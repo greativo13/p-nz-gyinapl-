@@ -8,132 +8,142 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   :root {
-    --purple: #7c3aed;
-    --purple-dark: #6d28d9;
-    --purple-light: #ede9fe;
-    --gray-btn: #6b7280;
-    --danger: #ef4444;
-    --green: #22c55e;
-    --blue: #3b82f6;
-    --yellow: #eab308;
-    --pink: #ec4899;
-    --gray: #9ca3af;
-    --text: #1f2937;
-    --border: #e5e7eb;
+    --green-dark: #0d3325;
+    --green-deep: #14432f;
+    --green: #1a5638;
+    --green-btn: #14432f;
+    --green-btn-hover: #1a5638;
+    --green-accent: #1f9d5b;
+    --green-soft: #e7f2ec;
+    --green-chip: #cfe8db;
+
+    --page: #f1f3f1;
+    --card: #ffffff;
+    --text: #16241d;
+    --muted: #6b7d73;
+    --border: #e3e8e4;
+
+    --danger: #e0483d;
+
+    --cat-green: #1f9d5b;
+    --cat-blue: #3b82f6;
+    --cat-yellow: #eab308;
+    --cat-pink: #ec4899;
+    --cat-gray: #94a3a0;
   }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--page);
     min-height: 100vh;
     color: var(--text);
-    padding: 12px;
-    line-height: 1.4;
+    padding: 0;
+    line-height: 1.45;
   }
 
   .container {
-    max-width: 520px;
+    max-width: 480px;
     margin: 0 auto;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
+    min-height: 100vh;
+    background: var(--page);
+    position: relative;
   }
 
+  /* ---------- Header ---------- */
   header {
-    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+    background: linear-gradient(160deg, var(--green-deep) 0%, var(--green-dark) 100%);
     color: #fff;
-    padding: 20px 16px 16px;
-    text-align: center;
+    padding: 22px 20px 26px;
+    border-radius: 0 0 26px 26px;
   }
-  header h1 { font-size: 22px; font-weight: 700; }
-  header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  header .brand { display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  header p { font-size: 13px; opacity: 0.8; margin-top: 3px; }
 
-  /* Tabs */
+  /* ---------- Tabs ---------- */
   .tabs {
     display: flex;
-    background: #f8f7fc;
-    border-bottom: 1px solid var(--border);
+    gap: 6px;
+    padding: 14px 16px 0;
+    position: sticky; top: 0; z-index: 10;
+    background: var(--page);
   }
   .tab {
     flex: 1;
-    padding: 14px 4px;
+    padding: 11px 4px;
     text-align: center;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 13px;
+    font-weight: 600;
     border: none;
-    background: none;
-    transition: background 0.15s;
-    position: relative;
-    color: #999;
+    background: #e4eae6;
+    color: var(--muted);
+    border-radius: 12px;
+    transition: background 0.15s, color 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
-  .tab .lbl { display: block; font-size: 11px; margin-top: 2px; font-weight: 600; }
-  .tab.active { color: var(--purple); background: #fff; }
-  .tab.active::after {
-    content: "";
-    position: absolute;
-    bottom: 0; left: 20%; right: 20%;
-    height: 3px;
-    background: var(--purple);
-    border-radius: 3px 3px 0 0;
-  }
+  .tab .ic { font-size: 17px; }
+  .tab.active { background: var(--green-deep); color: #fff; }
 
-  .content { padding: 18px 16px 26px; }
+  .content { padding: 16px; }
   .panel { display: none; }
   .panel.active { display: block; animation: fade 0.2s; }
   @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
 
-  h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); }
+  h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); font-weight: 700; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-head h2 { margin-bottom: 0; }
 
-  /* Buttons */
+  /* ---------- Buttons ---------- */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 14px 16px;
+    padding: 15px 18px;
     border: none;
-    border-radius: 12px;
+    border-radius: 30px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.08s, opacity 0.15s;
+    transition: transform 0.08s, background 0.15s;
     color: #fff;
-    background: var(--purple);
+    background: var(--green-btn);
     margin-bottom: 10px;
-    min-height: 48px;
+    min-height: 50px;
   }
-  .btn:active { transform: scale(0.97); }
-  .btn.secondary { background: var(--gray-btn); }
+  .btn:active { transform: scale(0.98); }
+  .btn:hover { background: var(--green-btn-hover); }
+  .btn.secondary { background: #e4eae6; color: var(--green-deep); }
+  .btn.secondary:hover { background: #d7e0da; }
   .btn.danger { background: var(--danger); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
+  .btn.danger:hover { background: #c53a30; }
   .btn-row { display: flex; gap: 10px; }
 
-  /* Inputs */
-  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4b5563; }
+  /* ---------- Inputs ---------- */
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #45564d; }
   input[type="text"], input[type="number"] {
     width: 100%;
-    padding: 13px 14px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
+    padding: 14px 15px;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
     font-size: 16px;
     margin-bottom: 14px;
     transition: border 0.15s;
     background: #fff;
     color: var(--text);
   }
-  input:focus { outline: none; border-color: var(--purple); }
+  input:focus { outline: none; border-color: var(--green-accent); }
 
-  /* Color picker buttons */
+  /* ---------- Color picker ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .color-btn {
     flex: 1;
     min-width: 56px;
-    padding: 10px 4px;
+    padding: 11px 4px;
     border: 3px solid transparent;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
     font-size: 11px;
     font-weight: 700;
@@ -143,14 +153,14 @@
     line-height: 1.2;
   }
   .color-btn:active { transform: scale(0.94); }
-  .color-btn.selected { border-color: var(--text); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text); }
-  .c-green { background: var(--green); }
-  .c-blue { background: var(--blue); }
-  .c-yellow { background: var(--yellow); }
-  .c-pink { background: var(--pink); }
-  .c-gray { background: var(--gray); }
+  .color-btn.selected { border-color: var(--green-deep); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--green-deep); }
+  .c-green { background: var(--cat-green); }
+  .c-blue { background: var(--cat-blue); }
+  .c-yellow { background: var(--cat-yellow); }
+  .c-pink { background: var(--cat-pink); }
+  .c-gray { background: var(--cat-gray); }
 
-  /* Messages */
+  /* ---------- Messages ---------- */
   .msg {
     padding: 12px 14px;
     border-radius: 12px;
@@ -160,81 +170,107 @@
     display: none;
   }
   .msg.show { display: block; animation: fade 0.2s; }
-  .msg.success { background: #dcfce7; color: #15803d; }
-  .msg.error { background: #fee2e2; color: #b91c1c; }
-  .msg.info { background: var(--purple-light); color: var(--purple-dark); }
+  .msg.success { background: var(--green-soft); color: var(--green-deep); }
+  .msg.error { background: #fdeae8; color: #b3392f; }
+  .msg.info { background: var(--green-soft); color: var(--green-deep); }
 
-  /* Summary cards */
-  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .summary-card {
-    padding: 14px;
-    border-radius: 14px;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  }
-  .summary-card .sc-name { font-size: 13px; font-weight: 600; opacity: 0.95; }
-  .summary-card .sc-amount { font-size: 20px; font-weight: 800; margin-top: 4px; }
-  .summary-card .sc-count { font-size: 11px; opacity: 0.85; margin-top: 2px; }
-  .summary-total {
-    grid-column: 1 / -1;
-    background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+  /* ---------- Card base ---------- */
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 6px 20px rgba(13, 51, 37, 0.06);
+    margin-bottom: 16px;
   }
 
-  /* Expense list */
+  /* ---------- Hero summary (egyenleg + körgyűrű) ---------- */
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .hero-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .hero-total { font-size: 27px; font-weight: 800; margin-top: 3px; letter-spacing: -0.02em; }
+  .hero-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .donut { position: relative; width: 104px; height: 104px; border-radius: 50%; flex-shrink: 0; }
+  .donut::after {
+    content: ""; position: absolute; inset: 13px; background: var(--card); border-radius: 50%;
+  }
+  .donut-center {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .donut-center b { font-size: 19px; font-weight: 800; }
+  .donut-center span { font-size: 9.5px; color: var(--muted); font-weight: 600; max-width: 66px; }
+
+  .hero-breakdown { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .bd-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .bd-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .bd-name { flex: 1; font-weight: 600; }
+  .bd-count { color: var(--muted); font-size: 12px; margin-right: 4px; }
+  .bd-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Expense list rows ---------- */
   .exp-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 12px 12px 14px;
-    border: 1px solid var(--border);
-    border-left: 6px solid var(--gray);
-    border-radius: 12px;
+    gap: 12px;
+    padding: 14px;
+    background: var(--card);
+    border-radius: 18px;
     margin-bottom: 10px;
-    background: #fff;
+    box-shadow: 0 4px 14px rgba(13, 51, 37, 0.05);
+  }
+  .exp-icon {
+    width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff;
   }
   .exp-info { flex: 1; min-width: 0; }
   .exp-name { font-weight: 700; font-size: 15px; word-break: break-word; }
-  .exp-cat { font-size: 12px; color: #6b7280; margin-top: 2px; }
-  .exp-amount { font-weight: 800; font-size: 16px; white-space: nowrap; }
-  .exp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .exp-cat { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .exp-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .exp-amount { font-weight: 800; font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .exp-actions { display: flex; gap: 6px; }
   .icon-btn {
-    width: 40px; height: 40px;
-    border: none; border-radius: 10px;
-    font-size: 17px; cursor: pointer;
+    width: 38px; height: 38px;
+    border: none; border-radius: 11px;
+    font-size: 16px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
+    background: #eef2ef;
   }
-  .icon-btn.edit { background: var(--purple-light); }
-  .icon-btn.del { background: #fee2e2; }
+  .icon-btn.del { background: #fdeae8; }
 
   .empty {
     text-align: center;
-    color: #9ca3af;
-    padding: 40px 20px;
+    color: var(--muted);
+    padding: 44px 20px;
     font-size: 14px;
+    background: var(--card);
+    border-radius: 20px;
   }
-  .empty .big { font-size: 40px; display: block; margin-bottom: 10px; }
+  .empty .big { font-size: 42px; display: block; margin-bottom: 10px; }
 
-  /* Categories list */
+  /* ---------- Categories ---------- */
   .cat-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    padding: 14px;
+    background: var(--card);
+    border-radius: 16px;
     margin-bottom: 10px;
+    box-shadow: 0 4px 14px rgba(13, 51, 37, 0.05);
   }
   .cat-dot { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
   .cat-name { flex: 1; font-weight: 600; }
-  .cat-badge { font-size: 11px; color: #9ca3af; }
+  .cat-badge { font-size: 11px; color: var(--muted); background: #eef2ef; padding: 3px 10px; border-radius: 20px; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
 
-  /* Modal */
+  /* ---------- Modal ---------- */
   .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(13, 51, 37, 0.5);
     z-index: 100;
     align-items: center;
     justify-content: center;
@@ -243,29 +279,31 @@
   .modal-overlay.show { display: flex; }
   .modal {
     background: #fff;
-    border-radius: 18px;
-    padding: 22px 18px;
+    border-radius: 22px;
+    padding: 24px 20px;
     width: 100%;
     max-width: 420px;
     animation: pop 0.2s;
   }
   @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
-  .modal h3 { font-size: 17px; margin-bottom: 16px; }
+  .modal h3 { font-size: 17px; margin-bottom: 16px; font-weight: 700; }
 
-  .hint { font-size: 12px; color: #9ca3af; margin-top: -8px; margin-bottom: 14px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>💰 Pénzügyi Napló</h1>
+    <div class="brand">
+      <h1>💰 Pénzügyi Napló</h1>
+    </div>
     <p>Kövesd a kiadásaidat egyszerűen</p>
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-panel="manual">✍️<span class="lbl">Bevitel</span></button>
-    <button class="tab" data-panel="list">📊<span class="lbl">Lista</span></button>
-    <button class="tab" data-panel="categories">⚙️<span class="lbl">Kategóriák</span></button>
+    <button class="tab active" data-panel="manual"><span class="ic">✍️</span>Bevitel</button>
+    <button class="tab" data-panel="list"><span class="ic">📊</span>Lista</button>
+    <button class="tab" data-panel="categories"><span class="ic">⚙️</span>Kategóriák</button>
   </nav>
 
   <div class="content">
@@ -275,24 +313,27 @@
       <h2>✍️ Új tétel</h2>
       <div class="msg" id="manualMsg"></div>
 
-      <label for="mName">Tétel neve</label>
-      <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér..." autocomplete="off">
+      <div class="card">
+        <label for="mName">Tétel neve</label>
+        <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér..." autocomplete="off">
 
-      <label for="mAmount">Összeg (Ft)</label>
-      <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
+        <label for="mAmount">Összeg (Ft)</label>
+        <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
 
-      <label>Kategória</label>
-      <div class="color-picker" id="manualColors"></div>
+        <label>Kategória</label>
+        <div class="color-picker" id="manualColors"></div>
 
-      <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
-      <p class="hint" style="margin-top:2px; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A kategória megmarad a következő tételhez.</p>
+        <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
+        <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A kategória megmarad a következő tételhez.</p>
+      </div>
     </section>
 
     <!-- ============ LIST PANEL ============ -->
     <section class="panel" id="panel-list">
-      <h2>📊 Összesítés</h2>
       <div id="summaryArea"></div>
-      <h2 style="margin-top:8px;">Tételek</h2>
+      <div class="section-head">
+        <h2>Tételek</h2>
+      </div>
       <div id="expenseListArea"></div>
       <hr class="divider" id="clearDivider" style="display:none">
       <button class="btn danger" id="btnClearAll" style="display:none">🗑️ Az összes adat törlése</button>
@@ -306,11 +347,13 @@
 
       <hr class="divider">
       <h2>➕ Új kategória</h2>
-      <label for="newCatName">Kategória neve</label>
-      <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
-      <label>Szín</label>
-      <div class="color-picker" id="newCatColors"></div>
-      <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
+      <div class="card">
+        <label for="newCatName">Kategória neve</label>
+        <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
+        <label>Szín</label>
+        <div class="color-picker" id="newCatColors"></div>
+        <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
+      </div>
     </section>
 
   </div>
@@ -335,10 +378,9 @@
 
 <script>
 /* =========================================================
-   PÉNZÜGYI NAPLÓ - Kézi bevitelre optimalizált változat
+   PÉNZÜGYI NAPLÓ - mélyzöld dizájn, kézi bevitel
    ========================================================= */
 
-// ---------- Alapkategóriák ----------
 const DEFAULT_CATEGORIES = {
   green:  { name: "Számlák",         color: "green"  },
   blue:   { name: "Étkezés",         color: "blue"   },
@@ -348,65 +390,43 @@ const DEFAULT_CATEGORIES = {
 };
 
 const COLOR_HEX = {
-  green: "#22c55e", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#9ca3af"
+  green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0"
 };
 const COLOR_LABELS = {
   green: "🟢 Zöld", blue: "🔵 Kék", yellow: "🟡 Sárga", pink: "🔴 Rózsaszín", gray: "⚫ Szürke"
 };
 const BASE_COLORS = ["green", "blue", "yellow", "pink", "gray"];
 
-// ---------- Állapot ----------
 let expenseItems = [];
 let customCategories = {};
 let editIndex = null;
 
-// ---------- LocalStorage ----------
+/* ---------- LocalStorage ---------- */
 function loadData() {
-  try {
-    const e = localStorage.getItem("expenseItems");
-    expenseItems = e ? JSON.parse(e) : [];
-  } catch { expenseItems = []; }
-  try {
-    const c = localStorage.getItem("customCategories");
-    customCategories = c ? JSON.parse(c) : {};
-  } catch { customCategories = {}; }
+  try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; }
+  catch { expenseItems = []; }
+  try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; }
+  catch { customCategories = {}; }
 }
-function saveItems() {
-  try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {}
-}
-function saveCategories() {
-  try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); } catch {}
-}
+function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
+function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); } catch {} }
 
-// ---------- Kategória segédek ----------
-function allCategories() {
-  return Object.assign({}, DEFAULT_CATEGORIES, customCategories);
-}
-function catName(key) {
-  const cats = allCategories();
-  return cats[key] ? cats[key].name : key;
-}
-function catHex(key) {
-  const cats = allCategories();
-  const c = cats[key] ? cats[key].color : key;
-  return COLOR_HEX[c] || "#9ca3af";
-}
-function formatFt(n) {
-  return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft";
-}
+/* ---------- Kategória segédek ---------- */
+function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
+function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
+function catHex(key) { const c = allCategories(); const col = c[key] ? c[key].color : key; return COLOR_HEX[col] || "#94a3a0"; }
+function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
 
-// ---------- Üzenetek ----------
+/* ---------- Üzenetek ---------- */
 function showMsg(id, text, type) {
   const el = document.getElementById(id);
   el.textContent = text;
   el.className = "msg show " + type;
   clearTimeout(el._t);
-  if (type !== "info") {
-    el._t = setTimeout(() => { el.className = "msg " + type; }, 3000);
-  }
+  if (type !== "info") el._t = setTimeout(() => { el.className = "msg " + type; }, 3000);
 }
 
-// ---------- Tab kezelés ----------
+/* ---------- Tabok ---------- */
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -419,9 +439,7 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-/* =========================================================
-   SZÍNVÁLASZTÓ komponens
-   ========================================================= */
+/* ---------- Színválasztó ---------- */
 function buildColorPicker(containerId, initial, onSelect) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
@@ -446,22 +464,16 @@ function getPickerValue(containerId) {
   return sel ? sel.dataset.key : null;
 }
 
-/* =========================================================
-   DUPLIKÁTUM szűrés
-   ========================================================= */
+/* ---------- Duplikátum ---------- */
 function isDuplicate(name, amount, color, ignoreIndex) {
   const n = name.trim().toLowerCase();
   return expenseItems.some((it, i) => {
     if (i === ignoreIndex) return false;
-    return it.name.trim().toLowerCase() === n &&
-           Number(it.amount) === Number(amount) &&
-           it.color === color;
+    return it.name.trim().toLowerCase() === n && Number(it.amount) === Number(amount) && it.color === color;
   });
 }
 
-/* =========================================================
-   KÉZI BEVITEL (gyorsított)
-   ========================================================= */
+/* ---------- Kézi bevitel ---------- */
 function addExpense(name, amount, color) {
   name = (name || "").trim();
   amount = Number(amount);
@@ -479,21 +491,16 @@ function submitManual() {
   const amountEl = document.getElementById("mAmount");
   const name = nameEl.value;
   const amount = amountEl.value;
-  const color = getPickerValue("manualColors"); // kategória megmarad a következő tételhez
+  const color = getPickerValue("manualColors");
   const res = addExpense(name, amount, color);
   if (res.ok) {
     showMsg("manualMsg", `✅ Hozzáadva: ${name.trim()} – ${formatFt(amount)}  (összesen ${expenseItems.length} tétel)`, "success");
-    nameEl.value = "";
-    amountEl.value = "";
-    nameEl.focus(); // gyors következő bevitel
+    nameEl.value = ""; amountEl.value = ""; nameEl.focus();
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
   }
 }
-
 document.getElementById("btnAddManual").addEventListener("click", submitManual);
-
-// Enter a névmezőben → ugrás az összeghez; Enter az összegnél → hozzáadás
 document.getElementById("mName").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); }
 });
@@ -501,9 +508,7 @@ document.getElementById("mAmount").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); submitManual(); }
 });
 
-/* =========================================================
-   LISTA / ÖSSZESÍTÉS
-   ========================================================= */
+/* ---------- Lista / összesítés ---------- */
 function renderList() {
   const summaryArea = document.getElementById("summaryArea");
   const listArea = document.getElementById("expenseListArea");
@@ -525,47 +530,73 @@ function renderList() {
     grand += Number(it.amount);
   });
 
-  let sHtml = '<div class="summary-grid">';
-  Object.keys(totals).forEach(color => {
-    sHtml += `
-      <div class="summary-card" style="background:${catHex(color)}">
-        <div class="sc-name">${escapeHtml(catName(color))}</div>
-        <div class="sc-amount">${formatFt(totals[color].sum)}</div>
-        <div class="sc-count">${totals[color].count} tétel</div>
+  // körgyűrű (conic-gradient) + legnagyobb kategória a közepén
+  const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count }));
+  entries.sort((a, b) => b.sum - a.sum);
+
+  let acc = 0;
+  const stops = entries.map(e => {
+    const start = (acc / grand) * 100;
+    acc += e.sum;
+    const end = (acc / grand) * 100;
+    return `${catHex(e.key)} ${start}% ${end}%`;
+  }).join(", ");
+
+  const top = entries[0];
+  const topPct = Math.round((top.sum / grand) * 100);
+
+  let bd = "";
+  entries.forEach(e => {
+    bd += `
+      <div class="bd-row">
+        <span class="bd-dot" style="background:${catHex(e.key)}"></span>
+        <span class="bd-name">${escapeHtml(catName(e.key))}</span>
+        <span class="bd-count">${e.count} db</span>
+        <span class="bd-amount">${formatFt(e.sum)}</span>
       </div>`;
   });
-  sHtml += `
-      <div class="summary-card summary-total">
-        <div class="sc-name">Összesen</div>
-        <div class="sc-amount">${formatFt(grand)}</div>
-        <div class="sc-count">${expenseItems.length} tétel</div>
-      </div>`;
-  sHtml += '</div>';
-  summaryArea.innerHTML = sHtml;
+
+  summaryArea.innerHTML = `
+    <div class="card">
+      <div class="hero-top">
+        <div>
+          <div class="hero-label">Összes kiadás</div>
+          <div class="hero-total">${formatFt(grand)}</div>
+          <div class="hero-sub">${expenseItems.length} tétel · ${entries.length} kategória</div>
+        </div>
+        <div class="donut" style="background:conic-gradient(${stops})">
+          <div class="donut-center">
+            <b>${topPct}%</b>
+            <span>${escapeHtml(catName(top.key))}</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-breakdown">${bd}</div>
+    </div>`;
 
   let lHtml = "";
-  // legújabb elöl
   for (let i = expenseItems.length - 1; i >= 0; i--) {
     const it = expenseItems[i];
     lHtml += `
-      <div class="exp-item" style="border-left-color:${catHex(it.color)}">
+      <div class="exp-item">
+        <div class="exp-icon" style="background:${catHex(it.color)}">💸</div>
         <div class="exp-info">
           <div class="exp-name">${escapeHtml(it.name)}</div>
           <div class="exp-cat">${escapeHtml(catName(it.color))}</div>
         </div>
-        <div class="exp-amount">${formatFt(it.amount)}</div>
-        <div class="exp-actions">
-          <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés">✏️</button>
-          <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
+        <div class="exp-right">
+          <span class="exp-amount">${formatFt(it.amount)}</span>
+          <div class="exp-actions">
+            <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés">✏️</button>
+            <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
+          </div>
         </div>
       </div>`;
   }
   listArea.innerHTML = lHtml;
 
-  listArea.querySelectorAll("[data-edit]").forEach(b =>
-    b.addEventListener("click", () => openEdit(Number(b.dataset.edit))));
-  listArea.querySelectorAll("[data-del]").forEach(b =>
-    b.addEventListener("click", () => deleteExpense(Number(b.dataset.del))));
+  listArea.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openEdit(Number(b.dataset.edit))));
+  listArea.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => deleteExpense(Number(b.dataset.del))));
 
   document.getElementById("btnClearAll").style.display = "block";
   document.getElementById("clearDivider").style.display = "block";
@@ -580,7 +611,6 @@ function deleteExpense(i) {
     renderList();
   }
 }
-
 document.getElementById("btnClearAll").addEventListener("click", () => {
   if (confirm("⚠️ Biztosan törlöd az ÖSSZES tételt?\n\nEz a művelet nem vonható vissza!")) {
     expenseItems = [];
@@ -589,9 +619,7 @@ document.getElementById("btnClearAll").addEventListener("click", () => {
   }
 });
 
-/* =========================================================
-   SZERKESZTÉS MODAL
-   ========================================================= */
+/* ---------- Szerkesztés modal ---------- */
 function openEdit(i) {
   const it = expenseItems[i];
   if (!it) return;
@@ -601,14 +629,9 @@ function openEdit(i) {
   buildColorPicker("editColors", it.color);
   document.getElementById("editModal").classList.add("show");
 }
-function closeEdit() {
-  document.getElementById("editModal").classList.remove("show");
-  editIndex = null;
-}
+function closeEdit() { document.getElementById("editModal").classList.remove("show"); editIndex = null; }
 document.getElementById("btnCancelEdit").addEventListener("click", closeEdit);
-document.getElementById("editModal").addEventListener("click", (e) => {
-  if (e.target.id === "editModal") closeEdit();
-});
+document.getElementById("editModal").addEventListener("click", (e) => { if (e.target.id === "editModal") closeEdit(); });
 document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (editIndex === null) return;
   const name = document.getElementById("editName").value.trim();
@@ -617,19 +640,14 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (!color) { alert("Válassz kategóriát."); return; }
-  if (isDuplicate(name, amount, color, editIndex)) {
-    alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum).");
-    return;
-  }
+  if (isDuplicate(name, amount, color, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
   expenseItems[editIndex] = { name, amount, color };
   saveItems();
   closeEdit();
   renderList();
 });
 
-/* =========================================================
-   KATEGÓRIÁK
-   ========================================================= */
+/* ---------- Kategóriák ---------- */
 function renderCategories() {
   const area = document.getElementById("catListArea");
   const cats = allCategories();
@@ -639,7 +657,7 @@ function renderCategories() {
     const isCustom = !DEFAULT_CATEGORIES[key];
     html += `
       <div class="cat-item">
-        <div class="cat-dot" style="background:${COLOR_HEX[c.color] || '#9ca3af'}"></div>
+        <div class="cat-dot" style="background:${COLOR_HEX[c.color] || '#94a3a0'}"></div>
         <div class="cat-name">${escapeHtml(c.name)}</div>
         ${isCustom
           ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>`
@@ -647,8 +665,7 @@ function renderCategories() {
       </div>`;
   });
   area.innerHTML = html;
-  area.querySelectorAll("[data-delcat]").forEach(b =>
-    b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
+  area.querySelectorAll("[data-delcat]").forEach(b => b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
 
   const container = document.getElementById("newCatColors");
   container.innerHTML = "";
@@ -675,12 +692,8 @@ function deleteCategory(key) {
   if (confirm(msg)) {
     delete customCategories[key];
     saveCategories();
-    if (used > 0) {
-      expenseItems = expenseItems.filter(it => it.color !== key);
-      saveItems();
-    }
+    if (used > 0) { expenseItems = expenseItems.filter(it => it.color !== key); saveItems(); }
     renderCategories();
-    // frissítsük a bevitel színválasztóját is (megtartva az érvényes kiválasztást)
     const cur = getPickerValue("manualColors");
     buildColorPicker("manualColors", allCategories()[cur] ? cur : "green");
   }
@@ -694,27 +707,21 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   if (!color) { showMsg("catMsg", "⚠️ Válassz színt.", "error"); return; }
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
   if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
-
   const key = "custom_" + Date.now();
   customCategories[key] = { name, color };
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
-  buildColorPicker("manualColors", getPickerValue("manualColors") || "green"); // új kategória megjelenik a bevitelnél is
+  buildColorPicker("manualColors", getPickerValue("manualColors") || "green");
   showMsg("catMsg", "✅ Kategória létrehozva!", "success");
 });
 
-/* =========================================================
-   Segédfüggvények
-   ========================================================= */
+/* ---------- Segéd ---------- */
 function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, c =>
-    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
-/* =========================================================
-   INDÍTÁS
-   ========================================================= */
+/* ---------- Indítás ---------- */
 function init() {
   loadData();
   buildColorPicker("manualColors", "green");
