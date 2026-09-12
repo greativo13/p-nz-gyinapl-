@@ -177,11 +177,6 @@
   }
   .color-btn:active { transform: scale(0.94); }
   .color-btn.selected { border-color: var(--green-deep); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--green-deep); }
-  .c-green { background: var(--cat-green); }
-  .c-blue { background: var(--cat-blue); }
-  .c-yellow { background: var(--cat-yellow); }
-  .c-pink { background: var(--cat-pink); }
-  .c-gray { background: var(--cat-gray); }
 
   /* ---------- Messages ---------- */
   .msg {
@@ -329,6 +324,20 @@
   .custom-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 7px; }
   .custom-color input[type="color"]::-moz-color-swatch { border: none; border-radius: 7px; }
 
+  .custom-color span { font-weight: 600; color: #45564d; font-size: 14px; }
+
+  /* Összecsukható ikonválasztó */
+  .icon-collapse { margin-bottom: 16px; border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .icon-collapse summary {
+    cursor: pointer; padding: 13px 15px; font-weight: 600; color: #45564d; font-size: 14px;
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
+  }
+  .icon-collapse summary::-webkit-details-marker { display: none; }
+  .icon-collapse summary::after { content: "▾"; color: var(--muted); }
+  .icon-collapse[open] summary::after { content: "▴"; }
+  .icon-collapse .icon-current { font-size: 20px; margin-left: auto; margin-right: 10px; }
+  .icon-collapse .icon-picker { padding: 0 15px 14px; margin-bottom: 0; }
+
   /* Ikonválasztó */
   .icon-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .icon-choice {
@@ -414,14 +423,15 @@
       <div class="card">
         <label for="newCatName">Kategória neve</label>
         <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
-        <label>Szín</label>
-        <div class="color-picker" id="newCatColors"></div>
+        <label for="newCatCustom">Szín</label>
         <div class="custom-color">
-          <label for="newCatCustom" style="margin:0;">Egyéni szín</label>
+          <span id="newCatColorLabel">Válaszd ki a kategória színét</span>
           <input type="color" id="newCatCustom" value="#1f9d5b">
         </div>
-        <label>Ikon</label>
-        <div class="icon-picker" id="newCatIcons"></div>
+        <details class="icon-collapse" id="iconCollapse">
+          <summary>Ikon <span class="icon-current" id="iconPreview">🧾</span></summary>
+          <div class="icon-picker" id="newCatIcons"></div>
+        </details>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
     </section>
@@ -468,24 +478,6 @@ function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon
 const COLOR_HEX = {
   green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0"
 };
-
-// Választható színek új kategóriákhoz (alap 5 + továbbiak). Az érték HEX.
-const PRESET_COLORS = [
-  { name: "Zöld",      hex: "#1f9d5b" },
-  { name: "Kék",       hex: "#3b82f6" },
-  { name: "Sárga",     hex: "#eab308" },
-  { name: "Rózsaszín", hex: "#ec4899" },
-  { name: "Szürke",    hex: "#94a3a0" },
-  { name: "Türkiz",    hex: "#14b8a6" },
-  { name: "Indigó",    hex: "#6366f1" },
-  { name: "Lila",      hex: "#a855f7" },
-  { name: "Narancs",   hex: "#f97316" },
-  { name: "Piros",     hex: "#ef4444" },
-  { name: "Lime",      hex: "#84cc16" },
-  { name: "Égszín",    hex: "#0ea5e9" },
-  { name: "Barna",     hex: "#b45309" },
-  { name: "Sötétzöld", hex: "#0d3325" }
-];
 
 // Fekete vagy fehér szöveg a háttérszínhez (kontraszt)
 function textOn(hex) {
@@ -829,25 +821,9 @@ function renderCategories() {
   area.innerHTML = html;
   area.querySelectorAll("[data-delcat]").forEach(b => b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
 
-  const container = document.getElementById("newCatColors");
-  container.innerHTML = "";
-  PRESET_COLORS.forEach((col, idx) => {
-    const btn = document.createElement("div");
-    btn.className = "color-btn";
-    btn.style.background = col.hex;
-    btn.style.color = textOn(col.hex);
-    btn.dataset.color = col.hex;
-    btn.textContent = col.name;
-    if (idx === 0) btn.classList.add("selected");
-    btn.addEventListener("click", () => {
-      container.querySelectorAll(".color-btn").forEach(x => x.classList.remove("selected"));
-      btn.classList.add("selected");
-    });
-    container.appendChild(btn);
-  });
-
-  // ikonválasztó feltöltése
+  // ikonválasztó feltöltése (összecsukható)
   const iconBox = document.getElementById("newCatIcons");
+  const iconPreview = document.getElementById("iconPreview");
   iconBox.innerHTML = "";
   ICON_CHOICES.forEach((ic, idx) => {
     const b = document.createElement("div");
@@ -858,15 +834,16 @@ function renderCategories() {
     b.addEventListener("click", () => {
       iconBox.querySelectorAll(".icon-choice").forEach(x => x.classList.remove("selected"));
       b.classList.add("selected");
+      iconPreview.textContent = ic;                 // előnézet frissítése
+      document.getElementById("iconCollapse").open = false; // választás után összecsuk
     });
     iconBox.appendChild(b);
   });
+  if (iconPreview) iconPreview.textContent = ICON_CHOICES[0];
 }
 
-// Az új kategória kiválasztott színe: preset gomb, vagy ha egyik sincs kijelölve, az egyéni színválasztó
+// Az új kategória színe az egyéni színválasztóból
 function getNewCatColor() {
-  const sel = document.querySelector("#newCatColors .color-btn.selected");
-  if (sel) return sel.dataset.color;
   return document.getElementById("newCatCustom").value;
 }
 function getNewCatIcon() {
@@ -918,10 +895,6 @@ function init() {
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
-  // Egyéni szín kiválasztásakor a preset gombok kijelölése törlődik
-  document.getElementById("newCatCustom").addEventListener("input", () => {
-    document.querySelectorAll("#newCatColors .color-btn").forEach(x => x.classList.remove("selected"));
-  });
   // Hónap-szűrő váltás
   document.getElementById("monthFilter").addEventListener("change", (e) => {
     selectedMonth = e.target.value;
