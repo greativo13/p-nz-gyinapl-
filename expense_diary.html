@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#14432f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pénzügyi Napló">
 <title>Pénzügyi Napló</title>
+<link rel="manifest" id="manifestLink">
+<link rel="apple-touch-icon" id="appleIcon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
@@ -11,23 +17,35 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   :root {
-    --green-dark: #0d3325;
-    --green-deep: #14432f;
-    --green: #1a5638;
-    --green-btn: #14432f;
-    --green-btn-hover: #1a5638;
-    --green-accent: #1f9d5b;
-    --green-soft: #e7f2ec;
-    --green-chip: #cfe8db;
-
+    /* felületi tokenek – VILÁGOS */
     --page: #f1f3f1;
     --card: #ffffff;
     --text: #16241d;
     --muted: #6b7d73;
     --border: #e3e8e4;
+    --input-bg: #ffffff;
+    --chip: #e4eae6;
+    --chip-hover: #d7e0da;
+    --chip-text: #45564d;
+    --soft: #e7f2ec;
+    --soft-text: #0d3325;
+    --err-bg: #fdeae8;
+    --err-text: #b3392f;
+    --shadow-card: 0 6px 20px rgba(13, 51, 37, 0.06);
+    --shadow-row: 0 4px 14px rgba(13, 51, 37, 0.05);
+
+    /* márka zöldek */
+    --green-dark: #0d3325;
+    --green-deep: #14432f;
+    --green-btn: #14432f;
+    --green-btn-hover: #1a5638;
+    --green-accent: #1f9d5b;
 
     --danger: #e0483d;
+    --danger-hover: #c53a30;
+    --income: #16a34a;
 
+    /* kategória alapszínek */
     --cat-green: #1f9d5b;
     --cat-blue: #3b82f6;
     --cat-yellow: #eab308;
@@ -38,54 +56,59 @@
     --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
+  :root[data-theme="dark"] {
+    --page: #0e1512;
+    --card: #17201c;
+    --text: #e6efe9;
+    --muted: #8fa39a;
+    --border: #26322c;
+    --input-bg: #121a16;
+    --chip: #1e2924;
+    --chip-hover: #263430;
+    --chip-text: #b6c7bf;
+    --soft: #123528;
+    --soft-text: #86e3ba;
+    --err-bg: #3a1d1a;
+    --err-text: #ffb3aa;
+    --shadow-card: 0 6px 20px rgba(0, 0, 0, 0.4);
+    --shadow-row: 0 4px 14px rgba(0, 0, 0, 0.32);
+    --green-btn: #1a5638;
+    --green-btn-hover: #22734a;
+    --income: #34d399;
+  }
+
   body {
     font-family: var(--font-ui);
     background: var(--page);
     min-height: 100vh;
     color: var(--text);
-    padding: 0;
     line-height: 1.45;
   }
-
-  .container {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    background: var(--page);
-    position: relative;
-  }
+  .container { max-width: 480px; margin: 0 auto; min-height: 100vh; }
 
   /* ---------- Header ---------- */
   header {
     background: linear-gradient(160deg, var(--green-deep) 0%, var(--green-dark) 100%);
     color: #fff;
-    padding: 22px 20px 26px;
+    padding: 20px 20px 24px;
     border-radius: 0 0 26px 26px;
   }
-  header .brand { display: flex; align-items: center; gap: 10px; }
+  .head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   header h1 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
   header p { font-size: 13px; opacity: 0.8; margin-top: 3px; }
+  .theme-toggle {
+    flex-shrink: 0; width: 42px; height: 42px; border: none; border-radius: 50%;
+    background: rgba(255,255,255,0.14); color: #fff; font-size: 19px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+  }
+  .theme-toggle:active { transform: scale(0.94); }
 
   /* ---------- Tabs ---------- */
-  .tabs {
-    display: flex;
-    gap: 6px;
-    padding: 14px 16px 0;
-    position: sticky; top: 0; z-index: 10;
-    background: var(--page);
-  }
+  .tabs { display: flex; gap: 6px; padding: 14px 16px 0; }
   .tab {
-    flex: 1;
-    padding: 11px 4px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    border: none;
-    background: #e4eae6;
-    color: var(--muted);
-    border-radius: 12px;
-    transition: background 0.15s, color 0.15s;
+    flex: 1; padding: 11px 4px; text-align: center; cursor: pointer;
+    font-size: 13px; font-weight: 600; border: none; background: var(--chip); color: var(--muted);
+    border-radius: 12px; transition: background 0.15s, color 0.15s;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
   .tab .ic { font-size: 17px; }
@@ -97,127 +120,88 @@
   @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
 
   h2 { font-family: var(--font-display); font-size: 19px; margin-bottom: 14px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
-  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .section-head h2 { margin-bottom: 0; }
 
   /* ---------- Buttons ---------- */
   .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 15px 18px;
-    border: none;
-    border-radius: 30px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.08s, background 0.15s;
-    color: #fff;
-    background: var(--green-btn);
-    margin-bottom: 10px;
-    min-height: 50px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 15px 18px; border: none; border-radius: 30px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.08s, background 0.15s;
+    color: #fff; background: var(--green-btn); margin-bottom: 10px; min-height: 50px; font-family: inherit;
   }
   .btn:active { transform: scale(0.98); }
   .btn:hover { background: var(--green-btn-hover); }
-  .btn.secondary { background: #e4eae6; color: var(--green-deep); }
-  .btn.secondary:hover { background: #d7e0da; }
-  .btn.danger { background: var(--danger); }
-  .btn.danger:hover { background: #c53a30; }
+  .btn.secondary { background: var(--chip); color: var(--chip-text); }
+  .btn.secondary:hover { background: var(--chip-hover); }
+  .btn.danger { background: var(--danger); color: #fff; }
+  .btn.danger:hover { background: var(--danger-hover); }
   .btn-row { display: flex; gap: 10px; }
 
   /* ---------- Inputs ---------- */
-  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #45564d; }
-  input[type="text"], input[type="number"], input[type="month"] {
-    width: 100%;
-    padding: 14px 15px;
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    font-size: 16px;
-    margin-bottom: 14px;
-    transition: border 0.15s;
-    background: #fff;
-    color: var(--text);
-    font-family: inherit;
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--chip-text); }
+  input[type="text"], input[type="number"], input[type="month"], input[type="search"], select {
+    width: 100%; padding: 14px 15px; border: 1.5px solid var(--border); border-radius: 14px;
+    font-size: 16px; margin-bottom: 14px; transition: border 0.15s;
+    background: var(--input-bg); color: var(--text); font-family: inherit;
   }
-  input:focus { outline: none; border-color: var(--green-accent); }
+  input:focus, select:focus { outline: none; border-color: var(--green-accent); }
 
-  /* Hónap-szűrő a listában */
-  .list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .list-toolbar label { margin: 0; white-space: nowrap; }
-  .list-toolbar select {
-    flex: 1;
-    padding: 12px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    font-size: 15px;
-    background: #fff;
-    color: var(--text);
-    font-family: inherit;
-    font-weight: 600;
+  /* ---------- Bevétel/Kiadás kapcsoló ---------- */
+  .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+  .type-btn {
+    flex: 1; padding: 13px; border: 2px solid var(--border); border-radius: 14px;
+    background: var(--input-bg); color: var(--muted); font-weight: 700; font-size: 14px;
+    cursor: pointer; font-family: inherit; transition: all 0.12s;
   }
-  .list-toolbar select:focus { outline: none; border-color: var(--green-accent); }
+  .type-btn.active[data-type="expense"] { border-color: var(--danger); background: var(--err-bg); color: var(--err-text); }
+  .type-btn.active[data-type="income"] { border-color: var(--income); background: var(--soft); color: var(--soft-text); }
 
-  /* ---------- Color picker ---------- */
+  /* ---------- Color picker (kategória gombok) ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .color-btn {
-    flex: 1;
-    min-width: 56px;
-    padding: 11px 4px;
-    border: 3px solid transparent;
-    border-radius: 14px;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 700;
-    color: #fff;
-    text-align: center;
-    transition: transform 0.08s;
-    line-height: 1.2;
+    flex: 1; min-width: 62px; padding: 11px 4px; border: 3px solid transparent; border-radius: 14px;
+    cursor: pointer; font-size: 11px; font-weight: 700; color: #fff; text-align: center;
+    transition: transform 0.08s; line-height: 1.25;
   }
   .color-btn:active { transform: scale(0.94); }
-  .color-btn.selected { border-color: var(--green-deep); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--green-deep); }
+  .color-btn.selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--text); }
+  .color-btn .cb-ic { font-size: 15px; display: block; margin-bottom: 2px; }
 
   /* ---------- Messages ---------- */
-  .msg {
-    padding: 12px 14px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 14px;
-    display: none;
-  }
+  .msg { padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; margin-bottom: 14px; display: none; }
   .msg.show { display: block; animation: fade 0.2s; }
-  .msg.success { background: var(--green-soft); color: var(--green-deep); }
-  .msg.error { background: #fdeae8; color: #b3392f; }
-  .msg.info { background: var(--green-soft); color: var(--green-deep); }
+  .msg.success { background: var(--soft); color: var(--soft-text); }
+  .msg.error { background: var(--err-bg); color: var(--err-text); }
+  .msg.info { background: var(--soft); color: var(--soft-text); }
 
-  /* ---------- Card base ---------- */
-  .card {
-    background: var(--card);
-    border-radius: 20px;
-    padding: 18px;
-    box-shadow: 0 6px 20px rgba(13, 51, 37, 0.06);
-    margin-bottom: 16px;
-  }
+  /* ---------- Card ---------- */
+  .card { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: var(--shadow-card); margin-bottom: 16px; }
 
-  /* ---------- Hero summary (egyenleg + körgyűrű) ---------- */
-  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  /* ---------- Lista eszköztár ---------- */
+  .list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .list-toolbar label { margin: 0; white-space: nowrap; }
+  .list-toolbar select { flex: 1; margin-bottom: 0; font-weight: 600; padding: 12px 14px; }
+  .list-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+  .list-controls input { margin-bottom: 0; flex: 1.4; }
+  .list-controls select { margin-bottom: 0; flex: 1; font-weight: 600; }
+
+  /* ---------- Hero ---------- */
+  .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
   .hero-label { font-size: 13px; color: var(--muted); font-weight: 600; }
   .hero-total { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em; }
-  .hero-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hero-total.neg { color: var(--danger); }
+  .hero-flows { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+  .flow-in { color: var(--income); }
+  .flow-out { color: var(--muted); }
+  .hero-compare { font-size: 12.5px; font-weight: 600; margin-top: 8px; }
+  .cmp-up { color: var(--danger); }
+  .cmp-down { color: var(--income); }
+  .cmp-flat { color: var(--muted); }
 
-  .donut { position: relative; width: 104px; height: 104px; border-radius: 50%; flex-shrink: 0; }
-  .donut::after {
-    content: ""; position: absolute; inset: 13px; background: var(--card); border-radius: 50%;
-  }
-  .donut-center {
-    position: absolute; inset: 0; z-index: 1;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center;
-  }
-  .donut-center b { font-size: 19px; font-weight: 800; }
-  .donut-center span { font-size: 9.5px; color: var(--muted); font-weight: 600; max-width: 66px; }
+  .donut { position: relative; width: 100px; height: 100px; border-radius: 50%; flex-shrink: 0; }
+  .donut::after { content: ""; position: absolute; inset: 13px; background: var(--card); border-radius: 50%; }
+  .donut-center { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .donut-center b { font-size: 18px; font-weight: 800; }
+  .donut-center span { font-size: 9px; color: var(--muted); font-weight: 600; max-width: 64px; }
 
   .hero-breakdown { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
   .bd-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
@@ -226,144 +210,71 @@
   .bd-count { color: var(--muted); font-size: 12px; margin-right: 4px; }
   .bd-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
 
-  /* ---------- Expense list rows ---------- */
-  .exp-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px;
-    background: var(--card);
-    border-radius: 18px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 14px rgba(13, 51, 37, 0.05);
-  }
-  .exp-icon {
-    width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: #fff;
-  }
+  /* ---------- Tétel-sorok ---------- */
+  .exp-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--card); border-radius: 18px; margin-bottom: 10px; box-shadow: var(--shadow-row); }
+  .exp-icon { width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; }
   .exp-info { flex: 1; min-width: 0; }
   .exp-name { font-weight: 700; font-size: 15px; word-break: break-word; }
   .exp-cat { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .exp-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .exp-amount { font-weight: 800; font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .exp-amount.amt-in { color: var(--income); }
   .exp-actions { display: flex; gap: 6px; }
-  .icon-btn {
-    width: 38px; height: 38px;
-    border: none; border-radius: 11px;
-    font-size: 16px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    background: #eef2ef;
-  }
-  .icon-btn.del { background: #fdeae8; }
+  .icon-btn { width: 38px; height: 38px; border: none; border-radius: 11px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--chip); }
+  .icon-btn.del { background: var(--err-bg); }
 
-  .empty {
-    text-align: center;
-    color: var(--muted);
-    padding: 44px 20px;
-    font-size: 14px;
-    background: var(--card);
-    border-radius: 20px;
-  }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; background: var(--card); border-radius: 20px; }
   .empty .big { font-size: 42px; display: block; margin-bottom: 10px; }
 
-  /* ---------- Categories ---------- */
-  .cat-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px;
-    background: var(--card);
-    border-radius: 16px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 14px rgba(13, 51, 37, 0.05);
-  }
-  .cat-dot { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
+  /* ---------- Kategóriák ---------- */
+  .cat-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--card); border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow-row); }
+  .cat-icon { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff; }
   .cat-name { flex: 1; font-weight: 600; }
-  .cat-badge { font-size: 11px; color: var(--muted); background: #eef2ef; padding: 3px 10px; border-radius: 20px; }
+  .cat-badge { font-size: 11px; color: var(--muted); background: var(--chip); padding: 3px 10px; border-radius: 20px; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
 
-  /* ---------- Modal ---------- */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(13, 51, 37, 0.5);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: #fff;
-    border-radius: 22px;
-    padding: 24px 20px;
-    width: 100%;
-    max-width: 420px;
-    animation: pop 0.2s;
-  }
-  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
-  .modal h3 { font-family: var(--font-display); font-size: 20px; margin-bottom: 16px; font-weight: 600; letter-spacing: -0.01em; }
-
-  .hint { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
-
-  /* Egyéni színválasztó */
-  .custom-color {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 12px 14px; margin-bottom: 16px;
-    border: 1.5px dashed var(--border); border-radius: 14px;
-  }
-  .custom-color label { font-weight: 600; color: #45564d; }
-  .custom-color input[type="color"] {
-    -webkit-appearance: none; appearance: none;
-    width: 54px; height: 40px; padding: 0; margin: 0;
-    border: 1.5px solid var(--border); border-radius: 10px; background: none; cursor: pointer;
-  }
+  .custom-color { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1.5px dashed var(--border); border-radius: 14px; }
+  .custom-color span { font-weight: 600; color: var(--chip-text); font-size: 14px; }
+  .custom-color input[type="color"] { -webkit-appearance: none; appearance: none; width: 54px; height: 40px; padding: 0; margin: 0; border: 1.5px solid var(--border); border-radius: 10px; background: none; cursor: pointer; }
   .custom-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
   .custom-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 7px; }
   .custom-color input[type="color"]::-moz-color-swatch { border: none; border-radius: 7px; }
 
-  .custom-color span { font-weight: 600; color: #45564d; font-size: 14px; }
-
-  /* Összecsukható ikonválasztó */
-  .icon-collapse { margin-bottom: 16px; border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; }
-  .icon-collapse summary {
-    cursor: pointer; padding: 13px 15px; font-weight: 600; color: #45564d; font-size: 14px;
-    list-style: none; display: flex; align-items: center; justify-content: space-between;
-  }
+  .icon-collapse { margin-bottom: 16px; border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--input-bg); }
+  .icon-collapse summary { cursor: pointer; padding: 13px 15px; font-weight: 600; color: var(--chip-text); font-size: 14px; list-style: none; display: flex; align-items: center; }
   .icon-collapse summary::-webkit-details-marker { display: none; }
   .icon-collapse summary::after { content: "▾"; color: var(--muted); }
-  .icon-collapse[open] summary::after { content: "▴"; }
   .icon-collapse .icon-current { font-size: 20px; margin-left: auto; margin-right: 10px; }
+  .icon-collapse[open] summary::after { content: "▴"; }
   .icon-collapse .icon-picker { padding: 0 15px 14px; margin-bottom: 0; }
 
-  /* Ikonválasztó */
   .icon-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .icon-choice {
-    width: 46px; height: 46px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; cursor: pointer;
-    border: 2px solid var(--border); border-radius: 13px; background: #fff;
-    transition: transform 0.08s, border-color 0.15s;
-  }
+  .icon-choice { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 2px solid var(--border); border-radius: 13px; background: var(--card); transition: transform 0.08s, border-color 0.15s; }
   .icon-choice:active { transform: scale(0.92); }
-  .icon-choice.selected { border-color: var(--green-deep); background: var(--green-soft); }
+  .icon-choice.selected { border-color: var(--green-accent); background: var(--soft); }
 
-  /* Kategória ikon a listában */
-  .cat-icon {
-    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff;
-  }
+  .data-actions { display: flex; flex-direction: column; gap: 0; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(13, 51, 37, 0.55); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--card); border-radius: 22px; padding: 24px 20px; width: 100%; max-width: 420px; animation: pop 0.2s; max-height: 92vh; overflow-y: auto; }
+  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h3 { font-family: var(--font-display); font-size: 20px; margin-bottom: 16px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: -6px; margin-bottom: 14px; }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <div class="brand">
-      <h1>💰 Pénzügyi Napló</h1>
+    <div class="head-row">
+      <div>
+        <h1>💰 Pénzügyi Napló</h1>
+        <p>Kövesd a bevételeid és kiadásaid</p>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Sötét/világos mód">🌙</button>
     </div>
-    <p>Kövesd a kiadásaidat egyszerűen</p>
   </header>
 
   <nav class="tabs">
@@ -374,14 +285,18 @@
 
   <div class="content">
 
-    <!-- ============ MANUAL PANEL ============ -->
+    <!-- ============ BEVITEL ============ -->
     <section class="panel active" id="panel-manual">
       <h2>✍️ Új tétel</h2>
       <div class="msg" id="manualMsg"></div>
-
       <div class="card">
+        <div class="type-toggle" id="typeToggle">
+          <button type="button" class="type-btn active" data-type="expense">💸 Kiadás</button>
+          <button type="button" class="type-btn" data-type="income">💰 Bevétel</button>
+        </div>
+
         <label for="mName">Tétel neve</label>
-        <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér..." autocomplete="off">
+        <input type="text" id="mName" placeholder="pl. Bevásárlás, Fizetés..." autocomplete="off">
 
         <label for="mAmount">Összeg (Ft)</label>
         <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
@@ -393,26 +308,34 @@
         <div class="color-picker" id="manualColors"></div>
 
         <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
-        <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A kategória megmarad a következő tételhez.</p>
+        <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
       </div>
     </section>
 
-    <!-- ============ LIST PANEL ============ -->
+    <!-- ============ LISTA ============ -->
     <section class="panel" id="panel-list">
       <div class="list-toolbar" id="listToolbar" style="display:none">
         <label for="monthFilter">📅 Hónap</label>
         <select id="monthFilter"></select>
       </div>
       <div id="summaryArea"></div>
-      <div class="section-head">
-        <h2>Tételek</h2>
+
+      <div class="list-controls" id="listControls" style="display:none">
+        <input type="search" id="searchInput" placeholder="🔍 Keresés a tételek közt...">
+        <select id="sortSelect">
+          <option value="date-desc">Legújabb elöl</option>
+          <option value="amount-desc">Összeg ↓</option>
+          <option value="amount-asc">Összeg ↑</option>
+          <option value="name-asc">Név A→Z</option>
+        </select>
       </div>
+
       <div id="expenseListArea"></div>
       <hr class="divider" id="clearDivider" style="display:none">
       <button class="btn danger" id="btnClearAll" style="display:none">🗑️ Az összes adat törlése</button>
     </section>
 
-    <!-- ============ CATEGORIES PANEL ============ -->
+    <!-- ============ KATEGÓRIÁK ============ -->
     <section class="panel" id="panel-categories">
       <h2>⚙️ Kategóriák</h2>
       <div class="msg" id="catMsg"></div>
@@ -425,7 +348,7 @@
         <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
         <label for="newCatCustom">Szín</label>
         <div class="custom-color">
-          <span id="newCatColorLabel">Válaszd ki a kategória színét</span>
+          <span>Válaszd ki a kategória színét</span>
           <input type="color" id="newCatCustom" value="#1f9d5b">
         </div>
         <details class="icon-collapse" id="iconCollapse">
@@ -434,15 +357,31 @@
         </details>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
+
+      <hr class="divider">
+      <h2>💾 Adatok</h2>
+      <div class="card data-actions">
+        <div class="btn-row">
+          <button class="btn secondary" id="btnExportJSON">⬇️ Mentés (JSON)</button>
+          <button class="btn secondary" id="btnExportCSV">⬇️ Excel (CSV)</button>
+        </div>
+        <button class="btn secondary" id="btnImport">⬆️ Visszaállítás fájlból</button>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+        <p class="hint" style="margin:6px 0 0;">A mentés a böngésződben tárolódik. Rendszeresen készíts biztonsági mentést, hogy ne veszítsd el az adataidat böngésző-törlésnél vagy eszközváltásnál.</p>
+      </div>
     </section>
 
   </div>
 </div>
 
-<!-- ============ EDIT MODAL ============ -->
+<!-- ============ TÉTEL SZERKESZTÉS MODAL ============ -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h3>✏️ Tétel szerkesztése</h3>
+    <div class="type-toggle" id="editTypeToggle">
+      <button type="button" class="type-btn" data-type="expense">💸 Kiadás</button>
+      <button type="button" class="type-btn" data-type="income">💰 Bevétel</button>
+    </div>
     <label for="editName">Tétel neve</label>
     <input type="text" id="editName" autocomplete="off">
     <label for="editAmount">Összeg (Ft)</label>
@@ -458,9 +397,31 @@
   </div>
 </div>
 
+<!-- ============ KATEGÓRIA SZERKESZTÉS MODAL ============ -->
+<div class="modal-overlay" id="catEditModal">
+  <div class="modal">
+    <h3>✏️ Kategória szerkesztése</h3>
+    <label for="catEditName">Név</label>
+    <input type="text" id="catEditName" autocomplete="off">
+    <label for="catEditColor">Szín</label>
+    <div class="custom-color">
+      <span>Kategória színe</span>
+      <input type="color" id="catEditColor" value="#1f9d5b">
+    </div>
+    <details class="icon-collapse" id="catEditIconCollapse">
+      <summary>Ikon <span class="icon-current" id="catEditIconPreview">🧾</span></summary>
+      <div class="icon-picker" id="catEditIcons"></div>
+    </details>
+    <div class="btn-row">
+      <button class="btn" id="btnCatSave">💾 Mentés</button>
+      <button class="btn secondary" id="btnCatCancel">Mégse</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =========================================================
-   PÉNZÜGYI NAPLÓ - mélyzöld dizájn, kézi bevitel
+   PÉNZÜGYI NAPLÓ
    ========================================================= */
 
 const DEFAULT_CATEGORIES = {
@@ -470,21 +431,12 @@ const DEFAULT_CATEGORIES = {
   pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️" },
   gray:   { name: "Egyéb",           color: "gray",   icon: "📦" }
 };
+const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
+const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒","💶","🎵"];
 
-// Választható ikonok új kategóriákhoz
-const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒"];
-function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
-
-const COLOR_HEX = {
-  green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0"
-};
-
-// Fekete vagy fehér szöveg a háttérszínhez (kontraszt)
 function textOn(hex) {
   if (!hex || hex[0] !== "#") return "#ffffff";
-  const h = hex.length === 4
-    ? hex.slice(1).split("").map(c => c + c).join("")
-    : hex.slice(1);
+  const h = hex.length === 4 ? hex.slice(1).split("").map(c => c + c).join("") : hex.slice(1);
   const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
   return (0.299*r + 0.587*g + 0.114*b) > 165 ? "#1f2937" : "#ffffff";
 }
@@ -492,13 +444,16 @@ function textOn(hex) {
 let expenseItems = [];
 let customCategories = {};
 let editIndex = null;
+let catEditKey = null;
+let selectedMonth = null;
+let entryType = "expense";      // bevitel típusa
+let searchQuery = "";
+let sortMode = "date-desc";
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
-  try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; }
-  catch { expenseItems = []; }
-  try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; }
-  catch { customCategories = {}; }
+  try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; } catch { expenseItems = []; }
+  try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
 }
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); } catch {} }
@@ -506,30 +461,20 @@ function saveCategories() { try { localStorage.setItem("customCategories", JSON.
 /* ---------- Kategória segédek ---------- */
 function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
+function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
-  if (typeof col === "string" && col[0] === "#") return col; // egyéni HEX szín
-  return COLOR_HEX[col] || "#94a3a0";                        // alap színnév
+  if (typeof col === "string" && col[0] === "#") return col;
+  return COLOR_HEX[col] || "#94a3a0";
 }
 function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
 
 /* ---------- Hónap segédek ---------- */
-function currentMonth() {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); // "YYYY-MM"
-}
-function monthLabel(m) {
-  if (!m) return "Nincs hónap";
-  const [y, mo] = m.split("-").map(Number);
-  return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(new Date(y, mo - 1, 1));
-}
-function monthLabelShort(m) {
-  if (!m) return "—";
-  const [y, mo] = m.split("-").map(Number);
-  return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(new Date(y, mo - 1, 1));
-}
-let selectedMonth = null; // null → első rendernél current/all; "all" → összes
+function currentMonth() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function monthLabel(m) { if (!m) return "Nincs hónap"; const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(new Date(y, mo - 1, 1)); }
+function monthLabelShort(m) { if (!m) return "—"; const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(new Date(y, mo - 1, 1)); }
+function prevMonthOf(m) { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 2, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
 
 /* ---------- Üzenetek ---------- */
 function showMsg(id, text, type) {
@@ -537,7 +482,16 @@ function showMsg(id, text, type) {
   el.textContent = text;
   el.className = "msg show " + type;
   clearTimeout(el._t);
-  if (type !== "info") el._t = setTimeout(() => { el.className = "msg " + type; }, 3000);
+  if (type !== "info") el._t = setTimeout(() => { el.className = "msg " + type; }, 3200);
+}
+
+/* ---------- Téma ---------- */
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("theme", t); } catch {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === "dark" ? "#0d3325" : "#14432f";
+  document.getElementById("themeToggle").textContent = t === "dark" ? "☀️" : "🌙";
 }
 
 /* ---------- Tabok ---------- */
@@ -553,8 +507,26 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
+/* ---------- Típus-kapcsoló ---------- */
+function wireTypeToggle(containerId, onChange) {
+  document.querySelectorAll("#" + containerId + " .type-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      if (onChange) onChange(btn.dataset.type);
+    });
+  });
+}
+function setTypeToggle(containerId, type) {
+  document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.type === type));
+}
+function getTypeToggle(containerId) {
+  const b = document.querySelector("#" + containerId + " .type-btn.active");
+  return b ? b.dataset.type : "expense";
+}
+
 /* ---------- Színválasztó ---------- */
-function buildColorPicker(containerId, initial, onSelect) {
+function buildColorPicker(containerId, initial) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
   const cats = allCategories();
@@ -565,12 +537,11 @@ function buildColorPicker(containerId, initial, onSelect) {
     btn.style.background = catHex(key);
     btn.style.color = textOn(catHex(key));
     btn.dataset.key = key;
-    btn.textContent = c.name;
+    btn.innerHTML = `<span class="cb-ic">${catIcon(key)}</span>${escapeHtml(c.name)}`;
     if (key === initial) btn.classList.add("selected");
     btn.addEventListener("click", () => {
       container.querySelectorAll(".color-btn").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
-      if (onSelect) onSelect(key);
     });
     container.appendChild(btn);
   });
@@ -581,25 +552,26 @@ function getPickerValue(containerId) {
 }
 
 /* ---------- Duplikátum ---------- */
-function isDuplicate(name, amount, color, month, ignoreIndex) {
+function isDuplicate(name, amount, color, month, type, ignoreIndex) {
   const n = name.trim().toLowerCase();
   return expenseItems.some((it, i) => {
     if (i === ignoreIndex) return false;
     return it.name.trim().toLowerCase() === n && Number(it.amount) === Number(amount) &&
-           it.color === color && (it.month || "") === (month || "");
+           it.color === color && (it.month || "") === (month || "") && (it.type || "expense") === type;
   });
 }
 
-/* ---------- Kézi bevitel ---------- */
-function addExpense(name, amount, color, month) {
+/* ---------- Bevitel ---------- */
+function addEntry(name, amount, color, month, type) {
   name = (name || "").trim();
   amount = Number(amount);
   month = month || currentMonth();
+  type = type === "income" ? "income" : "expense";
   if (!name) return { ok: false, reason: "A tétel neve kötelező." };
   if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
   if (!color) return { ok: false, reason: "Válassz kategóriát." };
-  if (isDuplicate(name, amount, color, month)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
-  expenseItems.push({ name, amount, color, month });
+  if (isDuplicate(name, amount, color, month, type)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
+  expenseItems.push({ name, amount, color, month, type });
   saveItems();
   return { ok: true };
 }
@@ -607,37 +579,33 @@ function addExpense(name, amount, color, month) {
 function submitManual() {
   const nameEl = document.getElementById("mName");
   const amountEl = document.getElementById("mAmount");
-  const monthEl = document.getElementById("mMonth");
-  const name = nameEl.value;
-  const amount = amountEl.value;
-  const month = monthEl.value || currentMonth();
+  const month = document.getElementById("mMonth").value || currentMonth();
+  const type = getTypeToggle("typeToggle");
   const color = getPickerValue("manualColors");
-  const res = addExpense(name, amount, color, month);
+  const res = addEntry(nameEl.value, amountEl.value, color, month, type);
   if (res.ok) {
-    showMsg("manualMsg", `✅ Hozzáadva: ${name.trim()} – ${formatFt(amount)} · ${monthLabelShort(month)}`, "success");
+    const t = type === "income" ? "Bevétel" : "Kiadás";
+    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${monthLabelShort(month)}`, "success");
     nameEl.value = ""; amountEl.value = ""; nameEl.focus();
-    // a hónap és a kategória megmarad a következő tételhez
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
   }
 }
 document.getElementById("btnAddManual").addEventListener("click", submitManual);
-document.getElementById("mName").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); }
-});
-document.getElementById("mAmount").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); submitManual(); }
-});
+document.getElementById("mName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); } });
+document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitManual(); } });
 
 /* ---------- Lista / összesítés ---------- */
 function renderList() {
   const summaryArea = document.getElementById("summaryArea");
   const listArea = document.getElementById("expenseListArea");
   const toolbar = document.getElementById("listToolbar");
+  const controls = document.getElementById("listControls");
   const filterSel = document.getElementById("monthFilter");
 
   if (expenseItems.length === 0) {
     toolbar.style.display = "none";
+    controls.style.display = "none";
     summaryArea.innerHTML = "";
     listArea.innerHTML = '<div class="empty"><span class="big">📭</span>Még nincs egyetlen tétel sem.<br>Vidd fel az elsőt a Bevitel fülön!</div>';
     document.getElementById("btnClearAll").style.display = "none";
@@ -645,26 +613,21 @@ function renderList() {
     return;
   }
 
-  // elérhető hónapok + az aktuális hónap mindig legyen opció (csökkenő sorrend)
   const itemMonths = [...new Set(expenseItems.map(it => it.month).filter(Boolean))];
   const months = [...new Set([currentMonth(), ...itemMonths])].sort().reverse();
-
-  // alapból mindig az aktuális hónap
   if (selectedMonth === null) selectedMonth = currentMonth();
   if (selectedMonth !== "all" && !months.includes(selectedMonth)) selectedMonth = currentMonth();
 
-  // szűrő legördülő feltöltése
   toolbar.style.display = "flex";
   let opts = `<option value="all">Összes hónap</option>`;
   months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabel(m)}</option>`; });
   filterSel.innerHTML = opts;
   filterSel.value = selectedMonth;
 
-  // szűrt nézet
-  const view = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => (it.month || "") === selectedMonth);
+  const monthView = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => (it.month || "") === selectedMonth);
 
-  // üres hónap (nincs tétel a kiválasztott hónapban)
-  if (view.length === 0) {
+  if (monthView.length === 0) {
+    controls.style.display = "none";
     summaryArea.innerHTML = `<div class="empty"><span class="big">🗓️</span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Vidd fel a Bevitel fülön, vagy válts hónapot fent.</div>`;
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -672,87 +635,117 @@ function renderList() {
     return;
   }
 
+  /* összegek */
+  let income = 0, expense = 0;
   const totals = {};
-  let grand = 0;
-  view.forEach(it => {
+  monthView.forEach(it => {
+    const amt = Number(it.amount);
+    if ((it.type || "expense") === "income") { income += amt; return; }
+    expense += amt;
     if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
-    totals[it.color].sum += Number(it.amount);
+    totals[it.color].sum += amt;
     totals[it.color].count++;
-    grand += Number(it.amount);
   });
+  const balance = income - expense;
 
-  // körgyűrű (conic-gradient) + legnagyobb kategória a közepén
-  const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count }));
-  entries.sort((a, b) => b.sum - a.sum);
+  /* körgyűrű (csak kiadás) */
+  const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count })).sort((a, b) => b.sum - a.sum);
+  let donutHtml = "";
+  if (expense > 0 && entries.length) {
+    let acc = 0;
+    const stops = entries.map(e => { const s = acc / expense * 100; acc += e.sum; return `${catHex(e.key)} ${s}% ${acc / expense * 100}%`; }).join(", ");
+    const top = entries[0];
+    donutHtml = `<div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(top.sum / expense * 100)}%</b><span>${escapeHtml(catName(top.key))}</span></div></div>`;
+  }
 
-  let acc = 0;
-  const stops = entries.map(e => {
-    const start = (acc / grand) * 100;
-    acc += e.sum;
-    const end = (acc / grand) * 100;
-    return `${catHex(e.key)} ${start}% ${end}%`;
-  }).join(", ");
-
-  const top = entries[0];
-  const topPct = Math.round((top.sum / grand) * 100);
+  /* havi összehasonlítás (kiadás vs előző hónap) */
+  let cmpHtml = "";
+  if (selectedMonth !== "all") {
+    const pm = prevMonthOf(selectedMonth);
+    const prevExpense = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income").reduce((s, it) => s + Number(it.amount), 0);
+    if (prevExpense > 0) {
+      const pct = Math.round((expense - prevExpense) / prevExpense * 100);
+      const cls = pct > 0 ? "cmp-up" : (pct < 0 ? "cmp-down" : "cmp-flat");
+      const arrow = pct > 0 ? "▲" : (pct < 0 ? "▼" : "＝");
+      cmpHtml = `<div class="hero-compare ${cls}">${arrow} ${Math.abs(pct)}% kiadás az előző hónaphoz képest</div>`;
+    } else {
+      cmpHtml = `<div class="hero-compare cmp-flat">Nincs előző havi adat az összehasonlításhoz</div>`;
+    }
+  }
 
   let bd = "";
   entries.forEach(e => {
-    bd += `
-      <div class="bd-row">
-        <span class="bd-dot" style="background:${catHex(e.key)}"></span>
-        <span class="bd-name">${escapeHtml(catName(e.key))}</span>
-        <span class="bd-count">${e.count} db</span>
-        <span class="bd-amount">${formatFt(e.sum)}</span>
-      </div>`;
+    bd += `<div class="bd-row"><span class="bd-dot" style="background:${catHex(e.key)}"></span><span class="bd-name">${escapeHtml(catName(e.key))}</span><span class="bd-count">${e.count} db</span><span class="bd-amount">${formatFt(e.sum)}</span></div>`;
   });
+  if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
   summaryArea.innerHTML = `
     <div class="card">
       <div class="hero-top">
         <div>
-          <div class="hero-label">${selectedMonth === "all" ? "Összes kiadás" : monthLabel(selectedMonth) + " – kiadás"}</div>
-          <div class="hero-total">${formatFt(grand)}</div>
-          <div class="hero-sub">${view.length} tétel · ${entries.length} kategória</div>
-        </div>
-        <div class="donut" style="background:conic-gradient(${stops})">
-          <div class="donut-center">
-            <b>${topPct}%</b>
-            <span>${escapeHtml(catName(top.key))}</span>
+          <div class="hero-label">${selectedMonth === "all" ? "Összesített egyenleg" : monthLabel(selectedMonth) + " · egyenleg"}</div>
+          <div class="hero-total ${balance < 0 ? "neg" : ""}">${formatFt(balance)}</div>
+          <div class="hero-flows">
+            <span class="flow-in">▲ Bevétel ${formatFt(income)}</span>
+            <span class="flow-out">▼ Kiadás ${formatFt(expense)}</span>
           </div>
+          ${cmpHtml}
         </div>
+        ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
     </div>`;
 
-  let lHtml = "";
-  for (let i = expenseItems.length - 1; i >= 0; i--) {
-    const it = expenseItems[i];
-    if (selectedMonth !== "all" && (it.month || "") !== selectedMonth) continue;
-    lHtml += `
-      <div class="exp-item">
-        <div class="exp-icon" style="background:${catHex(it.color)}">${catIcon(it.color)}</div>
-        <div class="exp-info">
-          <div class="exp-name">${escapeHtml(it.name)}</div>
-          <div class="exp-cat">${escapeHtml(catName(it.color))} · ${monthLabelShort(it.month)}</div>
-        </div>
-        <div class="exp-right">
-          <span class="exp-amount">${formatFt(it.amount)}</span>
-          <div class="exp-actions">
-            <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés">✏️</button>
-            <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
-          </div>
-        </div>
-      </div>`;
-  }
-  listArea.innerHTML = lHtml;
+  /* tétel-lista: hónap + keresés + rendezés */
+  controls.style.display = "flex";
+  let rows = expenseItems.map((it, i) => ({ it, i }))
+    .filter(x => selectedMonth === "all" || (x.it.month || "") === selectedMonth)
+    .filter(x => !searchQuery || x.it.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  listArea.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openEdit(Number(b.dataset.edit))));
-  listArea.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => deleteExpense(Number(b.dataset.del))));
+  rows.sort((a, b) => {
+    if (sortMode === "amount-desc") return Number(b.it.amount) - Number(a.it.amount);
+    if (sortMode === "amount-asc") return Number(a.it.amount) - Number(b.it.amount);
+    if (sortMode === "name-asc") return a.it.name.localeCompare(b.it.name, "hu");
+    // date-desc: hónap szerint csökkenő, majd beviteli sorrend szerint csökkenő
+    const m = (b.it.month || "").localeCompare(a.it.month || "");
+    return m !== 0 ? m : b.i - a.i;
+  });
+
+  if (rows.length === 0) {
+    listArea.innerHTML = `<div class="empty"><span class="big">🔍</span>Nincs találat a keresésre.</div>`;
+  } else {
+    let lHtml = "";
+    rows.forEach(({ it, i }) => {
+      const isIncome = (it.type || "expense") === "income";
+      const sign = isIncome ? "+" : "−";
+      lHtml += `
+        <div class="exp-item">
+          <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? "💰" : catIcon(it.color)}</div>
+          <div class="exp-info">
+            <div class="exp-name">${escapeHtml(it.name)}</div>
+            <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color))} · ${monthLabelShort(it.month)}</div>
+          </div>
+          <div class="exp-right">
+            <span class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</span>
+            <div class="exp-actions">
+              <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés">✏️</button>
+              <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    });
+    listArea.innerHTML = lHtml;
+    listArea.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openEdit(Number(b.dataset.edit))));
+    listArea.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => deleteExpense(Number(b.dataset.del))));
+  }
 
   document.getElementById("btnClearAll").style.display = "block";
   document.getElementById("clearDivider").style.display = "block";
 }
+
+document.getElementById("searchInput").addEventListener("input", (e) => { searchQuery = e.target.value; renderList(); });
+document.getElementById("sortSelect").addEventListener("change", (e) => { sortMode = e.target.value; renderList(); });
+document.getElementById("monthFilter").addEventListener("change", (e) => { selectedMonth = e.target.value; renderList(); });
 
 function deleteExpense(i) {
   const it = expenseItems[i];
@@ -764,14 +757,14 @@ function deleteExpense(i) {
   }
 }
 document.getElementById("btnClearAll").addEventListener("click", () => {
-  if (confirm("⚠️ Biztosan törlöd az ÖSSZES tételt?\n\nEz a művelet nem vonható vissza!")) {
+  if (confirm("⚠️ Biztosan törlöd az ÖSSZES tételt?\n\nEz nem vonható vissza! (Előtte készíts mentést a Kategóriák fülön.)")) {
     expenseItems = [];
     saveItems();
     renderList();
   }
 });
 
-/* ---------- Szerkesztés modal ---------- */
+/* ---------- Tétel szerkesztés ---------- */
 function openEdit(i) {
   const it = expenseItems[i];
   if (!it) return;
@@ -779,6 +772,7 @@ function openEdit(i) {
   document.getElementById("editName").value = it.name;
   document.getElementById("editAmount").value = it.amount;
   document.getElementById("editMonth").value = it.month || currentMonth();
+  setTypeToggle("editTypeToggle", it.type || "expense");
   buildColorPicker("editColors", it.color);
   document.getElementById("editModal").classList.add("show");
 }
@@ -790,16 +784,18 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   const name = document.getElementById("editName").value.trim();
   const amount = Number(document.getElementById("editAmount").value);
   const month = document.getElementById("editMonth").value || currentMonth();
+  const type = getTypeToggle("editTypeToggle");
   const color = getPickerValue("editColors");
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (!color) { alert("Válassz kategóriát."); return; }
-  if (isDuplicate(name, amount, color, month, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
-  expenseItems[editIndex] = { name, amount, color, month };
+  if (isDuplicate(name, amount, color, month, type, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
+  expenseItems[editIndex] = { name, amount, color, month, type };
   saveItems();
   closeEdit();
   renderList();
 });
+wireTypeToggle("editTypeToggle");
 
 /* ---------- Kategóriák ---------- */
 function renderCategories() {
@@ -813,43 +809,43 @@ function renderCategories() {
       <div class="cat-item">
         <div class="cat-icon" style="background:${catHex(key)}">${catIcon(key)}</div>
         <div class="cat-name">${escapeHtml(c.name)}</div>
-        ${isCustom
-          ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>`
-          : `<span class="cat-badge">alap</span>`}
+        <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés">✏️</button>
+        ${isCustom ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>` : `<span class="cat-badge">alap</span>`}
       </div>`;
   });
   area.innerHTML = html;
+  area.querySelectorAll("[data-editcat]").forEach(b => b.addEventListener("click", () => openCatEdit(b.dataset.editcat)));
   area.querySelectorAll("[data-delcat]").forEach(b => b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
 
-  // ikonválasztó feltöltése (összecsukható)
-  const iconBox = document.getElementById("newCatIcons");
-  const iconPreview = document.getElementById("iconPreview");
-  iconBox.innerHTML = "";
-  ICON_CHOICES.forEach((ic, idx) => {
+  /* ikonválasztó (új kategória) */
+  buildIconPicker("newCatIcons", ICON_CHOICES[0], "iconPreview", "iconCollapse");
+  const preview = document.getElementById("iconPreview");
+  if (preview) preview.textContent = ICON_CHOICES[0];
+}
+
+function buildIconPicker(boxId, selectedIcon, previewId, collapseId) {
+  const box = document.getElementById(boxId);
+  box.innerHTML = "";
+  ICON_CHOICES.forEach(ic => {
     const b = document.createElement("div");
     b.className = "icon-choice";
     b.textContent = ic;
     b.dataset.icon = ic;
-    if (idx === 0) b.classList.add("selected");
+    if (ic === selectedIcon) b.classList.add("selected");
     b.addEventListener("click", () => {
-      iconBox.querySelectorAll(".icon-choice").forEach(x => x.classList.remove("selected"));
+      box.querySelectorAll(".icon-choice").forEach(x => x.classList.remove("selected"));
       b.classList.add("selected");
-      iconPreview.textContent = ic;                 // előnézet frissítése
-      document.getElementById("iconCollapse").open = false; // választás után összecsuk
+      if (previewId) document.getElementById(previewId).textContent = ic;
+      if (collapseId) document.getElementById(collapseId).open = false;
     });
-    iconBox.appendChild(b);
+    box.appendChild(b);
   });
-  if (iconPreview) iconPreview.textContent = ICON_CHOICES[0];
 }
-
-// Az új kategória színe az egyéni színválasztóból
-function getNewCatColor() {
-  return document.getElementById("newCatCustom").value;
-}
-function getNewCatIcon() {
-  const sel = document.querySelector("#newCatIcons .icon-choice.selected");
+function getIconPickerValue(boxId) {
+  const sel = document.querySelector("#" + boxId + " .icon-choice.selected");
   return sel ? sel.dataset.icon : ICON_CHOICES[0];
 }
+function getNewCatColor() { return document.getElementById("newCatCustom").value; }
 
 function deleteCategory(key) {
   const c = customCategories[key];
@@ -870,12 +866,12 @@ function deleteCategory(key) {
 document.getElementById("btnAddCat").addEventListener("click", () => {
   const name = document.getElementById("newCatName").value.trim();
   const color = getNewCatColor();
+  const icon = getIconPickerValue("newCatIcons");
   if (!name) { showMsg("catMsg", "⚠️ Add meg a kategória nevét.", "error"); return; }
-  if (!color) { showMsg("catMsg", "⚠️ Válassz színt.", "error"); return; }
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
   if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
   const key = "custom_" + Date.now();
-  customCategories[key] = { name, color, icon: getNewCatIcon() };
+  customCategories[key] = { name, color, icon };
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
@@ -883,23 +879,126 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   showMsg("catMsg", "✅ Kategória létrehozva!", "success");
 });
 
+/* ---------- Kategória szerkesztés ---------- */
+function openCatEdit(key) {
+  const cats = allCategories();
+  const c = cats[key];
+  if (!c) return;
+  catEditKey = key;
+  document.getElementById("catEditName").value = c.name;
+  document.getElementById("catEditColor").value = catHex(key);
+  buildIconPicker("catEditIcons", c.icon || "💸", "catEditIconPreview", "catEditIconCollapse");
+  document.getElementById("catEditIconPreview").textContent = c.icon || "💸";
+  document.getElementById("catEditIconCollapse").open = false;
+  document.getElementById("catEditModal").classList.add("show");
+}
+function closeCatEdit() { document.getElementById("catEditModal").classList.remove("show"); catEditKey = null; }
+document.getElementById("btnCatCancel").addEventListener("click", closeCatEdit);
+document.getElementById("catEditModal").addEventListener("click", (e) => { if (e.target.id === "catEditModal") closeCatEdit(); });
+document.getElementById("btnCatSave").addEventListener("click", () => {
+  if (!catEditKey) return;
+  const name = document.getElementById("catEditName").value.trim();
+  const color = document.getElementById("catEditColor").value;
+  const icon = getIconPickerValue("catEditIcons");
+  if (!name) { alert("A kategória neve kötelező."); return; }
+  const dupe = Object.entries(allCategories()).some(([k, c]) => k !== catEditKey && c.name.trim().toLowerCase() === name.toLowerCase());
+  if (dupe) { alert("Ilyen nevű kategória már létezik."); return; }
+  // alap és egyedi kategória is felülírható a customCategories-ben
+  customCategories[catEditKey] = { name, color, icon };
+  saveCategories();
+  closeCatEdit();
+  renderCategories();
+  buildColorPicker("manualColors", getPickerValue("manualColors") || "green");
+  showMsg("catMsg", "✅ Kategória frissítve!", "success");
+});
+
+/* ---------- Export / Import ---------- */
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function exportJSON() {
+  const data = JSON.stringify({ app: "penzugyi-naplo", version: 2, exportedAt: new Date().toISOString(), expenseItems, customCategories }, null, 2);
+  downloadFile("penzugyi-naplo-mentes.json", data, "application/json");
+  showMsg("catMsg", "✅ JSON mentés letöltve.", "success");
+}
+function csvCell(v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function exportCSV() {
+  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Hónap"]];
+  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), catName(it.color), it.month || ""]));
+  const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
+  downloadFile("penzugyi-naplo.csv", "﻿" + csv, "text/csv;charset=utf-8");
+  showMsg("catMsg", "✅ CSV (Excel) letöltve.", "success");
+}
+document.getElementById("btnExportJSON").addEventListener("click", exportJSON);
+document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
+document.getElementById("btnImport").addEventListener("click", () => document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data || !Array.isArray(data.expenseItems)) throw new Error("Érvénytelen fájl.");
+      if (!confirm(`Visszaállítás: ${data.expenseItems.length} tétel és ${Object.keys(data.customCategories || {}).length} egyedi kategória.\n\nEz FELÜLÍRJA a jelenlegi adatokat. Folytatod?`)) return;
+      expenseItems = data.expenseItems;
+      customCategories = data.customCategories || {};
+      saveItems(); saveCategories();
+      selectedMonth = currentMonth();
+      buildColorPicker("manualColors", "green");
+      renderCategories();
+      renderList();
+      showMsg("catMsg", "✅ Adatok visszaállítva!", "success");
+    } catch (err) {
+      showMsg("catMsg", "⚠️ Hibás fájl: " + err.message, "error");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
 /* ---------- Segéd ---------- */
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
+/* ---------- PWA manifest (inline) ---------- */
+function setupPWA() {
+  const svg = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#14432f"/><text x="256" y="352" font-size="280" text-anchor="middle">💰</text></svg>`
+  );
+  const manifest = {
+    name: "Pénzügyi Napló", short_name: "Napló", description: "Bevétel- és kiadáskövető napló",
+    start_url: ".", scope: ".", display: "standalone",
+    background_color: "#0d3325", theme_color: "#14432f",
+    icons: [{ src: svg, sizes: "any", type: "image/svg+xml", purpose: "any" }]
+  };
+  const murl = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(manifest));
+  const ml = document.getElementById("manifestLink"); if (ml) ml.href = murl;
+  const ai = document.getElementById("appleIcon"); if (ai) ai.href = svg;
+}
+
 /* ---------- Indítás ---------- */
 function init() {
   loadData();
+  let theme = "light";
+  try { theme = localStorage.getItem("theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); } catch {}
+  applyTheme(theme);
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  setupPWA();
   document.getElementById("mMonth").value = currentMonth();
+  wireTypeToggle("typeToggle", (t) => { entryType = t; });
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
-  // Hónap-szűrő váltás
-  document.getElementById("monthFilter").addEventListener("change", (e) => {
-    selectedMonth = e.target.value;
-    renderList();
-  });
   document.getElementById("mName").focus();
 }
 init();
