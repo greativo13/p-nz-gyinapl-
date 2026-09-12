@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pénzügyi Napló</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -14,7 +13,6 @@
     --purple-light: #ede9fe;
     --gray-btn: #6b7280;
     --danger: #ef4444;
-    --danger-dark: #dc2626;
     --green: #22c55e;
     --blue: #3b82f6;
     --yellow: #eab308;
@@ -69,11 +67,8 @@
     position: relative;
     color: #999;
   }
-  .tab .lbl { display: block; font-size: 10px; margin-top: 2px; font-weight: 600; }
-  .tab.active {
-    color: var(--purple);
-    background: #fff;
-  }
+  .tab .lbl { display: block; font-size: 11px; margin-top: 2px; font-weight: 600; }
+  .tab.active { color: var(--purple); background: #fff; }
   .tab.active::after {
     content: "";
     position: absolute;
@@ -115,7 +110,6 @@
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .btn-row { display: flex; gap: 10px; }
-  .btn-row .btn { margin-bottom: 10px; }
 
   /* Inputs */
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4b5563; }
@@ -169,51 +163,6 @@
   .msg.success { background: #dcfce7; color: #15803d; }
   .msg.error { background: #fee2e2; color: #b91c1c; }
   .msg.info { background: var(--purple-light); color: var(--purple-dark); }
-
-  /* Camera / preview */
-  #cameraStream, #previewImg {
-    width: 100%;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    display: none;
-    background: #000;
-  }
-  #captureCanvas { display: none; }
-
-  /* Progress */
-  .progress-wrap { display: none; margin-bottom: 14px; }
-  .progress-bar { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
-  .progress-fill { height: 100%; width: 0%; background: var(--purple); transition: width 0.3s; }
-  .progress-label { font-size: 12px; color: #6b7280; margin-top: 6px; text-align: center; }
-
-  /* Detected items */
-  .detected-item {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
-    background: #fafafa;
-  }
-  .detected-item.dup { opacity: 0.5; }
-  .detected-item .di-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .detected-item input { margin-bottom: 0; }
-  .detected-item .di-name { flex: 2; }
-  .detected-item .di-amount { flex: 1; }
-  .detected-item select {
-    width: 100%;
-    padding: 10px;
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-    background: #fff;
-    color: var(--text);
-  }
-  .di-dup-badge { font-size: 11px; color: var(--danger); font-weight: 700; }
-  .di-controls { display:flex; gap:8px; align-items:center; }
-  .di-remove {
-    background: var(--danger); color:#fff; border:none; border-radius:8px;
-    width: 38px; height: 38px; font-size: 16px; cursor:pointer; flex-shrink:0;
-  }
 
   /* Summary cards */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
@@ -304,30 +253,6 @@
   .modal h3 { font-size: 17px; margin-bottom: 16px; }
 
   .hint { font-size: 12px; color: #9ca3af; margin-top: -8px; margin-bottom: 14px; }
-  .hint a { color: var(--purple); }
-
-  /* OCR beállítás (details) */
-  .ocr-settings {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 14px;
-    background: #faf9fe;
-  }
-  .ocr-settings summary {
-    cursor: pointer;
-    padding: 12px 14px;
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--purple-dark);
-    list-style: none;
-    user-select: none;
-  }
-  .ocr-settings summary::-webkit-details-marker { display: none; }
-  .ocr-settings summary::after { content: " ▾"; float: right; }
-  .ocr-settings[open] summary::after { content: " ▴"; }
-  .ocr-settings-body { padding: 0 14px 8px; }
-  .ocr-settings-body .hint { margin-top: 0; }
-  #ocrEngineInfo { font-weight: 600; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -338,69 +263,20 @@
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-panel="camera">📷<span class="lbl">Kamera</span></button>
-    <button class="tab" data-panel="manual">✍️<span class="lbl">Kézi</span></button>
+    <button class="tab active" data-panel="manual">✍️<span class="lbl">Bevitel</span></button>
     <button class="tab" data-panel="list">📊<span class="lbl">Lista</span></button>
     <button class="tab" data-panel="categories">⚙️<span class="lbl">Kategóriák</span></button>
   </nav>
 
   <div class="content">
 
-    <!-- ============ CAMERA PANEL ============ -->
-    <section class="panel active" id="panel-camera">
-      <h2>📷 Kép beolvasása</h2>
-      <div class="msg info show">Fotózd le vagy tölts fel egy oldalt a naplóból. A szöveget és a színeket automatikusan felismerem.</div>
-
-      <details class="ocr-settings" id="ocrSettings">
-        <summary>🔑 OCR beállítás (kézírás olvasáshoz)</summary>
-        <div class="ocr-settings-body">
-          <p class="hint" style="margin-top:10px;">
-            Kézírás olvasásához add meg a <b>Google Cloud Vision</b> API-kulcsodat.
-            A kulcs csak a saját böngésződben tárolódik (localStorage), sehova nem küldjük tovább.
-            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Kulcs létrehozása ↗</a>
-          </p>
-          <label for="gvKey">Google Vision API kulcs</label>
-          <input type="password" id="gvKey" placeholder="AIza..." autocomplete="off">
-          <div class="btn-row">
-            <button class="btn" id="btnSaveKey">💾 Mentés</button>
-            <button class="btn secondary" id="btnClearKey">🗑️ Törlés</button>
-          </div>
-          <div class="hint" id="ocrEngineInfo"></div>
-        </div>
-      </details>
-
-      <div class="btn-row">
-        <button class="btn" id="btnCamera">📸 Fotózás</button>
-        <button class="btn secondary" id="btnUpload">🖼️ Kép feltöltés</button>
-      </div>
-      <input type="file" id="fileInput" accept="image/*" style="display:none">
-      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
-
-      <video id="cameraStream" playsinline autoplay muted></video>
-      <button class="btn" id="btnSnap" style="display:none">✅ Kép készítése</button>
-      <button class="btn secondary" id="btnCancelCam" style="display:none">✖️ Mégse</button>
-
-      <img id="previewImg" alt="Előnézet">
-      <canvas id="captureCanvas"></canvas>
-
-      <div class="progress-wrap" id="ocrProgress">
-        <div class="progress-bar"><div class="progress-fill" id="ocrFill"></div></div>
-        <div class="progress-label" id="ocrLabel">Feldolgozás...</div>
-      </div>
-
-      <div class="msg" id="cameraMsg"></div>
-
-      <div id="detectedList"></div>
-      <button class="btn" id="btnAddDetected" style="display:none">➕ Kijelölt tételek hozzáadása</button>
-    </section>
-
     <!-- ============ MANUAL PANEL ============ -->
-    <section class="panel" id="panel-manual">
-      <h2>✍️ Kézi bevitel</h2>
+    <section class="panel active" id="panel-manual">
+      <h2>✍️ Új tétel</h2>
       <div class="msg" id="manualMsg"></div>
 
       <label for="mName">Tétel neve</label>
-      <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér...">
+      <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér..." autocomplete="off">
 
       <label for="mAmount">Összeg (Ft)</label>
       <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
@@ -409,6 +285,7 @@
       <div class="color-picker" id="manualColors"></div>
 
       <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
+      <p class="hint" style="margin-top:2px; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A kategória megmarad a következő tételhez.</p>
     </section>
 
     <!-- ============ LIST PANEL ============ -->
@@ -430,7 +307,7 @@
       <hr class="divider">
       <h2>➕ Új kategória</h2>
       <label for="newCatName">Kategória neve</label>
-      <input type="text" id="newCatName" placeholder="pl. Sport, Utazás...">
+      <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
       <label>Szín</label>
       <div class="color-picker" id="newCatColors"></div>
       <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
@@ -444,7 +321,7 @@
   <div class="modal">
     <h3>✏️ Tétel szerkesztése</h3>
     <label for="editName">Tétel neve</label>
-    <input type="text" id="editName">
+    <input type="text" id="editName" autocomplete="off">
     <label for="editAmount">Összeg (Ft)</label>
     <input type="number" id="editAmount" inputmode="numeric">
     <label>Kategória</label>
@@ -458,7 +335,7 @@
 
 <script>
 /* =========================================================
-   PÉNZÜGYI NAPLÓ - Egyoldalas alkalmazás
+   PÉNZÜGYI NAPLÓ - Kézi bevitelre optimalizált változat
    ========================================================= */
 
 // ---------- Alapkategóriák ----------
@@ -471,23 +348,17 @@ const DEFAULT_CATEGORIES = {
 };
 
 const COLOR_HEX = {
-  green:  "#22c55e",
-  blue:   "#3b82f6",
-  yellow: "#eab308",
-  pink:   "#ec4899",
-  gray:   "#9ca3af"
+  green: "#22c55e", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#9ca3af"
 };
-
 const COLOR_LABELS = {
   green: "🟢 Zöld", blue: "🔵 Kék", yellow: "🟡 Sárga", pink: "🔴 Rózsaszín", gray: "⚫ Szürke"
 };
-const BASE_COLORS = ["green","blue","yellow","pink","gray"];
+const BASE_COLORS = ["green", "blue", "yellow", "pink", "gray"];
 
 // ---------- Állapot ----------
 let expenseItems = [];
 let customCategories = {};
 let editIndex = null;
-let cameraStreamObj = null;
 
 // ---------- LocalStorage ----------
 function loadData() {
@@ -509,17 +380,15 @@ function saveCategories() {
 
 // ---------- Kategória segédek ----------
 function allCategories() {
-  // egyesített: alap + egyedi
   return Object.assign({}, DEFAULT_CATEGORIES, customCategories);
 }
-function catName(colorOrKey) {
+function catName(key) {
   const cats = allCategories();
-  if (cats[colorOrKey]) return cats[colorOrKey].name;
-  return colorOrKey;
+  return cats[key] ? cats[key].name : key;
 }
-function catHex(colorKey) {
+function catHex(key) {
   const cats = allCategories();
-  const c = cats[colorKey] ? cats[colorKey].color : colorKey;
+  const c = cats[key] ? cats[key].color : key;
   return COLOR_HEX[c] || "#9ca3af";
 }
 function formatFt(n) {
@@ -533,7 +402,7 @@ function showMsg(id, text, type) {
   el.className = "msg show " + type;
   clearTimeout(el._t);
   if (type !== "info") {
-    el._t = setTimeout(() => { el.className = "msg " + type; }, 3500);
+    el._t = setTimeout(() => { el.className = "msg " + type; }, 3000);
   }
 }
 
@@ -546,7 +415,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById("panel-" + tab.dataset.panel).classList.add("active");
     if (tab.dataset.panel === "list") renderList();
     if (tab.dataset.panel === "categories") renderCategories();
-    if (tab.dataset.panel === "camera") stopCamera();
+    if (tab.dataset.panel === "manual") document.getElementById("mName").focus();
   });
 });
 
@@ -557,7 +426,6 @@ function buildColorPicker(containerId, initial, onSelect) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
   const cats = allCategories();
-  // csoportosítás: minden létező kategóriát felkínálunk gombként (kulcs szerint)
   Object.keys(cats).forEach(key => {
     const c = cats[key];
     const btn = document.createElement("div");
@@ -592,7 +460,7 @@ function isDuplicate(name, amount, color, ignoreIndex) {
 }
 
 /* =========================================================
-   KÉZI BEVITEL
+   KÉZI BEVITEL (gyorsított)
    ========================================================= */
 function addExpense(name, amount, color) {
   name = (name || "").trim();
@@ -606,18 +474,31 @@ function addExpense(name, amount, color) {
   return { ok: true };
 }
 
-document.getElementById("btnAddManual").addEventListener("click", () => {
-  const name = document.getElementById("mName").value;
-  const amount = document.getElementById("mAmount").value;
-  const color = getPickerValue("manualColors");
+function submitManual() {
+  const nameEl = document.getElementById("mName");
+  const amountEl = document.getElementById("mAmount");
+  const name = nameEl.value;
+  const amount = amountEl.value;
+  const color = getPickerValue("manualColors"); // kategória megmarad a következő tételhez
   const res = addExpense(name, amount, color);
   if (res.ok) {
-    showMsg("manualMsg", "✅ Tétel hozzáadva!", "success");
-    document.getElementById("mName").value = "";
-    document.getElementById("mAmount").value = "";
+    showMsg("manualMsg", `✅ Hozzáadva: ${name.trim()} – ${formatFt(amount)}  (összesen ${expenseItems.length} tétel)`, "success");
+    nameEl.value = "";
+    amountEl.value = "";
+    nameEl.focus(); // gyors következő bevitel
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
   }
+}
+
+document.getElementById("btnAddManual").addEventListener("click", submitManual);
+
+// Enter a névmezőben → ugrás az összeghez; Enter az összegnél → hozzáadás
+document.getElementById("mName").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); }
+});
+document.getElementById("mAmount").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); submitManual(); }
 });
 
 /* =========================================================
@@ -629,13 +510,12 @@ function renderList() {
 
   if (expenseItems.length === 0) {
     summaryArea.innerHTML = "";
-    listArea.innerHTML = '<div class="empty"><span class="big">📭</span>Még nincs egyetlen tétel sem.<br>Adj hozzá kézzel vagy fotóval!</div>';
+    listArea.innerHTML = '<div class="empty"><span class="big">📭</span>Még nincs egyetlen tétel sem.<br>Vidd fel az elsőt a Bevitel fülön!</div>';
     document.getElementById("btnClearAll").style.display = "none";
     document.getElementById("clearDivider").style.display = "none";
     return;
   }
 
-  // Összesítés kategóriánként
   const totals = {};
   let grand = 0;
   expenseItems.forEach(it => {
@@ -663,9 +543,10 @@ function renderList() {
   sHtml += '</div>';
   summaryArea.innerHTML = sHtml;
 
-  // Tételek (legújabb elöl)
   let lHtml = "";
-  expenseItems.forEach((it, i) => {
+  // legújabb elöl
+  for (let i = expenseItems.length - 1; i >= 0; i--) {
+    const it = expenseItems[i];
     lHtml += `
       <div class="exp-item" style="border-left-color:${catHex(it.color)}">
         <div class="exp-info">
@@ -678,7 +559,7 @@ function renderList() {
           <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
         </div>
       </div>`;
-  });
+  }
   listArea.innerHTML = lHtml;
 
   listArea.querySelectorAll("[data-edit]").forEach(b =>
@@ -769,7 +650,6 @@ function renderCategories() {
   area.querySelectorAll("[data-delcat]").forEach(b =>
     b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
 
-  // Új kategória színválasztó (csak alapszínek)
   const container = document.getElementById("newCatColors");
   container.innerHTML = "";
   BASE_COLORS.forEach((color, idx) => {
@@ -800,6 +680,9 @@ function deleteCategory(key) {
       saveItems();
     }
     renderCategories();
+    // frissítsük a bevitel színválasztóját is (megtartva az érvényes kiválasztást)
+    const cur = getPickerValue("manualColors");
+    buildColorPicker("manualColors", allCategories()[cur] ? cur : "green");
   }
 }
 
@@ -809,7 +692,6 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   const color = sel ? sel.dataset.color : null;
   if (!name) { showMsg("catMsg", "⚠️ Add meg a kategória nevét.", "error"); return; }
   if (!color) { showMsg("catMsg", "⚠️ Válassz színt.", "error"); return; }
-  // duplikátum név ellenőrzés
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
   if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
 
@@ -818,436 +700,8 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
+  buildColorPicker("manualColors", getPickerValue("manualColors") || "green"); // új kategória megjelenik a bevitelnél is
   showMsg("catMsg", "✅ Kategória létrehozva!", "success");
-});
-
-/* =========================================================
-   KAMERA / KÉP FELTÖLTÉS
-   ========================================================= */
-const video = document.getElementById("cameraStream");
-const canvas = document.getElementById("captureCanvas");
-const previewImg = document.getElementById("previewImg");
-
-document.getElementById("btnUpload").addEventListener("click", () => {
-  document.getElementById("fileInput").click();
-});
-document.getElementById("fileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (file) handleImageFile(file);
-  e.target.value = "";
-});
-
-// Fotózás gomb – élő stream, ha lehet; egyébként fallback capture input
-document.getElementById("btnCamera").addEventListener("click", async () => {
-  stopCamera();
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    try {
-      cameraStreamObj = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } }, audio: false
-      });
-      video.srcObject = cameraStreamObj;
-      video.style.display = "block";
-      document.getElementById("btnSnap").style.display = "flex";
-      document.getElementById("btnCancelCam").style.display = "flex";
-      previewImg.style.display = "none";
-      return;
-    } catch (err) {
-      // engedély megtagadva vagy nem elérhető → fallback
-    }
-  }
-  // Fallback: natív kamera capture input
-  document.getElementById("cameraInput").click();
-});
-document.getElementById("cameraInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (file) handleImageFile(file);
-  e.target.value = "";
-});
-
-document.getElementById("btnSnap").addEventListener("click", () => {
-  if (!video.videoWidth) return;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-  stopCamera();
-  const dataUrl = canvas.toDataURL("image/png");
-  previewImg.src = dataUrl;
-  previewImg.style.display = "block";
-  processImage(canvas);
-});
-document.getElementById("btnCancelCam").addEventListener("click", stopCamera);
-
-function stopCamera() {
-  if (cameraStreamObj) {
-    cameraStreamObj.getTracks().forEach(t => t.stop());
-    cameraStreamObj = null;
-  }
-  video.style.display = "none";
-  video.srcObject = null;
-  document.getElementById("btnSnap").style.display = "none";
-  document.getElementById("btnCancelCam").style.display = "none";
-}
-
-function handleImageFile(file) {
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const img = new Image();
-    img.onload = () => {
-      previewImg.src = ev.target.result;
-      previewImg.style.display = "block";
-      // rajzoljuk canvasra a pixel-elemzéshez
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      processImage(canvas);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-/* =========================================================
-   OCR + SZÍN-DETEKTÁLÁS
-   Diszpécser: Google Vision (kézírás) ha van API kulcs,
-   különben Tesseract (nyomtatott szöveghez).
-   ========================================================= */
-let googleVisionKey = "";
-
-function loadKey() {
-  try { googleVisionKey = localStorage.getItem("googleVisionApiKey") || ""; } catch { googleVisionKey = ""; }
-}
-function updateEngineInfo() {
-  const el = document.getElementById("ocrEngineInfo");
-  if (!el) return;
-  if (googleVisionKey) {
-    el.innerHTML = "✅ <b>Google Vision</b> aktív – kézírás olvasása bekapcsolva.";
-    el.style.color = "#15803d";
-  } else {
-    el.innerHTML = "⚠️ Nincs kulcs – <b>Tesseract</b> fut (nyomtatott szöveghez; kézíráson gyenge).";
-    el.style.color = "#b45309";
-  }
-}
-
-async function processImage(sourceCanvas) {
-  const progressWrap = document.getElementById("ocrProgress");
-  const fill = document.getElementById("ocrFill");
-  const label = document.getElementById("ocrLabel");
-  const detectedList = document.getElementById("detectedList");
-  const btnAdd = document.getElementById("btnAddDetected");
-
-  detectedList.innerHTML = "";
-  btnAdd.style.display = "none";
-  document.getElementById("cameraMsg").className = "msg";
-  progressWrap.style.display = "block";
-  fill.style.width = "5%";
-
-  try {
-    let items;
-    if (googleVisionKey) {
-      label.textContent = "Google Vision olvasás (kézírás)...";
-      fill.style.width = "40%";
-      items = await googleVisionOCR(sourceCanvas);
-      fill.style.width = "100%";
-      label.textContent = "Elemzés...";
-    } else {
-      if (typeof Tesseract === "undefined") {
-        progressWrap.style.display = "none";
-        showMsg("cameraMsg", "⚠️ Az OCR könyvtár nem töltődött be. Ellenőrizd az internetkapcsolatot, vagy használd a Kézi bevitelt.", "error");
-        return;
-      }
-      label.textContent = "OCR indítása...";
-      items = await tesseractOCR(sourceCanvas, fill, label);
-    }
-
-    progressWrap.style.display = "none";
-    window.tempItems = items; // debug
-
-    if (!items || items.length === 0) {
-      const tip = googleVisionKey
-        ? "🔍 Nem sikerült tételeket felismerni. Próbáld közelebbről, jó fényben, egyenesen fotózva."
-        : "🔍 Nem sikerült tételeket felismerni. Kézíráshoz add meg a Google Vision kulcsot a fenti beállításokban, vagy használd a Kézi bevitelt.";
-      showMsg("cameraMsg", tip, "error");
-      return;
-    }
-
-    renderDetected(items);
-    const dupCount = items.filter(it => isDuplicate(it.name, it.amount, it.color)).length;
-    let infoTxt = `✅ ${items.length} tétel felismerve. Ellenőrizd és módosítsd, ha kell.`;
-    if (dupCount > 0) infoTxt += ` (${dupCount} már létezik, ezek kikapcsolva.)`;
-    showMsg("cameraMsg", infoTxt, "info");
-    btnAdd.style.display = "flex";
-
-  } catch (err) {
-    console.error(err);
-    progressWrap.style.display = "none";
-    showMsg("cameraMsg", "⚠️ Hiba a feldolgozás közben: " + err.message, "error");
-  }
-}
-
-/* ---------- Tesseract motor (nyomtatott szöveg) ---------- */
-async function tesseractOCR(sourceCanvas, fill, label) {
-  const { data } = await Tesseract.recognize(sourceCanvas, "hun+eng", {
-    logger: m => {
-      if (m.status === "recognizing text") {
-        const p = Math.round(m.progress * 90) + 10;
-        fill.style.width = p + "%";
-        label.textContent = "Szövegfelismerés... " + Math.round(m.progress * 100) + "%";
-      } else {
-        label.textContent = m.status + "...";
-      }
-    }
-  });
-  const lines = (data.lines || []).length
-    ? data.lines
-    : (data.text || "").split("\n").map(t => ({ text: t, bbox: null }));
-  return linesToItems(lines, sourceCanvas);
-}
-
-/* ---------- Google Cloud Vision motor (kézírás) ---------- */
-async function googleVisionOCR(sourceCanvas) {
-  // JPEG-re tömörítjük a payload csökkentéséhez
-  const dataUrl = sourceCanvas.toDataURL("image/jpeg", 0.92);
-  const base64 = dataUrl.split(",")[1];
-
-  const body = {
-    requests: [{
-      image: { content: base64 },
-      features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-      imageContext: { languageHints: ["hu", "en"] }
-    }]
-  };
-
-  const resp = await fetch(
-    "https://vision.googleapis.com/v1/images:annotate?key=" + encodeURIComponent(googleVisionKey),
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-  );
-  const json = await resp.json();
-
-  if (!resp.ok || json.error) {
-    const m = (json.error && json.error.message) || ("HTTP " + resp.status);
-    throw new Error("Google Vision: " + m);
-  }
-  const r = json.responses && json.responses[0];
-  if (!r || r.error) throw new Error("Google Vision: " + ((r && r.error && r.error.message) || "üres válasz"));
-  if (!r.fullTextAnnotation) return [];
-
-  const lines = visionAnnotationToLines(r.fullTextAnnotation);
-  return linesToItems(lines, sourceCanvas);
-}
-
-/* Vision fullTextAnnotation → sorok {text, bbox} */
-function visionAnnotationToLines(fta) {
-  const lines = [];
-  (fta.pages || []).forEach(page => {
-    (page.blocks || []).forEach(block => {
-      (block.paragraphs || []).forEach(par => {
-        let lineText = "";
-        let verts = [];
-        const flush = () => {
-          const t = lineText.trim();
-          if (t) lines.push({ text: t, bbox: vertsToBbox(verts) });
-          lineText = ""; verts = [];
-        };
-        (par.words || []).forEach(word => {
-          const wt = (word.symbols || []).map(s => s.text).join("");
-          lineText += wt + " ";
-          if (word.boundingBox && word.boundingBox.vertices) {
-            verts = verts.concat(word.boundingBox.vertices);
-          }
-          const syms = word.symbols || [];
-          const last = syms[syms.length - 1];
-          const brk = last && last.property && last.property.detectedBreak && last.property.detectedBreak.type;
-          if (brk === "LINE_BREAK" || brk === "EOL_SURE_SPACE") flush();
-        });
-        flush();
-      });
-    });
-  });
-  return lines;
-}
-
-function vertsToBbox(verts) {
-  if (!verts || !verts.length) return null;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  verts.forEach(v => {
-    const x = v.x || 0, y = v.y || 0;
-    if (x < x0) x0 = x; if (y < y0) y0 = y;
-    if (x > x1) x1 = x; if (y > y1) y1 = y;
-  });
-  return { x0, y0, x1, y1 };
-}
-
-/* Sorok → tételek (parse + szín-detektálás az eredeti színes képen) */
-function linesToItems(lines, sourceCanvas) {
-  const ctx = sourceCanvas.getContext("2d");
-  const items = [];
-  lines.forEach(line => {
-    const raw = (line.text || "").trim();
-    if (!raw) return;
-    const parsed = parseLine(raw);
-    if (!parsed) return;
-    let color = "gray";
-    if (line.bbox) {
-      color = detectColorInRegion(ctx, line.bbox, sourceCanvas.width, sourceCanvas.height);
-    }
-    items.push({ name: parsed.name, amount: parsed.amount, color });
-  });
-  return items;
-}
-
-/* Sor feldolgozása: név + összeg kinyerése */
-function parseLine(text) {
-  // számjegyek keresése (ezres tagolás pont/szóköz/vessző lehet)
-  // pl "Lakber 150 000 Ft", "Kaja rendeles 2.500", "Marketing: 5000"
-  const cleaned = text.replace(/\s+/g, " ").trim();
-  // keressünk minden szám-szerű blokkot
-  const numMatches = cleaned.match(/[\d][\d\s.,]*\d|\d/g);
-  if (!numMatches) return null;
-
-  // az utolsó (általában jobb oldali) szám az összeg
-  let amountStr = numMatches[numMatches.length - 1];
-  let amount = parseAmount(amountStr);
-  if (!amount || amount <= 0) return null;
-
-  // név: a szám előtti rész
-  let idx = cleaned.lastIndexOf(amountStr);
-  let name = cleaned.substring(0, idx).trim();
-  // vágjuk le a végén lévő elválasztókat
-  name = name.replace(/[:\-–—.\s]+$/, "").trim();
-  // Ft/HUF szó eltávolítás névből
-  name = name.replace(/\b(Ft|HUF|forint)\b/gi, "").trim();
-  if (!name) name = "Ismeretlen tétel";
-  if (name.length > 60) name = name.substring(0, 60);
-
-  return { name, amount };
-}
-
-function parseAmount(str) {
-  // eltávolítjuk a szóközöket és a pontokat (ezres tagolás), a vesszőt is
-  let s = str.replace(/[\s.]/g, "").replace(/,/g, "");
-  const n = parseInt(s, 10);
-  return isNaN(n) ? 0 : n;
-}
-
-/* Pixel-alapú szín-detektálás egy régióban.
-   Kézíráshoz: a fehér papírt és a semleges (fekete/szürke/ceruza) pixeleket
-   kihagyjuk, csak a színes tollvonalak számítanak – így a vékony vonal is dominál. */
-function detectColorInRegion(ctx, bbox, cw, ch) {
-  try {
-    let x0 = Math.max(0, Math.floor(bbox.x0));
-    let y0 = Math.max(0, Math.floor(bbox.y0));
-    let x1 = Math.min(cw, Math.ceil(bbox.x1));
-    let y1 = Math.min(ch, Math.ceil(bbox.y1));
-    let w = x1 - x0, h = y1 - y0;
-    if (w <= 0 || h <= 0) return "gray";
-
-    const imgData = ctx.getImageData(x0, y0, w, h).data;
-    const counts = { green: 0, blue: 0, yellow: 0, pink: 0 };
-    let chromatic = 0;
-
-    // minden pixelt megnézünk (a sor-régió kicsi), hogy a vékony vonal se maradjon ki
-    for (let i = 0; i < imgData.length; i += 4) {
-      const r = imgData[i], g = imgData[i+1], b = imgData[i+2], a = imgData[i+3];
-      if (a < 100) continue;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      if (max > 230 && min > 205) continue; // fehér papír
-      if (max - min < 28) continue;         // semleges (fekete/szürke/ceruza) – nem szín
-      const cls = classifyColor(r, g, b);
-      if (cls && cls !== "gray") { counts[cls]++; chromatic++; }
-    }
-
-    if (chromatic < 3) return "gray"; // nincs érdemi színes toll → Egyéb
-    let best = "gray", bestC = 0;
-    for (const k in counts) if (counts[k] > bestC) { bestC = counts[k]; best = k; }
-    return best;
-  } catch {
-    return "gray";
-  }
-}
-
-/* RGB → kategória szín osztályozás (hue-alapú). A hívó már kiszűrte a semlegeseket. */
-function classifyColor(r, g, b) {
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  if (max - min < 25) return "gray"; // semleges
-  // Sárga: piros ÉS zöld magas, kék alacsony
-  if (r > b + 25 && g > b + 25 && Math.abs(r - g) < 70) return "yellow";
-  // Zöld: a zöld a domináns csatorna
-  if (g >= r && g >= b && g > min + 15) return "green";
-  // Kék: a kék a domináns csatorna
-  if (b >= r && b >= g && b > min + 15) return "blue";
-  // Rózsaszín / piros: a piros a domináns csatorna
-  if (r >= g && r >= b) return "pink";
-  return "gray";
-}
-
-/* Felismert tételek megjelenítése (szerkeszthető) */
-function renderDetected(items) {
-  const list = document.getElementById("detectedList");
-  const cats = allCategories();
-  let html = "";
-  items.forEach((it, i) => {
-    const dup = isDuplicate(it.name, it.amount, it.color);
-    let opts = "";
-    Object.keys(cats).forEach(key => {
-      opts += `<option value="${key}" ${key === it.color ? "selected" : ""}>${escapeHtml(cats[key].name)}</option>`;
-    });
-    html += `
-      <div class="detected-item ${dup ? "dup" : ""}" data-idx="${i}">
-        <div class="di-row">
-          <input type="text" class="di-name" value="${escapeAttr(it.name)}" placeholder="Tétel neve">
-          <input type="number" class="di-amount" value="${it.amount}" placeholder="Ft" inputmode="numeric">
-        </div>
-        <div class="di-controls">
-          <select class="di-color" style="border-left:6px solid ${catHex(it.color)}">${opts}</select>
-          <button class="di-remove" title="Kihagyás">✖</button>
-        </div>
-        ${dup ? '<div class="di-dup-badge">⚠️ Már létezik – nem lesz újra hozzáadva</div>' : ''}
-      </div>`;
-  });
-  list.innerHTML = html;
-
-  // színes bal szegély frissítés select változáskor + eltávolítás
-  list.querySelectorAll(".detected-item").forEach(row => {
-    const sel = row.querySelector(".di-color");
-    sel.addEventListener("change", () => {
-      sel.style.borderLeftColor = catHex(sel.value);
-    });
-    row.querySelector(".di-remove").addEventListener("click", () => {
-      row.remove();
-      if (!list.querySelector(".detected-item")) {
-        document.getElementById("btnAddDetected").style.display = "none";
-      }
-    });
-  });
-}
-
-/* Kijelölt tételek hozzáadása (duplikátum szűréssel) */
-document.getElementById("btnAddDetected").addEventListener("click", () => {
-  const rows = document.querySelectorAll("#detectedList .detected-item");
-  let added = 0, skipped = 0, invalid = 0;
-  rows.forEach(row => {
-    const name = row.querySelector(".di-name").value.trim();
-    const amount = Number(row.querySelector(".di-amount").value);
-    const color = row.querySelector(".di-color").value;
-    if (!name || !amount || amount <= 0) { invalid++; return; }
-    if (isDuplicate(name, amount, color)) { skipped++; return; }
-    expenseItems.push({ name, amount, color });
-    added++;
-  });
-  if (added > 0) saveItems();
-
-  let parts = [];
-  if (added > 0) parts.push(`${added} hozzáadva`);
-  if (skipped > 0) parts.push(`${skipped} duplikátum kihagyva`);
-  if (invalid > 0) parts.push(`${invalid} hiányos kihagyva`);
-  const type = added > 0 ? "success" : "error";
-  showMsg("cameraMsg", (added > 0 ? "✅ " : "⚠️ ") + parts.join(", ") + ".", type);
-
-  if (added > 0) {
-    document.getElementById("detectedList").innerHTML = "";
-    document.getElementById("btnAddDetected").style.display = "none";
-    previewImg.style.display = "none";
-  }
 });
 
 /* =========================================================
@@ -1257,40 +711,16 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c =>
     ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
-function escapeAttr(str) {
-  return escapeHtml(str);
-}
-
-/* =========================================================
-   OCR API KULCS kezelés
-   ========================================================= */
-document.getElementById("btnSaveKey").addEventListener("click", () => {
-  const val = document.getElementById("gvKey").value.trim();
-  if (!val) { showMsg("cameraMsg", "⚠️ Adj meg egy API kulcsot.", "error"); return; }
-  googleVisionKey = val;
-  try { localStorage.setItem("googleVisionApiKey", val); } catch {}
-  updateEngineInfo();
-  showMsg("cameraMsg", "✅ Kulcs mentve. A kézírás olvasás bekapcsolva.", "success");
-});
-document.getElementById("btnClearKey").addEventListener("click", () => {
-  googleVisionKey = "";
-  document.getElementById("gvKey").value = "";
-  try { localStorage.removeItem("googleVisionApiKey"); } catch {}
-  updateEngineInfo();
-  showMsg("cameraMsg", "🗑️ Kulcs törölve. Visszaálltunk a Tesseract motorra.", "info");
-});
 
 /* =========================================================
    INDÍTÁS
    ========================================================= */
 function init() {
   loadData();
-  loadKey();
-  document.getElementById("gvKey").value = googleVisionKey;
-  updateEngineInfo();
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
+  document.getElementById("mName").focus();
 }
 init();
 </script>
