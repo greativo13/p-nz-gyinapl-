@@ -304,8 +304,10 @@
         <label for="mMonth">Hónap</label>
         <input type="month" id="mMonth">
 
-        <label>Kategória</label>
-        <div class="color-picker" id="manualColors"></div>
+        <div id="manualCatWrap">
+          <label>Kategória</label>
+          <div class="color-picker" id="manualColors"></div>
+        </div>
 
         <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
@@ -388,8 +390,10 @@
     <input type="number" id="editAmount" inputmode="numeric">
     <label for="editMonth">Hónap</label>
     <input type="month" id="editMonth">
-    <label>Kategória</label>
-    <div class="color-picker" id="editColors"></div>
+    <div id="editCatWrap">
+      <label>Kategória</label>
+      <div class="color-picker" id="editColors"></div>
+    </div>
     <div class="btn-row">
       <button class="btn" id="btnSaveEdit">💾 Mentés</button>
       <button class="btn secondary" id="btnCancelEdit">Mégse</button>
@@ -569,7 +573,8 @@ function addEntry(name, amount, color, month, type) {
   type = type === "income" ? "income" : "expense";
   if (!name) return { ok: false, reason: "A tétel neve kötelező." };
   if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
-  if (!color) return { ok: false, reason: "Válassz kategóriát." };
+  if (type === "income") color = null;                       // bevételnél nincs kategória
+  else if (!color) return { ok: false, reason: "Válassz kategóriát." };
   if (isDuplicate(name, amount, color, month, type)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
   expenseItems.push({ name, amount, color, month, type });
   saveItems();
@@ -581,7 +586,7 @@ function submitManual() {
   const amountEl = document.getElementById("mAmount");
   const month = document.getElementById("mMonth").value || currentMonth();
   const type = getTypeToggle("typeToggle");
-  const color = getPickerValue("manualColors");
+  const color = type === "income" ? null : getPickerValue("manualColors");
   const res = addEntry(nameEl.value, amountEl.value, color, month, type);
   if (res.ok) {
     const t = type === "income" ? "Bevétel" : "Kiadás";
@@ -773,6 +778,7 @@ function openEdit(i) {
   document.getElementById("editAmount").value = it.amount;
   document.getElementById("editMonth").value = it.month || currentMonth();
   setTypeToggle("editTypeToggle", it.type || "expense");
+  document.getElementById("editCatWrap").style.display = (it.type === "income") ? "none" : "";
   buildColorPicker("editColors", it.color);
   document.getElementById("editModal").classList.add("show");
 }
@@ -785,17 +791,17 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   const amount = Number(document.getElementById("editAmount").value);
   const month = document.getElementById("editMonth").value || currentMonth();
   const type = getTypeToggle("editTypeToggle");
-  const color = getPickerValue("editColors");
+  const color = type === "income" ? null : getPickerValue("editColors");
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
-  if (!color) { alert("Válassz kategóriát."); return; }
+  if (type === "expense" && !color) { alert("Válassz kategóriát."); return; }
   if (isDuplicate(name, amount, color, month, type, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
   expenseItems[editIndex] = { name, amount, color, month, type };
   saveItems();
   closeEdit();
   renderList();
 });
-wireTypeToggle("editTypeToggle");
+wireTypeToggle("editTypeToggle", (t) => { document.getElementById("editCatWrap").style.display = t === "income" ? "none" : ""; });
 
 /* ---------- Kategóriák ---------- */
 function renderCategories() {
@@ -986,7 +992,7 @@ function init() {
 
   registerSW();
   document.getElementById("mMonth").value = currentMonth();
-  wireTypeToggle("typeToggle", (t) => { entryType = t; });
+  wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
