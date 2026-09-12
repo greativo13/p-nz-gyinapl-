@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pénzügyi Napló</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --purple: #7c3aed;
+    --purple-dark: #6d28d9;
+    --purple-light: #ede9fe;
+    --gray-btn: #6b7280;
+    --danger: #ef4444;
+    --danger-dark: #dc2626;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --yellow: #eab308;
+    --pink: #ec4899;
+    --gray: #9ca3af;
+    --text: #1f2937;
+    --border: #e5e7eb;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: var(--text);
+    padding: 12px;
+    line-height: 1.4;
+  }
+
+  .container {
+    max-width: 520px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+    color: #fff;
+    padding: 20px 16px 16px;
+    text-align: center;
+  }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    background: #f8f7fc;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 14px 4px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 20px;
+    border: none;
+    background: none;
+    transition: background 0.15s;
+    position: relative;
+    color: #999;
+  }
+  .tab .lbl { display: block; font-size: 10px; margin-top: 2px; font-weight: 600; }
+  .tab.active {
+    color: var(--purple);
+    background: #fff;
+  }
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 20%; right: 20%;
+    height: 3px;
+    background: var(--purple);
+    border-radius: 3px 3px 0 0;
+  }
+
+  .content { padding: 18px 16px 26px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade 0.2s; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+
+  h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.08s, opacity 0.15s;
+    color: #fff;
+    background: var(--purple);
+    margin-bottom: 10px;
+    min-height: 48px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.secondary { background: var(--gray-btn); }
+  .btn.danger { background: var(--danger); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { margin-bottom: 10px; }
+
+  /* Inputs */
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4b5563; }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 13px 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 16px;
+    margin-bottom: 14px;
+    transition: border 0.15s;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus { outline: none; border-color: var(--purple); }
+
+  /* Color picker buttons */
+  .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .color-btn {
+    flex: 1;
+    min-width: 56px;
+    padding: 10px 4px;
+    border: 3px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    transition: transform 0.08s;
+    line-height: 1.2;
+  }
+  .color-btn:active { transform: scale(0.94); }
+  .color-btn.selected { border-color: var(--text); box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text); }
+  .c-green { background: var(--green); }
+  .c-blue { background: var(--blue); }
+  .c-yellow { background: var(--yellow); }
+  .c-pink { background: var(--pink); }
+  .c-gray { background: var(--gray); }
+
+  /* Messages */
+  .msg {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .msg.show { display: block; animation: fade 0.2s; }
+  .msg.success { background: #dcfce7; color: #15803d; }
+  .msg.error { background: #fee2e2; color: #b91c1c; }
+  .msg.info { background: var(--purple-light); color: var(--purple-dark); }
+
+  /* Camera / preview */
+  #cameraStream, #previewImg {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    display: none;
+    background: #000;
+  }
+  #captureCanvas { display: none; }
+
+  /* Progress */
+  .progress-wrap { display: none; margin-bottom: 14px; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; background: var(--purple); transition: width 0.3s; }
+  .progress-label { font-size: 12px; color: #6b7280; margin-top: 6px; text-align: center; }
+
+  /* Detected items */
+  .detected-item {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+  .detected-item.dup { opacity: 0.5; }
+  .detected-item .di-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .detected-item input { margin-bottom: 0; }
+  .detected-item .di-name { flex: 2; }
+  .detected-item .di-amount { flex: 1; }
+  .detected-item select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+  }
+  .di-dup-badge { font-size: 11px; color: var(--danger); font-weight: 700; }
+  .di-controls { display:flex; gap:8px; align-items:center; }
+  .di-remove {
+    background: var(--danger); color:#fff; border:none; border-radius:8px;
+    width: 38px; height: 38px; font-size: 16px; cursor:pointer; flex-shrink:0;
+  }
+
+  /* Summary cards */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .summary-card {
+    padding: 14px;
+    border-radius: 14px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .summary-card .sc-name { font-size: 13px; font-weight: 600; opacity: 0.95; }
+  .summary-card .sc-amount { font-size: 20px; font-weight: 800; margin-top: 4px; }
+  .summary-card .sc-count { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+  .summary-total {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+  }
+
+  /* Expense list */
+  .exp-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 6px solid var(--gray);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .exp-info { flex: 1; min-width: 0; }
+  .exp-name { font-weight: 700; font-size: 15px; word-break: break-word; }
+  .exp-cat { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .exp-amount { font-weight: 800; font-size: 16px; white-space: nowrap; }
+  .exp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    width: 40px; height: 40px;
+    border: none; border-radius: 10px;
+    font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn.edit { background: var(--purple-light); }
+  .icon-btn.del { background: #fee2e2; }
+
+  .empty {
+    text-align: center;
+    color: #9ca3af;
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+  .empty .big { font-size: 40px; display: block; margin-bottom: 10px; }
+
+  /* Categories list */
+  .cat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .cat-dot { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
+  .cat-name { flex: 1; font-weight: 600; }
+  .cat-badge { font-size: 11px; color: #9ca3af; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 18px;
+    width: 100%;
+    max-width: 420px;
+    animation: pop 0.2s;
+  }
+  @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h3 { font-size: 17px; margin-bottom: 16px; }
+
+  .hint { font-size: 12px; color: #9ca3af; margin-top: -8px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>💰 Pénzügyi Napló</h1>
+    <p>Kövesd a kiadásaidat egyszerűen</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-panel="camera">📷<span class="lbl">Kamera</span></button>
+    <button class="tab" data-panel="manual">✍️<span class="lbl">Kézi</span></button>
+    <button class="tab" data-panel="list">📊<span class="lbl">Lista</span></button>
+    <button class="tab" data-panel="categories">⚙️<span class="lbl">Kategóriák</span></button>
+  </nav>
+
+  <div class="content">
+
+    <!-- ============ CAMERA PANEL ============ -->
+    <section class="panel active" id="panel-camera">
+      <h2>📷 Kép beolvasása</h2>
+      <div class="msg info show">Fotózd le vagy tölts fel egy oldalt a naplóból. A szöveget és a színeket automatikusan felismerem.</div>
+
+      <div class="btn-row">
+        <button class="btn" id="btnCamera">📸 Fotózás</button>
+        <button class="btn secondary" id="btnUpload">🖼️ Kép feltöltés</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+
+      <video id="cameraStream" playsinline autoplay muted></video>
+      <button class="btn" id="btnSnap" style="display:none">✅ Kép készítése</button>
+      <button class="btn secondary" id="btnCancelCam" style="display:none">✖️ Mégse</button>
+
+      <img id="previewImg" alt="Előnézet">
+      <canvas id="captureCanvas"></canvas>
+
+      <div class="progress-wrap" id="ocrProgress">
+        <div class="progress-bar"><div class="progress-fill" id="ocrFill"></div></div>
+        <div class="progress-label" id="ocrLabel">Feldolgozás...</div>
+      </div>
+
+      <div class="msg" id="cameraMsg"></div>
+
+      <div id="detectedList"></div>
+      <button class="btn" id="btnAddDetected" style="display:none">➕ Kijelölt tételek hozzáadása</button>
+    </section>
+
+    <!-- ============ MANUAL PANEL ============ -->
+    <section class="panel" id="panel-manual">
+      <h2>✍️ Kézi bevitel</h2>
+      <div class="msg" id="manualMsg"></div>
+
+      <label for="mName">Tétel neve</label>
+      <input type="text" id="mName" placeholder="pl. Bevásárlás, Lakbér...">
+
+      <label for="mAmount">Összeg (Ft)</label>
+      <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
+
+      <label>Kategória</label>
+      <div class="color-picker" id="manualColors"></div>
+
+      <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
+    </section>
+
+    <!-- ============ LIST PANEL ============ -->
+    <section class="panel" id="panel-list">
+      <h2>📊 Összesítés</h2>
+      <div id="summaryArea"></div>
+      <h2 style="margin-top:8px;">Tételek</h2>
+      <div id="expenseListArea"></div>
+      <hr class="divider" id="clearDivider" style="display:none">
+      <button class="btn danger" id="btnClearAll" style="display:none">🗑️ Az összes adat törlése</button>
+    </section>
+
+    <!-- ============ CATEGORIES PANEL ============ -->
+    <section class="panel" id="panel-categories">
+      <h2>⚙️ Kategóriák</h2>
+      <div class="msg" id="catMsg"></div>
+      <div id="catListArea"></div>
+
+      <hr class="divider">
+      <h2>➕ Új kategória</h2>
+      <label for="newCatName">Kategória neve</label>
+      <input type="text" id="newCatName" placeholder="pl. Sport, Utazás...">
+      <label>Szín</label>
+      <div class="color-picker" id="newCatColors"></div>
+      <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
+    </section>
+
+  </div>
+</div>
+
+<!-- ============ EDIT MODAL ============ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Tétel szerkesztése</h3>
+    <label for="editName">Tétel neve</label>
+    <input type="text" id="editName">
+    <label for="editAmount">Összeg (Ft)</label>
+    <input type="number" id="editAmount" inputmode="numeric">
+    <label>Kategória</label>
+    <div class="color-picker" id="editColors"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnSaveEdit">💾 Mentés</button>
+      <button class="btn secondary" id="btnCancelEdit">Mégse</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   PÉNZÜGYI NAPLÓ - Egyoldalas alkalmazás
+   ========================================================= */
+
+// ---------- Alapkategóriák ----------
+const DEFAULT_CATEGORIES = {
+  green:  { name: "Számlák",         color: "green"  },
+  blue:   { name: "Étkezés",         color: "blue"   },
+  yellow: { name: "Vállalkozás",     color: "yellow" },
+  pink:   { name: "Impulzív kiadás", color: "pink"   },
+  gray:   { name: "Egyéb",           color: "gray"   }
+};
+
+const COLOR_HEX = {
+  green:  "#22c55e",
+  blue:   "#3b82f6",
+  yellow: "#eab308",
+  pink:   "#ec4899",
+  gray:   "#9ca3af"
+};
+
+const COLOR_LABELS = {
+  green: "🟢 Zöld", blue: "🔵 Kék", yellow: "🟡 Sárga", pink: "🔴 Rózsaszín", gray: "⚫ Szürke"
+};
+const BASE_COLORS = ["green","blue","yellow","pink","gray"];
+
+// ---------- Állapot ----------
+let expenseItems = [];
+let customCategories = {};
+let editIndex = null;
+let cameraStreamObj = null;
+
+// ---------- LocalStorage ----------
+function loadData() {
+  try {
+    const e = localStorage.getItem("expenseItems");
+    expenseItems = e ? JSON.parse(e) : [];
+  } catch { expenseItems = []; }
+  try {
+    const c = localStorage.getItem("customCategories");
+    customCategories = c ? JSON.parse(c) : {};
+  } catch { customCategories = {}; }
+}
+function saveItems() {
+  try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {}
+}
+function saveCategories() {
+  try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); } catch {}
+}
+
+// ---------- Kategória segédek ----------
+function allCategories() {
+  // egyesített: alap + egyedi
+  return Object.assign({}, DEFAULT_CATEGORIES, customCategories);
+}
+function catName(colorOrKey) {
+  const cats = allCategories();
+  if (cats[colorOrKey]) return cats[colorOrKey].name;
+  return colorOrKey;
+}
+function catHex(colorKey) {
+  const cats = allCategories();
+  const c = cats[colorKey] ? cats[colorKey].color : colorKey;
+  return COLOR_HEX[c] || "#9ca3af";
+}
+function formatFt(n) {
+  return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft";
+}
+
+// ---------- Üzenetek ----------
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "msg show " + type;
+  clearTimeout(el._t);
+  if (type !== "info") {
+    el._t = setTimeout(() => { el.className = "msg " + type; }, 3500);
+  }
+}
+
+// ---------- Tab kezelés ----------
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.panel).classList.add("active");
+    if (tab.dataset.panel === "list") renderList();
+    if (tab.dataset.panel === "categories") renderCategories();
+    if (tab.dataset.panel === "camera") stopCamera();
+  });
+});
+
+/* =========================================================
+   SZÍNVÁLASZTÓ komponens
+   ========================================================= */
+function buildColorPicker(containerId, initial, onSelect) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  const cats = allCategories();
+  // csoportosítás: minden létező kategóriát felkínálunk gombként (kulcs szerint)
+  Object.keys(cats).forEach(key => {
+    const c = cats[key];
+    const btn = document.createElement("div");
+    btn.className = "color-btn c-" + c.color;
+    btn.dataset.key = key;
+    btn.textContent = c.name;
+    if (key === initial) btn.classList.add("selected");
+    btn.addEventListener("click", () => {
+      container.querySelectorAll(".color-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      if (onSelect) onSelect(key);
+    });
+    container.appendChild(btn);
+  });
+}
+function getPickerValue(containerId) {
+  const sel = document.querySelector("#" + containerId + " .color-btn.selected");
+  return sel ? sel.dataset.key : null;
+}
+
+/* =========================================================
+   DUPLIKÁTUM szűrés
+   ========================================================= */
+function isDuplicate(name, amount, color, ignoreIndex) {
+  const n = name.trim().toLowerCase();
+  return expenseItems.some((it, i) => {
+    if (i === ignoreIndex) return false;
+    return it.name.trim().toLowerCase() === n &&
+           Number(it.amount) === Number(amount) &&
+           it.color === color;
+  });
+}
+
+/* =========================================================
+   KÉZI BEVITEL
+   ========================================================= */
+function addExpense(name, amount, color) {
+  name = (name || "").trim();
+  amount = Number(amount);
+  if (!name) return { ok: false, reason: "A tétel neve kötelező." };
+  if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
+  if (!color) return { ok: false, reason: "Válassz kategóriát." };
+  if (isDuplicate(name, amount, color)) return { ok: false, reason: "Ez a tétel már létezik (duplikátum)." };
+  expenseItems.push({ name, amount, color });
+  saveItems();
+  return { ok: true };
+}
+
+document.getElementById("btnAddManual").addEventListener("click", () => {
+  const name = document.getElementById("mName").value;
+  const amount = document.getElementById("mAmount").value;
+  const color = getPickerValue("manualColors");
+  const res = addExpense(name, amount, color);
+  if (res.ok) {
+    showMsg("manualMsg", "✅ Tétel hozzáadva!", "success");
+    document.getElementById("mName").value = "";
+    document.getElementById("mAmount").value = "";
+  } else {
+    showMsg("manualMsg", "⚠️ " + res.reason, "error");
+  }
+});
+
+/* =========================================================
+   LISTA / ÖSSZESÍTÉS
+   ========================================================= */
+function renderList() {
+  const summaryArea = document.getElementById("summaryArea");
+  const listArea = document.getElementById("expenseListArea");
+
+  if (expenseItems.length === 0) {
+    summaryArea.innerHTML = "";
+    listArea.innerHTML = '<div class="empty"><span class="big">📭</span>Még nincs egyetlen tétel sem.<br>Adj hozzá kézzel vagy fotóval!</div>';
+    document.getElementById("btnClearAll").style.display = "none";
+    document.getElementById("clearDivider").style.display = "none";
+    return;
+  }
+
+  // Összesítés kategóriánként
+  const totals = {};
+  let grand = 0;
+  expenseItems.forEach(it => {
+    if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
+    totals[it.color].sum += Number(it.amount);
+    totals[it.color].count++;
+    grand += Number(it.amount);
+  });
+
+  let sHtml = '<div class="summary-grid">';
+  Object.keys(totals).forEach(color => {
+    sHtml += `
+      <div class="summary-card" style="background:${catHex(color)}">
+        <div class="sc-name">${escapeHtml(catName(color))}</div>
+        <div class="sc-amount">${formatFt(totals[color].sum)}</div>
+        <div class="sc-count">${totals[color].count} tétel</div>
+      </div>`;
+  });
+  sHtml += `
+      <div class="summary-card summary-total">
+        <div class="sc-name">Összesen</div>
+        <div class="sc-amount">${formatFt(grand)}</div>
+        <div class="sc-count">${expenseItems.length} tétel</div>
+      </div>`;
+  sHtml += '</div>';
+  summaryArea.innerHTML = sHtml;
+
+  // Tételek (legújabb elöl)
+  let lHtml = "";
+  expenseItems.forEach((it, i) => {
+    lHtml += `
+      <div class="exp-item" style="border-left-color:${catHex(it.color)}">
+        <div class="exp-info">
+          <div class="exp-name">${escapeHtml(it.name)}</div>
+          <div class="exp-cat">${escapeHtml(catName(it.color))}</div>
+        </div>
+        <div class="exp-amount">${formatFt(it.amount)}</div>
+        <div class="exp-actions">
+          <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés">✏️</button>
+          <button class="icon-btn del" data-del="${i}" title="Törlés">🗑️</button>
+        </div>
+      </div>`;
+  });
+  listArea.innerHTML = lHtml;
+
+  listArea.querySelectorAll("[data-edit]").forEach(b =>
+    b.addEventListener("click", () => openEdit(Number(b.dataset.edit))));
+  listArea.querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => deleteExpense(Number(b.dataset.del))));
+
+  document.getElementById("btnClearAll").style.display = "block";
+  document.getElementById("clearDivider").style.display = "block";
+}
+
+function deleteExpense(i) {
+  const it = expenseItems[i];
+  if (!it) return;
+  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}`)) {
+    expenseItems.splice(i, 1);
+    saveItems();
+    renderList();
+  }
+}
+
+document.getElementById("btnClearAll").addEventListener("click", () => {
+  if (confirm("⚠️ Biztosan törlöd az ÖSSZES tételt?\n\nEz a művelet nem vonható vissza!")) {
+    expenseItems = [];
+    saveItems();
+    renderList();
+  }
+});
+
+/* =========================================================
+   SZERKESZTÉS MODAL
+   ========================================================= */
+function openEdit(i) {
+  const it = expenseItems[i];
+  if (!it) return;
+  editIndex = i;
+  document.getElementById("editName").value = it.name;
+  document.getElementById("editAmount").value = it.amount;
+  buildColorPicker("editColors", it.color);
+  document.getElementById("editModal").classList.add("show");
+}
+function closeEdit() {
+  document.getElementById("editModal").classList.remove("show");
+  editIndex = null;
+}
+document.getElementById("btnCancelEdit").addEventListener("click", closeEdit);
+document.getElementById("editModal").addEventListener("click", (e) => {
+  if (e.target.id === "editModal") closeEdit();
+});
+document.getElementById("btnSaveEdit").addEventListener("click", () => {
+  if (editIndex === null) return;
+  const name = document.getElementById("editName").value.trim();
+  const amount = Number(document.getElementById("editAmount").value);
+  const color = getPickerValue("editColors");
+  if (!name) { alert("A tétel neve kötelező."); return; }
+  if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
+  if (!color) { alert("Válassz kategóriát."); return; }
+  if (isDuplicate(name, amount, color, editIndex)) {
+    alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum).");
+    return;
+  }
+  expenseItems[editIndex] = { name, amount, color };
+  saveItems();
+  closeEdit();
+  renderList();
+});
+
+/* =========================================================
+   KATEGÓRIÁK
+   ========================================================= */
+function renderCategories() {
+  const area = document.getElementById("catListArea");
+  const cats = allCategories();
+  let html = "";
+  Object.keys(cats).forEach(key => {
+    const c = cats[key];
+    const isCustom = !DEFAULT_CATEGORIES[key];
+    html += `
+      <div class="cat-item">
+        <div class="cat-dot" style="background:${COLOR_HEX[c.color] || '#9ca3af'}"></div>
+        <div class="cat-name">${escapeHtml(c.name)}</div>
+        ${isCustom
+          ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>`
+          : `<span class="cat-badge">alap</span>`}
+      </div>`;
+  });
+  area.innerHTML = html;
+  area.querySelectorAll("[data-delcat]").forEach(b =>
+    b.addEventListener("click", () => deleteCategory(b.dataset.delcat)));
+
+  // Új kategória színválasztó (csak alapszínek)
+  const container = document.getElementById("newCatColors");
+  container.innerHTML = "";
+  BASE_COLORS.forEach((color, idx) => {
+    const btn = document.createElement("div");
+    btn.className = "color-btn c-" + color;
+    btn.dataset.color = color;
+    btn.textContent = COLOR_LABELS[color];
+    if (idx === 0) btn.classList.add("selected");
+    btn.addEventListener("click", () => {
+      container.querySelectorAll(".color-btn").forEach(x => x.classList.remove("selected"));
+      btn.classList.add("selected");
+    });
+    container.appendChild(btn);
+  });
+}
+
+function deleteCategory(key) {
+  const c = customCategories[key];
+  if (!c) return;
+  const used = expenseItems.filter(it => it.color === key).length;
+  let msg = `Biztosan törlöd a(z) "${c.name}" kategóriát?`;
+  if (used > 0) msg += `\n\n⚠️ ${used} tétel használja ezt a kategóriát – azok is törlődnek!`;
+  if (confirm(msg)) {
+    delete customCategories[key];
+    saveCategories();
+    if (used > 0) {
+      expenseItems = expenseItems.filter(it => it.color !== key);
+      saveItems();
+    }
+    renderCategories();
+  }
+}
+
+document.getElementById("btnAddCat").addEventListener("click", () => {
+  const name = document.getElementById("newCatName").value.trim();
+  const sel = document.querySelector("#newCatColors .color-btn.selected");
+  const color = sel ? sel.dataset.color : null;
+  if (!name) { showMsg("catMsg", "⚠️ Add meg a kategória nevét.", "error"); return; }
+  if (!color) { showMsg("catMsg", "⚠️ Válassz színt.", "error"); return; }
+  // duplikátum név ellenőrzés
+  const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
+  if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
+
+  const key = "custom_" + Date.now();
+  customCategories[key] = { name, color };
+  saveCategories();
+  document.getElementById("newCatName").value = "";
+  renderCategories();
+  showMsg("catMsg", "✅ Kategória létrehozva!", "success");
+});
+
+/* =========================================================
+   KAMERA / KÉP FELTÖLTÉS
+   ========================================================= */
+const video = document.getElementById("cameraStream");
+const canvas = document.getElementById("captureCanvas");
+const previewImg = document.getElementById("previewImg");
+
+document.getElementById("btnUpload").addEventListener("click", () => {
+  document.getElementById("fileInput").click();
+});
+document.getElementById("fileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) handleImageFile(file);
+  e.target.value = "";
+});
+
+// Fotózás gomb – élő stream, ha lehet; egyébként fallback capture input
+document.getElementById("btnCamera").addEventListener("click", async () => {
+  stopCamera();
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      cameraStreamObj = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }, audio: false
+      });
+      video.srcObject = cameraStreamObj;
+      video.style.display = "block";
+      document.getElementById("btnSnap").style.display = "flex";
+      document.getElementById("btnCancelCam").style.display = "flex";
+      previewImg.style.display = "none";
+      return;
+    } catch (err) {
+      // engedély megtagadva vagy nem elérhető → fallback
+    }
+  }
+  // Fallback: natív kamera capture input
+  document.getElementById("cameraInput").click();
+});
+document.getElementById("cameraInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) handleImageFile(file);
+  e.target.value = "";
+});
+
+document.getElementById("btnSnap").addEventListener("click", () => {
+  if (!video.videoWidth) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  stopCamera();
+  const dataUrl = canvas.toDataURL("image/png");
+  previewImg.src = dataUrl;
+  previewImg.style.display = "block";
+  processImage(canvas);
+});
+document.getElementById("btnCancelCam").addEventListener("click", stopCamera);
+
+function stopCamera() {
+  if (cameraStreamObj) {
+    cameraStreamObj.getTracks().forEach(t => t.stop());
+    cameraStreamObj = null;
+  }
+  video.style.display = "none";
+  video.srcObject = null;
+  document.getElementById("btnSnap").style.display = "none";
+  document.getElementById("btnCancelCam").style.display = "none";
+}
+
+function handleImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      previewImg.src = ev.target.result;
+      previewImg.style.display = "block";
+      // rajzoljuk canvasra a pixel-elemzéshez
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      processImage(canvas);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* =========================================================
+   OCR + SZÍN-DETEKTÁLÁS
+   ========================================================= */
+async function processImage(sourceCanvas) {
+  const progressWrap = document.getElementById("ocrProgress");
+  const fill = document.getElementById("ocrFill");
+  const label = document.getElementById("ocrLabel");
+  const detectedList = document.getElementById("detectedList");
+  const btnAdd = document.getElementById("btnAddDetected");
+
+  detectedList.innerHTML = "";
+  btnAdd.style.display = "none";
+  document.getElementById("cameraMsg").className = "msg";
+  progressWrap.style.display = "block";
+  fill.style.width = "5%";
+  label.textContent = "OCR indítása...";
+
+  if (typeof Tesseract === "undefined") {
+    progressWrap.style.display = "none";
+    showMsg("cameraMsg", "⚠️ Az OCR könyvtár nem töltődött be. Ellenőrizd az internetkapcsolatot, vagy használd a Kézi bevitelt.", "error");
+    return;
+  }
+
+  try {
+    const { data } = await Tesseract.recognize(sourceCanvas, "hun+eng", {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          const p = Math.round(m.progress * 90) + 10;
+          fill.style.width = p + "%";
+          label.textContent = "Szövegfelismerés... " + Math.round(m.progress * 100) + "%";
+        } else {
+          label.textContent = m.status + "...";
+        }
+      }
+    });
+
+    fill.style.width = "100%";
+    label.textContent = "Elemzés...";
+
+    const lines = (data.lines || []).length
+      ? data.lines
+      : (data.text || "").split("\n").map(t => ({ text: t, bbox: null }));
+
+    const ctx = sourceCanvas.getContext("2d");
+    const items = [];
+
+    lines.forEach(line => {
+      const raw = (line.text || "").trim();
+      if (!raw) return;
+      const parsed = parseLine(raw);
+      if (!parsed) return;
+
+      // Szín-detektálás a sor területén (ha van bbox)
+      let color = "gray";
+      if (line.bbox) {
+        color = detectColorInRegion(ctx, line.bbox, sourceCanvas.width, sourceCanvas.height);
+      }
+      items.push({ name: parsed.name, amount: parsed.amount, color });
+    });
+
+    progressWrap.style.display = "none";
+    window.tempItems = items; // debug
+
+    if (items.length === 0) {
+      showMsg("cameraMsg", "🔍 Nem sikerült tételeket felismerni. Próbáld élesebb képpel, vagy használd a Kézi bevitelt.", "error");
+      return;
+    }
+
+    renderDetected(items);
+    const dupCount = items.filter(it => isDuplicate(it.name, it.amount, it.color)).length;
+    let infoTxt = `✅ ${items.length} tétel felismerve. Ellenőrizd és módosítsd, ha kell.`;
+    if (dupCount > 0) infoTxt += ` (${dupCount} már létezik, ezek kikapcsolva.)`;
+    showMsg("cameraMsg", infoTxt, "info");
+    btnAdd.style.display = "flex";
+
+  } catch (err) {
+    console.error(err);
+    progressWrap.style.display = "none";
+    showMsg("cameraMsg", "⚠️ Hiba történt a feldolgozás közben: " + err.message, "error");
+  }
+}
+
+/* Sor feldolgozása: név + összeg kinyerése */
+function parseLine(text) {
+  // számjegyek keresése (ezres tagolás pont/szóköz/vessző lehet)
+  // pl "Lakber 150 000 Ft", "Kaja rendeles 2.500", "Marketing: 5000"
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  // keressünk minden szám-szerű blokkot
+  const numMatches = cleaned.match(/[\d][\d\s.,]*\d|\d/g);
+  if (!numMatches) return null;
+
+  // az utolsó (általában jobb oldali) szám az összeg
+  let amountStr = numMatches[numMatches.length - 1];
+  let amount = parseAmount(amountStr);
+  if (!amount || amount <= 0) return null;
+
+  // név: a szám előtti rész
+  let idx = cleaned.lastIndexOf(amountStr);
+  let name = cleaned.substring(0, idx).trim();
+  // vágjuk le a végén lévő elválasztókat
+  name = name.replace(/[:\-–—.\s]+$/, "").trim();
+  // Ft/HUF szó eltávolítás névből
+  name = name.replace(/\b(Ft|HUF|forint)\b/gi, "").trim();
+  if (!name) name = "Ismeretlen tétel";
+  if (name.length > 60) name = name.substring(0, 60);
+
+  return { name, amount };
+}
+
+function parseAmount(str) {
+  // eltávolítjuk a szóközöket és a pontokat (ezres tagolás), a vesszőt is
+  let s = str.replace(/[\s.]/g, "").replace(/,/g, "");
+  const n = parseInt(s, 10);
+  return isNaN(n) ? 0 : n;
+}
+
+/* Pixel-alapú szín-detektálás egy régióban */
+function detectColorInRegion(ctx, bbox, cw, ch) {
+  try {
+    let x0 = Math.max(0, Math.floor(bbox.x0));
+    let y0 = Math.max(0, Math.floor(bbox.y0));
+    let x1 = Math.min(cw, Math.ceil(bbox.x1));
+    let y1 = Math.min(ch, Math.ceil(bbox.y1));
+    let w = x1 - x0, h = y1 - y0;
+    if (w <= 0 || h <= 0) return "gray";
+
+    const imgData = ctx.getImageData(x0, y0, w, h).data;
+    const counts = { green: 0, blue: 0, yellow: 0, pink: 0, gray: 0 };
+    let sampled = 0;
+
+    // mintavételezés (minden 4. pixel a sebességért)
+    for (let i = 0; i < imgData.length; i += 16) {
+      const r = imgData[i], g = imgData[i+1], b = imgData[i+2], a = imgData[i+3];
+      if (a < 100) continue;
+      // fehér / fekete (szöveg és háttér) kihagyása
+      const max = Math.max(r,g,b), min = Math.min(r,g,b);
+      if (max > 235 && min > 235) continue; // fehér háttér
+      if (max < 60) continue;               // fekete szöveg
+      const cls = classifyColor(r, g, b);
+      if (cls) { counts[cls]++; sampled++; }
+    }
+
+    if (sampled < 5) return "gray";
+    // legtöbbször előforduló szín
+    let best = "gray", bestC = 0;
+    for (const k in counts) {
+      if (counts[k] > bestC) { bestC = counts[k]; best = k; }
+    }
+    return best;
+  } catch {
+    return "gray";
+  }
+}
+
+/* RGB → kategória szín osztályozás */
+function classifyColor(r, g, b) {
+  // Zöld: g dominál
+  if (g > r + 20 && g > b + 20) return "green";
+  // Kék: b dominál
+  if (b > r + 20 && b > g + 20) return "blue";
+  // Sárga: r és g magas, b alacsony
+  if (r > b + 30 && g > b + 30 && Math.abs(r - g) < 60) return "yellow";
+  // Rózsaszín / piros: r dominál
+  if (r > g + 20 && r > b + 10) return "pink";
+  // Szürke / semleges
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  if (max - min < 25) return "gray";
+  return null;
+}
+
+/* Felismert tételek megjelenítése (szerkeszthető) */
+function renderDetected(items) {
+  const list = document.getElementById("detectedList");
+  const cats = allCategories();
+  let html = "";
+  items.forEach((it, i) => {
+    const dup = isDuplicate(it.name, it.amount, it.color);
+    let opts = "";
+    Object.keys(cats).forEach(key => {
+      opts += `<option value="${key}" ${key === it.color ? "selected" : ""}>${escapeHtml(cats[key].name)}</option>`;
+    });
+    html += `
+      <div class="detected-item ${dup ? "dup" : ""}" data-idx="${i}">
+        <div class="di-row">
+          <input type="text" class="di-name" value="${escapeAttr(it.name)}" placeholder="Tétel neve">
+          <input type="number" class="di-amount" value="${it.amount}" placeholder="Ft" inputmode="numeric">
+        </div>
+        <div class="di-controls">
+          <select class="di-color" style="border-left:6px solid ${catHex(it.color)}">${opts}</select>
+          <button class="di-remove" title="Kihagyás">✖</button>
+        </div>
+        ${dup ? '<div class="di-dup-badge">⚠️ Már létezik – nem lesz újra hozzáadva</div>' : ''}
+      </div>`;
+  });
+  list.innerHTML = html;
+
+  // színes bal szegély frissítés select változáskor + eltávolítás
+  list.querySelectorAll(".detected-item").forEach(row => {
+    const sel = row.querySelector(".di-color");
+    sel.addEventListener("change", () => {
+      sel.style.borderLeftColor = catHex(sel.value);
+    });
+    row.querySelector(".di-remove").addEventListener("click", () => {
+      row.remove();
+      if (!list.querySelector(".detected-item")) {
+        document.getElementById("btnAddDetected").style.display = "none";
+      }
+    });
+  });
+}
+
+/* Kijelölt tételek hozzáadása (duplikátum szűréssel) */
+document.getElementById("btnAddDetected").addEventListener("click", () => {
+  const rows = document.querySelectorAll("#detectedList .detected-item");
+  let added = 0, skipped = 0, invalid = 0;
+  rows.forEach(row => {
+    const name = row.querySelector(".di-name").value.trim();
+    const amount = Number(row.querySelector(".di-amount").value);
+    const color = row.querySelector(".di-color").value;
+    if (!name || !amount || amount <= 0) { invalid++; return; }
+    if (isDuplicate(name, amount, color)) { skipped++; return; }
+    expenseItems.push({ name, amount, color });
+    added++;
+  });
+  if (added > 0) saveItems();
+
+  let parts = [];
+  if (added > 0) parts.push(`${added} hozzáadva`);
+  if (skipped > 0) parts.push(`${skipped} duplikátum kihagyva`);
+  if (invalid > 0) parts.push(`${invalid} hiányos kihagyva`);
+  const type = added > 0 ? "success" : "error";
+  showMsg("cameraMsg", (added > 0 ? "✅ " : "⚠️ ") + parts.join(", ") + ".", type);
+
+  if (added > 0) {
+    document.getElementById("detectedList").innerHTML = "";
+    document.getElementById("btnAddDetected").style.display = "none";
+    previewImg.style.display = "none";
+  }
+});
+
+/* =========================================================
+   Segédfüggvények
+   ========================================================= */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+function escapeAttr(str) {
+  return escapeHtml(str);
+}
+
+/* =========================================================
+   INDÍTÁS
+   ========================================================= */
+function init() {
+  loadData();
+  buildColorPicker("manualColors", "green");
+  renderList();
+  renderCategories();
+}
+init();
+</script>
+</body>
+</html>
