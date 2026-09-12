@@ -129,7 +129,7 @@
 
   /* ---------- Inputs ---------- */
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #45564d; }
-  input[type="text"], input[type="number"] {
+  input[type="text"], input[type="number"], input[type="month"] {
     width: 100%;
     padding: 14px 15px;
     border: 1.5px solid var(--border);
@@ -139,8 +139,25 @@
     transition: border 0.15s;
     background: #fff;
     color: var(--text);
+    font-family: inherit;
   }
   input:focus { outline: none; border-color: var(--green-accent); }
+
+  /* Hónap-szűrő a listában */
+  .list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .list-toolbar label { margin: 0; white-space: nowrap; }
+  .list-toolbar select {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--text);
+    font-family: inherit;
+    font-weight: 600;
+  }
+  .list-toolbar select:focus { outline: none; border-color: var(--green-accent); }
 
   /* ---------- Color picker ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -342,6 +359,9 @@
         <label for="mAmount">Összeg (Ft)</label>
         <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
 
+        <label for="mMonth">Hónap</label>
+        <input type="month" id="mMonth">
+
         <label>Kategória</label>
         <div class="color-picker" id="manualColors"></div>
 
@@ -352,6 +372,10 @@
 
     <!-- ============ LIST PANEL ============ -->
     <section class="panel" id="panel-list">
+      <div class="list-toolbar" id="listToolbar" style="display:none">
+        <label for="monthFilter">📅 Hónap</label>
+        <select id="monthFilter"></select>
+      </div>
       <div id="summaryArea"></div>
       <div class="section-head">
         <h2>Tételek</h2>
@@ -393,6 +417,8 @@
     <input type="text" id="editName" autocomplete="off">
     <label for="editAmount">Összeg (Ft)</label>
     <input type="number" id="editAmount" inputmode="numeric">
+    <label for="editMonth">Hónap</label>
+    <input type="month" id="editMonth">
     <label>Kategória</label>
     <div class="color-picker" id="editColors"></div>
     <div class="btn-row">
@@ -472,6 +498,23 @@ function catHex(key) {
 }
 function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
 
+/* ---------- Hónap segédek ---------- */
+function currentMonth() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); // "YYYY-MM"
+}
+function monthLabel(m) {
+  if (!m) return "Nincs hónap";
+  const [y, mo] = m.split("-").map(Number);
+  return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(new Date(y, mo - 1, 1));
+}
+function monthLabelShort(m) {
+  if (!m) return "—";
+  const [y, mo] = m.split("-").map(Number);
+  return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(new Date(y, mo - 1, 1));
+}
+let selectedMonth = null; // null → első rendernél current/all; "all" → összes
+
 /* ---------- Üzenetek ---------- */
 function showMsg(id, text, type) {
   const el = document.getElementById(id);
@@ -522,23 +565,25 @@ function getPickerValue(containerId) {
 }
 
 /* ---------- Duplikátum ---------- */
-function isDuplicate(name, amount, color, ignoreIndex) {
+function isDuplicate(name, amount, color, month, ignoreIndex) {
   const n = name.trim().toLowerCase();
   return expenseItems.some((it, i) => {
     if (i === ignoreIndex) return false;
-    return it.name.trim().toLowerCase() === n && Number(it.amount) === Number(amount) && it.color === color;
+    return it.name.trim().toLowerCase() === n && Number(it.amount) === Number(amount) &&
+           it.color === color && (it.month || "") === (month || "");
   });
 }
 
 /* ---------- Kézi bevitel ---------- */
-function addExpense(name, amount, color) {
+function addExpense(name, amount, color, month) {
   name = (name || "").trim();
   amount = Number(amount);
+  month = month || currentMonth();
   if (!name) return { ok: false, reason: "A tétel neve kötelező." };
   if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
   if (!color) return { ok: false, reason: "Válassz kategóriát." };
-  if (isDuplicate(name, amount, color)) return { ok: false, reason: "Ez a tétel már létezik (duplikátum)." };
-  expenseItems.push({ name, amount, color });
+  if (isDuplicate(name, amount, color, month)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
+  expenseItems.push({ name, amount, color, month });
   saveItems();
   return { ok: true };
 }
@@ -546,13 +591,16 @@ function addExpense(name, amount, color) {
 function submitManual() {
   const nameEl = document.getElementById("mName");
   const amountEl = document.getElementById("mAmount");
+  const monthEl = document.getElementById("mMonth");
   const name = nameEl.value;
   const amount = amountEl.value;
+  const month = monthEl.value || currentMonth();
   const color = getPickerValue("manualColors");
-  const res = addExpense(name, amount, color);
+  const res = addExpense(name, amount, color, month);
   if (res.ok) {
-    showMsg("manualMsg", `✅ Hozzáadva: ${name.trim()} – ${formatFt(amount)}  (összesen ${expenseItems.length} tétel)`, "success");
+    showMsg("manualMsg", `✅ Hozzáadva: ${name.trim()} – ${formatFt(amount)} · ${monthLabelShort(month)}`, "success");
     nameEl.value = ""; amountEl.value = ""; nameEl.focus();
+    // a hónap és a kategória megmarad a következő tételhez
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
   }
@@ -569,8 +617,11 @@ document.getElementById("mAmount").addEventListener("keydown", (e) => {
 function renderList() {
   const summaryArea = document.getElementById("summaryArea");
   const listArea = document.getElementById("expenseListArea");
+  const toolbar = document.getElementById("listToolbar");
+  const filterSel = document.getElementById("monthFilter");
 
   if (expenseItems.length === 0) {
+    toolbar.style.display = "none";
     summaryArea.innerHTML = "";
     listArea.innerHTML = '<div class="empty"><span class="big">📭</span>Még nincs egyetlen tétel sem.<br>Vidd fel az elsőt a Bevitel fülön!</div>';
     document.getElementById("btnClearAll").style.display = "none";
@@ -578,9 +629,30 @@ function renderList() {
     return;
   }
 
+  // elérhető hónapok (csökkenő sorrendben)
+  const months = [...new Set(expenseItems.map(it => it.month).filter(Boolean))].sort().reverse();
+
+  // kiválasztott hónap meghatározása
+  if (selectedMonth === null) selectedMonth = months.includes(currentMonth()) ? currentMonth() : "all";
+  if (selectedMonth !== "all" && !months.includes(selectedMonth)) selectedMonth = "all";
+
+  // szűrő legördülő feltöltése
+  if (months.length) {
+    toolbar.style.display = "flex";
+    let opts = `<option value="all">Összes hónap</option>`;
+    months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabel(m)}</option>`; });
+    filterSel.innerHTML = opts;
+    filterSel.value = selectedMonth;
+  } else {
+    toolbar.style.display = "none";
+  }
+
+  // szűrt nézet
+  const view = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => (it.month || "") === selectedMonth);
+
   const totals = {};
   let grand = 0;
-  expenseItems.forEach(it => {
+  view.forEach(it => {
     if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
     totals[it.color].sum += Number(it.amount);
     totals[it.color].count++;
@@ -617,9 +689,9 @@ function renderList() {
     <div class="card">
       <div class="hero-top">
         <div>
-          <div class="hero-label">Összes kiadás</div>
+          <div class="hero-label">${selectedMonth === "all" ? "Összes kiadás" : monthLabel(selectedMonth) + " – kiadás"}</div>
           <div class="hero-total">${formatFt(grand)}</div>
-          <div class="hero-sub">${expenseItems.length} tétel · ${entries.length} kategória</div>
+          <div class="hero-sub">${view.length} tétel · ${entries.length} kategória</div>
         </div>
         <div class="donut" style="background:conic-gradient(${stops})">
           <div class="donut-center">
@@ -634,12 +706,13 @@ function renderList() {
   let lHtml = "";
   for (let i = expenseItems.length - 1; i >= 0; i--) {
     const it = expenseItems[i];
+    if (selectedMonth !== "all" && (it.month || "") !== selectedMonth) continue;
     lHtml += `
       <div class="exp-item">
         <div class="exp-icon" style="background:${catHex(it.color)}">💸</div>
         <div class="exp-info">
           <div class="exp-name">${escapeHtml(it.name)}</div>
-          <div class="exp-cat">${escapeHtml(catName(it.color))}</div>
+          <div class="exp-cat">${escapeHtml(catName(it.color))} · ${monthLabelShort(it.month)}</div>
         </div>
         <div class="exp-right">
           <span class="exp-amount">${formatFt(it.amount)}</span>
@@ -683,6 +756,7 @@ function openEdit(i) {
   editIndex = i;
   document.getElementById("editName").value = it.name;
   document.getElementById("editAmount").value = it.amount;
+  document.getElementById("editMonth").value = it.month || currentMonth();
   buildColorPicker("editColors", it.color);
   document.getElementById("editModal").classList.add("show");
 }
@@ -693,12 +767,13 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (editIndex === null) return;
   const name = document.getElementById("editName").value.trim();
   const amount = Number(document.getElementById("editAmount").value);
+  const month = document.getElementById("editMonth").value || currentMonth();
   const color = getPickerValue("editColors");
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (!color) { alert("Válassz kategóriát."); return; }
-  if (isDuplicate(name, amount, color, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
-  expenseItems[editIndex] = { name, amount, color };
+  if (isDuplicate(name, amount, color, month, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
+  expenseItems[editIndex] = { name, amount, color, month };
   saveItems();
   closeEdit();
   renderList();
@@ -789,12 +864,18 @@ function escapeHtml(str) {
 /* ---------- Indítás ---------- */
 function init() {
   loadData();
+  document.getElementById("mMonth").value = currentMonth();
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
   // Egyéni szín kiválasztásakor a preset gombok kijelölése törlődik
   document.getElementById("newCatCustom").addEventListener("input", () => {
     document.querySelectorAll("#newCatColors .color-btn").forEach(x => x.classList.remove("selected"));
+  });
+  // Hónap-szűrő váltás
+  document.getElementById("monthFilter").addEventListener("change", (e) => {
+    selectedMonth = e.target.value;
+    renderList();
   });
   document.getElementById("mName").focus();
 }
