@@ -1,0 +1,16 @@
+{
+  "name": "Pénzügyi Napló",
+  "short_name": "Napló",
+  "description": "Bevétel- és kiadáskövető napló – kategóriák, havi bontás, offline.",
+  "lang": "hu",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d3325",
+  "theme_color": "#14432f",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
