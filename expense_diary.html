@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pénzügyi Napló</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* KAMERA MÓD */
+        .camera-section {
+            text-align: center;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        video.active {
+            display: block;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ee5a52;
+        }
+
+        /* MANUÁLIS BEVITEL */
+        .manual-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* OCR FELDOLGOZÁS */
+        .processing {
+            text-align: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* TÉTEL HOZZÁADÁS */
+        .item-form {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .item-form.active {
+            display: block;
+        }
+
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .color-option {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 3px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+        }
+
+        .color-green { background: #4CAF50; }
+        .color-blue { background: #2196F3; }
+        .color-yellow { background: #FFC107; }
+        .color-pink { background: #E91E63; }
+        .color-gray { background: #9E9E9E; }
+
+        .color-label {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 5px;
+            color: #666;
+        }
+
+        /* LISTA */
+        .list-section {
+            margin-top: 20px;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .amount {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .summary-card.green { background: #4CAF50; }
+        .summary-card.blue { background: #2196F3; }
+        .summary-card.yellow { background: #FFC107; color: #333; }
+        .summary-card.pink { background: #E91E63; }
+        .summary-card.gray { background: #9E9E9E; }
+
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            transition: all 0.2s;
+        }
+
+        .item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .item.green { border-left-color: #4CAF50; }
+        .item.blue { border-left-color: #2196F3; }
+        .item.yellow { border-left-color: #FFC107; }
+        .item.pink { border-left-color: #E91E63; }
+        .item.gray { border-left-color: #9E9E9E; }
+
+        .item-left {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .item-category {
+            font-size: 12px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .item-amount {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 15px;
+            font-size: 16px;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-delete {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            opacity: 0.3;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Pénzügyi Napló</h1>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('camera')">📷 Kamera</button>
+            <button class="tab-btn" onclick="switchTab('manual')">✍️ Kézi</button>
+            <button class="tab-btn" onclick="switchTab('list')">📊 Lista</button>
+        </div>
+
+        <!-- KAMERA MÓD -->
+        <div id="camera" class="tab-content active">
+            <div class="camera-section">
+                <video id="video" playsinline></video>
+                <canvas id="canvas"></canvas>
+                
+                <div class="camera-controls">
+                    <button class="btn-primary" onclick="startCamera()">🎥 Kamera indítása</button>
+                    <button class="btn-primary" onclick="takePhoto()" id="photoBtn" style="display:none;">📸 Fotózás</button>
+                    <button class="btn-secondary" onclick="stopCamera()" id="stopBtn" style="display:none;">⏹️ Leállítás</button>
+                </div>
+
+                <div id="processingSection" class="processing" style="display:none;">
+                    <div class="spinner"></div>
+                    <p>Feldolgozás...</p>
+                </div>
+
+                <div id="ocrResult" class="item-form"></div>
+            </div>
+        </div>
+
+        <!-- KÉZI BEVITEL -->
+        <div id="manual" class="tab-content">
+            <div class="manual-section">
+                <div class="form-group">
+                    <label for="manualName">Tétel neve</label>
+                    <input type="text" id="manualName" placeholder="pl: Lakbér, Kaja rendelés">
+                </div>
+
+                <div class="form-group">
+                    <label for="manualAmount">Összeg (Ft)</label>
+                    <input type="number" id="manualAmount" placeholder="0" step="100">
+                </div>
+
+                <div class="form-group">
+                    <label>Kategória (szín)</label>
+                    <div class="color-picker">
+                        <div>
+                            <div class="color-option color-green" onclick="selectManualColor('green')"></div>
+                            <div class="color-label">Zöld (lakbér)</div>
+                        </div>
+                        <div>
+                            <div class="color-option color-blue" onclick="selectManualColor('blue')"></div>
+                            <div class="color-label">Kék (kaja)</div>
+                        </div>
+                        <div>
+                            <div class="color-option color-yellow" onclick="selectManualColor('yellow')"></div>
+                            <div class="color-label">Sárga (üzlet)</div>
+                        </div>
+                        <div>
+                            <div class="color-option color-pink" onclick="selectManualColor('pink')"></div>
+                            <div class="color-label">Rózsaszín</div>
+                        </div>
+                        <div>
+                            <div class="color-option color-gray" onclick="selectManualColor('gray')"></div>
+                            <div class="color-label">Szürke (egyéb)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="selectedManualColor" value="">
+
+                <button class="btn-primary" onclick="addManualItem()" style="width: 100%;">➕ Hozzáadás</button>
+            </div>
+        </div>
+
+        <!-- LISTA -->
+        <div id="list" class="tab-content">
+            <div class="list-section">
+                <div id="summary" class="summary"></div>
+                <div id="itemsList" class="items-list"></div>
+                <div id="emptyState" class="empty-state">
+                    <p>Nincs még tétel. Kezdj a kamera vagy kézi módal!</p>
+                </div>
+            </div>
+            <button class="btn-danger" onclick="clearAllData()" style="width: 100%; margin-top: 20px;">🗑️ Az összes adat törlése</button>
+        </div>
+
+        <div id="errorMsg" class="error-message"></div>
+        <div id="successMsg" class="success-message"></div>
+    </div>
+
+    <!-- MÓDOSÍTÁSI MODAL -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Tétel módosítása</div>
+            <div class="form-group">
+                <label for="editName">Tétel neve</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label for="editAmount">Összeg</label>
+                <input type="number" id="editAmount" step="100">
+            </div>
+            <div class="form-group">
+                <label>Kategória</label>
+                <div class="color-picker">
+                    <div>
+                        <div class="color-option color-green" onclick="selectEditColor('green')"></div>
+                        <div class="color-label">Zöld</div>
+                    </div>
+                    <div>
+                        <div class="color-option color-blue" onclick="selectEditColor('blue')"></div>
+                        <div class="color-label">Kék</div>
+                    </div>
+                    <div>
+                        <div class="color-option color-yellow" onclick="selectEditColor('yellow')"></div>
+                        <div class="color-label">Sárga</div>
+                    </div>
+                    <div>
+                        <div class="color-option color-pink" onclick="selectEditColor('pink')"></div>
+                        <div class="color-label">Rózsaszín</div>
+                    </div>
+                    <div>
+                        <div class="color-option color-gray" onclick="selectEditColor('gray')"></div>
+                        <div class="color-label">Szürke</div>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="editColor" value="">
+            <input type="hidden" id="editIndex" value="">
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeEditModal()">Mégse</button>
+                <button class="btn-primary" onclick="saveEdit()">Mentés</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CATEGORIES = {
+            green: { name: 'Lakbér, Előfiz., Számlák', color: 'green' },
+            blue: { name: 'Bevásárlás, Kaja', color: 'blue' },
+            yellow: { name: 'Üzlet kiadás', color: 'yellow' },
+            pink: { name: 'Impulzív', color: 'pink' },
+            gray: { name: 'Egyéb', color: 'gray' }
+        };
+
+        let items = [];
+        let video = null;
+        let currentEditIndex = null;
+
+        // INICIALIZÁLÁS
+        function init() {
+            loadItems();
+            renderList();
+        }
+
+        // LOCALSTORAGE
+        function saveItems() {
+            localStorage.setItem('expenseItems', JSON.stringify(items));
+        }
+
+        function loadItems() {
+            const data = localStorage.getItem('expenseItems');
+            items = data ? JSON.parse(data) : [];
+        }
+
+        // TAB KEZELÉS
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+        }
+
+        // KAMERA FUNKCIÓK
+        async function startCamera() {
+            try {
+                video = document.getElementById('video');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                video.srcObject = stream;
+                video.classList.add('active');
+                document.getElementById('photoBtn').style.display = 'inline-block';
+                document.getElementById('stopBtn').style.display = 'inline-block';
+            } catch (err) {
+                showError('Kamera elérése nem sikerült. Ellenőrizd az engedélyeket!');
+            }
+        }
+
+        function stopCamera() {
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.classList.remove('active');
+                document.getElementById('photoBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'none';
+            }
+        }
+
+        async function takePhoto() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            showProcessing(true);
+            
+            try {
+                const { data: { text } } = await Tesseract.recognize(canvas, 'hun');
+                showProcessing(false);
+                processOCRText(text, canvas);
+            } catch (err) {
+                showProcessing(false);
+                showError('OCR feldolgozás hiba: ' + err.message);
+            }
+        }
+
+        function processOCRText(text, canvas) {
+            // Szöveg feldolgozása - tételek és összegek kinyerése
+            const lines = text.split('\n').filter(l => l.trim());
+            const pixelData = analyzeImageColors(canvas);
+
+            const resultHtml = `
+                <h3>Felismert tételek:</h3>
+                <div id="ocrItems"></div>
+                <button class="btn-primary" onclick="addOcrItems()" style="width: 100%; margin-top: 10px;">✅ Hozzáadás</button>
+                <button class="btn-secondary" onclick="clearOcrResult()" style="width: 100%; margin-top: 10px;">❌ Mégse</button>
+            `;
+
+            document.getElementById('ocrResult').innerHTML = resultHtml;
+            document.getElementById('ocrResult').classList.add('active');
+
+            const ocrItemsDiv = document.getElementById('ocrItems');
+            let tempItems = [];
+
+            // Egyszerű feldolgozás: számokat keresi meg a sorok után
+            lines.forEach((line, idx) => {
+                const amounts = line.match(/\d+/g);
+                if (amounts && amounts.length > 0) {
+                    const amount = parseInt(amounts[amounts.length - 1]);
+                    if (amount > 0) {
+                        const itemName = line.replace(/\d+/g, '').trim();
+                        if (itemName) {
+                            const detectedColor = detectColorFromPixels(pixelData, idx);
+                            const item = {
+                                name: itemName,
+                                amount: amount,
+                                color: detectedColor
+                            };
+                            tempItems.push(item);
+
+                            const itemHtml = `
+                                <div style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin: 5px 0; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: bold;">${itemName}</div>
+                                        <div style="font-size: 12px; color: #666;">
+                                            <select onchange="tempItems[${tempItems.length-1}].color = this.value" style="padding: 5px;">
+                                                <option value="green" ${detectedColor === 'green' ? 'selected' : ''}>🟢 Zöld</option>
+                                                <option value="blue" ${detectedColor === 'blue' ? 'selected' : ''}>🔵 Kék</option>
+                                                <option value="yellow" ${detectedColor === 'yellow' ? 'selected' : ''}>🟡 Sárga</option>
+                                                <option value="pink" ${detectedColor === 'pink' ? 'selected' : ''}>🔴 Rózsaszín</option>
+                                                <option value="gray" ${detectedColor === 'gray' ? 'selected' : ''}>⚫ Szürke</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style="font-weight: bold; color: #667eea;">${amount} Ft</div>
+                                </div>
+                            `;
+                            ocrItemsDiv.innerHTML += itemHtml;
+                        }
+                    }
+                }
+            });
+
+            window.tempItems = tempItems;
+        }
+
+        function analyzeImageColors(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            const colorPixels = {
+                green: 0,
+                blue: 0,
+                yellow: 0,
+                pink: 0,
+                gray: 0
+            };
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
+
+                if (a > 128) {
+                    if (g > r + 20 && g > b + 20) colorPixels.green++;
+                    else if (b > r + 20 && b > g + 20) colorPixels.blue++;
+                    else if (r > 150 && g > 150 && b < 100) colorPixels.yellow++;
+                    else if (r > g + 20 && g > b) colorPixels.pink++;
+                    else colorPixels.gray++;
+                }
+            }
+
+            return colorPixels;
+        }
+
+        function detectColorFromPixels(pixelData, lineIndex) {
+            const colors = Object.entries(pixelData).sort((a, b) => b[1] - a[1]);
+            return colors[0][0];
+        }
+
+        function clearOcrResult() {
+            document.getElementById('ocrResult').innerHTML = '';
+            document.getElementById('ocrResult').classList.remove('active');
+        }
+
+        function addOcrItems() {
+            if (!window.tempItems) return;
+            
+            let addedCount = 0;
+            window.tempItems.forEach(item => {
+                if (!isDuplicate(item)) {
+                    items.push(item);
+                    addedCount++;
+                }
+            });
+
+            saveItems();
+            renderList();
+            clearOcrResult();
+            switchTab('list');
+            showSuccess(`${addedCount} tétel hozzáadva!`);
+        }
+
+        // KÉZI BEVITEL
+        function selectManualColor(color) {
+            document.querySelectorAll('.manual-section .color-option').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.color-option').classList.add('selected');
+            document.getElementById('selectedManualColor').value = color;
+        }
+
+        function selectEditColor(color) {
+            document.querySelectorAll('#editModal .color-option').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.color-option').classList.add('selected');
+            document.getElementById('editColor').value = color;
+        }
+
+        function addManualItem() {
+            const name = document.getElementById('manualName').value.trim();
+            const amount = parseInt(document.getElementById('manualAmount').value);
+            const color = document.getElementById('selectedManualColor').value;
+
+            if (!name) {
+                showError('Írd be a tétel nevét!');
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showError('Írd be az összeget!');
+                return;
+            }
+            if (!color) {
+                showError('Válassz színt!');
+                return;
+            }
+
+            const item = { name, amount, color };
+
+            if (isDuplicate(item)) {
+                showError('Ez a tétel már benne van!');
+                return;
+            }
+
+            items.push(item);
+            saveItems();
+            renderList();
+
+            document.getElementById('manualName').value = '';
+            document.getElementById('manualAmount').value = '';
+            document.getElementById('selectedManualColor').value = '';
+            document.querySelectorAll('.manual-section .color-option').forEach(el => el.classList.remove('selected'));
+
+            showSuccess('Tétel hozzáadva!');
+            switchTab('list');
+        }
+
+        // DUPLIKÁTUM SZŰRÉS
+        function isDuplicate(item) {
+            return items.some(existing => 
+                existing.name.toLowerCase() === item.name.toLowerCase() &&
+                existing.amount === item.amount &&
+                existing.color === item.color
+            );
+        }
+
+        // LISTA MEGJELENÍTÉS
+        function renderList() {
+            const listDiv = document.getElementById('itemsList');
+            const emptyState = document.getElementById('emptyState');
+            const summaryDiv = document.getElementById('summary');
+
+            if (items.length === 0) {
+                listDiv.innerHTML = '';
+                emptyState.style.display = 'block';
+                summaryDiv.innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Összesítés
+            const summary = {};
+            Object.keys(CATEGORIES).forEach(color => {
+                summary[color] = items.filter(item => item.color === color)
+                    .reduce((sum, item) => sum + item.amount, 0);
+            });
+
+            const summaryHtml = Object.entries(summary)
+                .filter(([, amount]) => amount > 0)
+                .map(([color, amount]) => `
+                    <div class="summary-card ${color}">
+                        <h3>${CATEGORIES[color].name}</h3>
+                        <div class="amount">${amount.toLocaleString()} Ft</div>
+                    </div>
+                `)
+                .join('');
+            summaryDiv.innerHTML = summaryHtml;
+
+            // Tételek
+            listDiv.innerHTML = items.map((item, idx) => `
+                <div class="item ${item.color}">
+                    <div class="item-left">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-category">${CATEGORIES[item.color].name}</div>
+                    </div>
+                    <div class="item-amount">${item.amount.toLocaleString()} Ft</div>
+                    <div class="item-actions">
+                        <button class="btn-small btn-edit" onclick="editItem(${idx})">✏️</button>
+                        <button class="btn-small btn-delete" onclick="deleteItem(${idx})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // SZERKESZTÉS
+        function editItem(idx) {
+            currentEditIndex = idx;
+            const item = items[idx];
+            document.getElementById('editName').value = item.name;
+            document.getElementById('editAmount').value = item.amount;
+            document.getElementById('editColor').value = item.color;
+            document.getElementById('editIndex').value = idx;
+            
+            document.querySelectorAll('#editModal .color-option').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`#editModal .color-${item.color}`).classList.add('selected');
+            
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            currentEditIndex = null;
+        }
+
+        function saveEdit() {
+            const name = document.getElementById('editName').value.trim();
+            const amount = parseInt(document.getElementById('editAmount').value);
+            const color = document.getElementById('editColor').value;
+            const idx = parseInt(document.getElementById('editIndex').value);
+
+            if (!name || !amount || !color) {
+                showError('Töltsd ki az összes mezőt!');
+                return;
+            }
+
+            items[idx] = { name, amount, color };
+            saveItems();
+            renderList();
+            closeEditModal();
+            showSuccess('Tétel módosítva!');
+        }
+
+        // TÖRLÉS
+        function deleteItem(idx) {
+            if (confirm('Biztosan törlöd ezt a tételt?')) {
+                items.splice(idx, 1);
+                saveItems();
+                renderList();
+                showSuccess('Tétel törölve!');
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('Biztos, hogy törlöd az ÖSSZES adatot? Ez nem vonható vissza!')) {
+                items = [];
+                saveItems();
+                renderList();
+                showSuccess('Összes adat törölve!');
+            }
+        }
+
+        // ÜZENETEK
+        function showProcessing(show) {
+            document.getElementById('processingSection').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
+        }
+
+        // INDÍTÁS
+        init();
+    </script>
+</body>
+</html>
