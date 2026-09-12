@@ -144,6 +144,8 @@
     background: var(--input-bg); color: var(--text); font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: var(--green-accent); }
+  /* A hónap-mező csak akkora legyen, amekkora kell (ne teljes szélesség) */
+  input[type="month"] { width: auto; max-width: 100%; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -179,7 +181,7 @@
   /* ---------- Lista eszköztár ---------- */
   .list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .list-toolbar .tb-ic { font-size: 18px; flex-shrink: 0; }
-  .list-toolbar select { flex: 1; min-width: 0; margin-bottom: 0; font-weight: 600; padding: 12px 14px; }
+  .list-toolbar select { flex: 0 1 auto; width: auto; max-width: 100%; min-width: 0; margin-bottom: 0; font-weight: 600; padding: 12px 14px; }
   .list-controls { display: flex; gap: 10px; margin-bottom: 14px; }
   .list-controls input { margin-bottom: 0; flex: 1.4; }
   .list-controls select { margin-bottom: 0; flex: 1; font-weight: 600; }
@@ -688,7 +690,7 @@ function renderList() {
     <div class="card">
       <div class="hero-top">
         <div>
-          <div class="hero-label">${selectedMonth === "all" ? "Összesített egyenleg" : monthLabel(selectedMonth) + " · egyenleg"}</div>
+          <div class="hero-label">${selectedMonth === "all" ? "Összesített egyenleg" : monthLabelShort(selectedMonth) + " · egyenleg"}</div>
           <div class="hero-total ${balance < 0 ? "neg" : ""}">${formatFt(balance)}</div>
           <div class="hero-flows">
             <span class="flow-in">▲ Bevétel ${formatFt(income)}</span>
