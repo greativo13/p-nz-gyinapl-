@@ -328,6 +328,24 @@
   .custom-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
   .custom-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 7px; }
   .custom-color input[type="color"]::-moz-color-swatch { border: none; border-radius: 7px; }
+
+  /* Ikonválasztó */
+  .icon-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .icon-choice {
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; cursor: pointer;
+    border: 2px solid var(--border); border-radius: 13px; background: #fff;
+    transition: transform 0.08s, border-color 0.15s;
+  }
+  .icon-choice:active { transform: scale(0.92); }
+  .icon-choice.selected { border-color: var(--green-deep); background: var(--green-soft); }
+
+  /* Kategória ikon a listában */
+  .cat-icon {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -402,6 +420,8 @@
           <label for="newCatCustom" style="margin:0;">Egyéni szín</label>
           <input type="color" id="newCatCustom" value="#1f9d5b">
         </div>
+        <label>Ikon</label>
+        <div class="icon-picker" id="newCatIcons"></div>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
     </section>
@@ -434,12 +454,16 @@
    ========================================================= */
 
 const DEFAULT_CATEGORIES = {
-  green:  { name: "Számlák",         color: "green"  },
-  blue:   { name: "Étkezés",         color: "blue"   },
-  yellow: { name: "Vállalkozás",     color: "yellow" },
-  pink:   { name: "Impulzív kiadás", color: "pink"   },
-  gray:   { name: "Egyéb",           color: "gray"   }
+  green:  { name: "Számlák",         color: "green",  icon: "🧾" },
+  blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️" },
+  yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼" },
+  pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️" },
+  gray:   { name: "Egyéb",           color: "gray",   icon: "📦" }
 };
+
+// Választható ikonok új kategóriákhoz
+const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒"];
+function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
 
 const COLOR_HEX = {
   green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0"
@@ -531,7 +555,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     tab.classList.add("active");
     document.getElementById("panel-" + tab.dataset.panel).classList.add("active");
-    if (tab.dataset.panel === "list") renderList();
+    if (tab.dataset.panel === "list") { selectedMonth = currentMonth(); renderList(); }
     if (tab.dataset.panel === "categories") renderCategories();
     if (tab.dataset.panel === "manual") document.getElementById("mName").focus();
   });
@@ -629,26 +653,32 @@ function renderList() {
     return;
   }
 
-  // elérhető hónapok (csökkenő sorrendben)
-  const months = [...new Set(expenseItems.map(it => it.month).filter(Boolean))].sort().reverse();
+  // elérhető hónapok + az aktuális hónap mindig legyen opció (csökkenő sorrend)
+  const itemMonths = [...new Set(expenseItems.map(it => it.month).filter(Boolean))];
+  const months = [...new Set([currentMonth(), ...itemMonths])].sort().reverse();
 
-  // kiválasztott hónap meghatározása
-  if (selectedMonth === null) selectedMonth = months.includes(currentMonth()) ? currentMonth() : "all";
-  if (selectedMonth !== "all" && !months.includes(selectedMonth)) selectedMonth = "all";
+  // alapból mindig az aktuális hónap
+  if (selectedMonth === null) selectedMonth = currentMonth();
+  if (selectedMonth !== "all" && !months.includes(selectedMonth)) selectedMonth = currentMonth();
 
   // szűrő legördülő feltöltése
-  if (months.length) {
-    toolbar.style.display = "flex";
-    let opts = `<option value="all">Összes hónap</option>`;
-    months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabel(m)}</option>`; });
-    filterSel.innerHTML = opts;
-    filterSel.value = selectedMonth;
-  } else {
-    toolbar.style.display = "none";
-  }
+  toolbar.style.display = "flex";
+  let opts = `<option value="all">Összes hónap</option>`;
+  months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabel(m)}</option>`; });
+  filterSel.innerHTML = opts;
+  filterSel.value = selectedMonth;
 
   // szűrt nézet
   const view = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => (it.month || "") === selectedMonth);
+
+  // üres hónap (nincs tétel a kiválasztott hónapban)
+  if (view.length === 0) {
+    summaryArea.innerHTML = `<div class="empty"><span class="big">🗓️</span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Vidd fel a Bevitel fülön, vagy válts hónapot fent.</div>`;
+    listArea.innerHTML = "";
+    document.getElementById("btnClearAll").style.display = "block";
+    document.getElementById("clearDivider").style.display = "block";
+    return;
+  }
 
   const totals = {};
   let grand = 0;
@@ -709,7 +739,7 @@ function renderList() {
     if (selectedMonth !== "all" && (it.month || "") !== selectedMonth) continue;
     lHtml += `
       <div class="exp-item">
-        <div class="exp-icon" style="background:${catHex(it.color)}">💸</div>
+        <div class="exp-icon" style="background:${catHex(it.color)}">${catIcon(it.color)}</div>
         <div class="exp-info">
           <div class="exp-name">${escapeHtml(it.name)}</div>
           <div class="exp-cat">${escapeHtml(catName(it.color))} · ${monthLabelShort(it.month)}</div>
@@ -789,7 +819,7 @@ function renderCategories() {
     const isCustom = !DEFAULT_CATEGORIES[key];
     html += `
       <div class="cat-item">
-        <div class="cat-dot" style="background:${catHex(key)}"></div>
+        <div class="cat-icon" style="background:${catHex(key)}">${catIcon(key)}</div>
         <div class="cat-name">${escapeHtml(c.name)}</div>
         ${isCustom
           ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>`
@@ -815,6 +845,22 @@ function renderCategories() {
     });
     container.appendChild(btn);
   });
+
+  // ikonválasztó feltöltése
+  const iconBox = document.getElementById("newCatIcons");
+  iconBox.innerHTML = "";
+  ICON_CHOICES.forEach((ic, idx) => {
+    const b = document.createElement("div");
+    b.className = "icon-choice";
+    b.textContent = ic;
+    b.dataset.icon = ic;
+    if (idx === 0) b.classList.add("selected");
+    b.addEventListener("click", () => {
+      iconBox.querySelectorAll(".icon-choice").forEach(x => x.classList.remove("selected"));
+      b.classList.add("selected");
+    });
+    iconBox.appendChild(b);
+  });
 }
 
 // Az új kategória kiválasztott színe: preset gomb, vagy ha egyik sincs kijelölve, az egyéni színválasztó
@@ -822,6 +868,10 @@ function getNewCatColor() {
   const sel = document.querySelector("#newCatColors .color-btn.selected");
   if (sel) return sel.dataset.color;
   return document.getElementById("newCatCustom").value;
+}
+function getNewCatIcon() {
+  const sel = document.querySelector("#newCatIcons .icon-choice.selected");
+  return sel ? sel.dataset.icon : ICON_CHOICES[0];
 }
 
 function deleteCategory(key) {
@@ -848,7 +898,7 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
   if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
   const key = "custom_" + Date.now();
-  customCategories[key] = { name, color };
+  customCategories[key] = { name, color, icon: getNewCatIcon() };
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
