@@ -304,6 +304,30 @@
   .modal h3 { font-size: 17px; margin-bottom: 16px; }
 
   .hint { font-size: 12px; color: #9ca3af; margin-top: -8px; margin-bottom: 14px; }
+  .hint a { color: var(--purple); }
+
+  /* OCR beállítás (details) */
+  .ocr-settings {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    background: #faf9fe;
+  }
+  .ocr-settings summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--purple-dark);
+    list-style: none;
+    user-select: none;
+  }
+  .ocr-settings summary::-webkit-details-marker { display: none; }
+  .ocr-settings summary::after { content: " ▾"; float: right; }
+  .ocr-settings[open] summary::after { content: " ▴"; }
+  .ocr-settings-body { padding: 0 14px 8px; }
+  .ocr-settings-body .hint { margin-top: 0; }
+  #ocrEngineInfo { font-weight: 600; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -326,6 +350,24 @@
     <section class="panel active" id="panel-camera">
       <h2>📷 Kép beolvasása</h2>
       <div class="msg info show">Fotózd le vagy tölts fel egy oldalt a naplóból. A szöveget és a színeket automatikusan felismerem.</div>
+
+      <details class="ocr-settings" id="ocrSettings">
+        <summary>🔑 OCR beállítás (kézírás olvasáshoz)</summary>
+        <div class="ocr-settings-body">
+          <p class="hint" style="margin-top:10px;">
+            Kézírás olvasásához add meg a <b>Google Cloud Vision</b> API-kulcsodat.
+            A kulcs csak a saját böngésződben tárolódik (localStorage), sehova nem küldjük tovább.
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Kulcs létrehozása ↗</a>
+          </p>
+          <label for="gvKey">Google Vision API kulcs</label>
+          <input type="password" id="gvKey" placeholder="AIza..." autocomplete="off">
+          <div class="btn-row">
+            <button class="btn" id="btnSaveKey">💾 Mentés</button>
+            <button class="btn secondary" id="btnClearKey">🗑️ Törlés</button>
+          </div>
+          <div class="hint" id="ocrEngineInfo"></div>
+        </div>
+      </details>
 
       <div class="btn-row">
         <button class="btn" id="btnCamera">📸 Fotózás</button>
@@ -866,7 +908,26 @@ function handleImageFile(file) {
 
 /* =========================================================
    OCR + SZÍN-DETEKTÁLÁS
+   Diszpécser: Google Vision (kézírás) ha van API kulcs,
+   különben Tesseract (nyomtatott szöveghez).
    ========================================================= */
+let googleVisionKey = "";
+
+function loadKey() {
+  try { googleVisionKey = localStorage.getItem("googleVisionApiKey") || ""; } catch { googleVisionKey = ""; }
+}
+function updateEngineInfo() {
+  const el = document.getElementById("ocrEngineInfo");
+  if (!el) return;
+  if (googleVisionKey) {
+    el.innerHTML = "✅ <b>Google Vision</b> aktív – kézírás olvasása bekapcsolva.";
+    el.style.color = "#15803d";
+  } else {
+    el.innerHTML = "⚠️ Nincs kulcs – <b>Tesseract</b> fut (nyomtatott szöveghez; kézíráson gyenge).";
+    el.style.color = "#b45309";
+  }
+}
+
 async function processImage(sourceCanvas) {
   const progressWrap = document.getElementById("ocrProgress");
   const fill = document.getElementById("ocrFill");
@@ -879,56 +940,33 @@ async function processImage(sourceCanvas) {
   document.getElementById("cameraMsg").className = "msg";
   progressWrap.style.display = "block";
   fill.style.width = "5%";
-  label.textContent = "OCR indítása...";
-
-  if (typeof Tesseract === "undefined") {
-    progressWrap.style.display = "none";
-    showMsg("cameraMsg", "⚠️ Az OCR könyvtár nem töltődött be. Ellenőrizd az internetkapcsolatot, vagy használd a Kézi bevitelt.", "error");
-    return;
-  }
 
   try {
-    const { data } = await Tesseract.recognize(sourceCanvas, "hun+eng", {
-      logger: m => {
-        if (m.status === "recognizing text") {
-          const p = Math.round(m.progress * 90) + 10;
-          fill.style.width = p + "%";
-          label.textContent = "Szövegfelismerés... " + Math.round(m.progress * 100) + "%";
-        } else {
-          label.textContent = m.status + "...";
-        }
+    let items;
+    if (googleVisionKey) {
+      label.textContent = "Google Vision olvasás (kézírás)...";
+      fill.style.width = "40%";
+      items = await googleVisionOCR(sourceCanvas);
+      fill.style.width = "100%";
+      label.textContent = "Elemzés...";
+    } else {
+      if (typeof Tesseract === "undefined") {
+        progressWrap.style.display = "none";
+        showMsg("cameraMsg", "⚠️ Az OCR könyvtár nem töltődött be. Ellenőrizd az internetkapcsolatot, vagy használd a Kézi bevitelt.", "error");
+        return;
       }
-    });
-
-    fill.style.width = "100%";
-    label.textContent = "Elemzés...";
-
-    const lines = (data.lines || []).length
-      ? data.lines
-      : (data.text || "").split("\n").map(t => ({ text: t, bbox: null }));
-
-    const ctx = sourceCanvas.getContext("2d");
-    const items = [];
-
-    lines.forEach(line => {
-      const raw = (line.text || "").trim();
-      if (!raw) return;
-      const parsed = parseLine(raw);
-      if (!parsed) return;
-
-      // Szín-detektálás a sor területén (ha van bbox)
-      let color = "gray";
-      if (line.bbox) {
-        color = detectColorInRegion(ctx, line.bbox, sourceCanvas.width, sourceCanvas.height);
-      }
-      items.push({ name: parsed.name, amount: parsed.amount, color });
-    });
+      label.textContent = "OCR indítása...";
+      items = await tesseractOCR(sourceCanvas, fill, label);
+    }
 
     progressWrap.style.display = "none";
     window.tempItems = items; // debug
 
-    if (items.length === 0) {
-      showMsg("cameraMsg", "🔍 Nem sikerült tételeket felismerni. Próbáld élesebb képpel, vagy használd a Kézi bevitelt.", "error");
+    if (!items || items.length === 0) {
+      const tip = googleVisionKey
+        ? "🔍 Nem sikerült tételeket felismerni. Próbáld közelebbről, jó fényben, egyenesen fotózva."
+        : "🔍 Nem sikerült tételeket felismerni. Kézíráshoz add meg a Google Vision kulcsot a fenti beállításokban, vagy használd a Kézi bevitelt.";
+      showMsg("cameraMsg", tip, "error");
       return;
     }
 
@@ -942,8 +980,119 @@ async function processImage(sourceCanvas) {
   } catch (err) {
     console.error(err);
     progressWrap.style.display = "none";
-    showMsg("cameraMsg", "⚠️ Hiba történt a feldolgozás közben: " + err.message, "error");
+    showMsg("cameraMsg", "⚠️ Hiba a feldolgozás közben: " + err.message, "error");
   }
+}
+
+/* ---------- Tesseract motor (nyomtatott szöveg) ---------- */
+async function tesseractOCR(sourceCanvas, fill, label) {
+  const { data } = await Tesseract.recognize(sourceCanvas, "hun+eng", {
+    logger: m => {
+      if (m.status === "recognizing text") {
+        const p = Math.round(m.progress * 90) + 10;
+        fill.style.width = p + "%";
+        label.textContent = "Szövegfelismerés... " + Math.round(m.progress * 100) + "%";
+      } else {
+        label.textContent = m.status + "...";
+      }
+    }
+  });
+  const lines = (data.lines || []).length
+    ? data.lines
+    : (data.text || "").split("\n").map(t => ({ text: t, bbox: null }));
+  return linesToItems(lines, sourceCanvas);
+}
+
+/* ---------- Google Cloud Vision motor (kézírás) ---------- */
+async function googleVisionOCR(sourceCanvas) {
+  // JPEG-re tömörítjük a payload csökkentéséhez
+  const dataUrl = sourceCanvas.toDataURL("image/jpeg", 0.92);
+  const base64 = dataUrl.split(",")[1];
+
+  const body = {
+    requests: [{
+      image: { content: base64 },
+      features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+      imageContext: { languageHints: ["hu", "en"] }
+    }]
+  };
+
+  const resp = await fetch(
+    "https://vision.googleapis.com/v1/images:annotate?key=" + encodeURIComponent(googleVisionKey),
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+  );
+  const json = await resp.json();
+
+  if (!resp.ok || json.error) {
+    const m = (json.error && json.error.message) || ("HTTP " + resp.status);
+    throw new Error("Google Vision: " + m);
+  }
+  const r = json.responses && json.responses[0];
+  if (!r || r.error) throw new Error("Google Vision: " + ((r && r.error && r.error.message) || "üres válasz"));
+  if (!r.fullTextAnnotation) return [];
+
+  const lines = visionAnnotationToLines(r.fullTextAnnotation);
+  return linesToItems(lines, sourceCanvas);
+}
+
+/* Vision fullTextAnnotation → sorok {text, bbox} */
+function visionAnnotationToLines(fta) {
+  const lines = [];
+  (fta.pages || []).forEach(page => {
+    (page.blocks || []).forEach(block => {
+      (block.paragraphs || []).forEach(par => {
+        let lineText = "";
+        let verts = [];
+        const flush = () => {
+          const t = lineText.trim();
+          if (t) lines.push({ text: t, bbox: vertsToBbox(verts) });
+          lineText = ""; verts = [];
+        };
+        (par.words || []).forEach(word => {
+          const wt = (word.symbols || []).map(s => s.text).join("");
+          lineText += wt + " ";
+          if (word.boundingBox && word.boundingBox.vertices) {
+            verts = verts.concat(word.boundingBox.vertices);
+          }
+          const syms = word.symbols || [];
+          const last = syms[syms.length - 1];
+          const brk = last && last.property && last.property.detectedBreak && last.property.detectedBreak.type;
+          if (brk === "LINE_BREAK" || brk === "EOL_SURE_SPACE") flush();
+        });
+        flush();
+      });
+    });
+  });
+  return lines;
+}
+
+function vertsToBbox(verts) {
+  if (!verts || !verts.length) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  verts.forEach(v => {
+    const x = v.x || 0, y = v.y || 0;
+    if (x < x0) x0 = x; if (y < y0) y0 = y;
+    if (x > x1) x1 = x; if (y > y1) y1 = y;
+  });
+  return { x0, y0, x1, y1 };
+}
+
+/* Sorok → tételek (parse + szín-detektálás az eredeti színes képen) */
+function linesToItems(lines, sourceCanvas) {
+  const ctx = sourceCanvas.getContext("2d");
+  const items = [];
+  lines.forEach(line => {
+    const raw = (line.text || "").trim();
+    if (!raw) return;
+    const parsed = parseLine(raw);
+    if (!parsed) return;
+    let color = "gray";
+    if (line.bbox) {
+      color = detectColorInRegion(ctx, line.bbox, sourceCanvas.width, sourceCanvas.height);
+    }
+    items.push({ name: parsed.name, amount: parsed.amount, color });
+  });
+  return items;
 }
 
 /* Sor feldolgozása: név + összeg kinyerése */
@@ -980,7 +1129,9 @@ function parseAmount(str) {
   return isNaN(n) ? 0 : n;
 }
 
-/* Pixel-alapú szín-detektálás egy régióban */
+/* Pixel-alapú szín-detektálás egy régióban.
+   Kézíráshoz: a fehér papírt és a semleges (fekete/szürke/ceruza) pixeleket
+   kihagyjuk, csak a színes tollvonalak számítanak – így a vékony vonal is dominál. */
 function detectColorInRegion(ctx, bbox, cw, ch) {
   try {
     let x0 = Math.max(0, Math.floor(bbox.x0));
@@ -991,47 +1142,42 @@ function detectColorInRegion(ctx, bbox, cw, ch) {
     if (w <= 0 || h <= 0) return "gray";
 
     const imgData = ctx.getImageData(x0, y0, w, h).data;
-    const counts = { green: 0, blue: 0, yellow: 0, pink: 0, gray: 0 };
-    let sampled = 0;
+    const counts = { green: 0, blue: 0, yellow: 0, pink: 0 };
+    let chromatic = 0;
 
-    // mintavételezés (minden 4. pixel a sebességért)
-    for (let i = 0; i < imgData.length; i += 16) {
+    // minden pixelt megnézünk (a sor-régió kicsi), hogy a vékony vonal se maradjon ki
+    for (let i = 0; i < imgData.length; i += 4) {
       const r = imgData[i], g = imgData[i+1], b = imgData[i+2], a = imgData[i+3];
       if (a < 100) continue;
-      // fehér / fekete (szöveg és háttér) kihagyása
-      const max = Math.max(r,g,b), min = Math.min(r,g,b);
-      if (max > 235 && min > 235) continue; // fehér háttér
-      if (max < 60) continue;               // fekete szöveg
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      if (max > 230 && min > 205) continue; // fehér papír
+      if (max - min < 28) continue;         // semleges (fekete/szürke/ceruza) – nem szín
       const cls = classifyColor(r, g, b);
-      if (cls) { counts[cls]++; sampled++; }
+      if (cls && cls !== "gray") { counts[cls]++; chromatic++; }
     }
 
-    if (sampled < 5) return "gray";
-    // legtöbbször előforduló szín
+    if (chromatic < 3) return "gray"; // nincs érdemi színes toll → Egyéb
     let best = "gray", bestC = 0;
-    for (const k in counts) {
-      if (counts[k] > bestC) { bestC = counts[k]; best = k; }
-    }
+    for (const k in counts) if (counts[k] > bestC) { bestC = counts[k]; best = k; }
     return best;
   } catch {
     return "gray";
   }
 }
 
-/* RGB → kategória szín osztályozás */
+/* RGB → kategória szín osztályozás (hue-alapú). A hívó már kiszűrte a semlegeseket. */
 function classifyColor(r, g, b) {
-  // Zöld: g dominál
-  if (g > r + 20 && g > b + 20) return "green";
-  // Kék: b dominál
-  if (b > r + 20 && b > g + 20) return "blue";
-  // Sárga: r és g magas, b alacsony
-  if (r > b + 30 && g > b + 30 && Math.abs(r - g) < 60) return "yellow";
-  // Rózsaszín / piros: r dominál
-  if (r > g + 20 && r > b + 10) return "pink";
-  // Szürke / semleges
-  const max = Math.max(r,g,b), min = Math.min(r,g,b);
-  if (max - min < 25) return "gray";
-  return null;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max - min < 25) return "gray"; // semleges
+  // Sárga: piros ÉS zöld magas, kék alacsony
+  if (r > b + 25 && g > b + 25 && Math.abs(r - g) < 70) return "yellow";
+  // Zöld: a zöld a domináns csatorna
+  if (g >= r && g >= b && g > min + 15) return "green";
+  // Kék: a kék a domináns csatorna
+  if (b >= r && b >= g && b > min + 15) return "blue";
+  // Rózsaszín / piros: a piros a domináns csatorna
+  if (r >= g && r >= b) return "pink";
+  return "gray";
 }
 
 /* Felismert tételek megjelenítése (szerkeszthető) */
@@ -1116,10 +1262,32 @@ function escapeAttr(str) {
 }
 
 /* =========================================================
+   OCR API KULCS kezelés
+   ========================================================= */
+document.getElementById("btnSaveKey").addEventListener("click", () => {
+  const val = document.getElementById("gvKey").value.trim();
+  if (!val) { showMsg("cameraMsg", "⚠️ Adj meg egy API kulcsot.", "error"); return; }
+  googleVisionKey = val;
+  try { localStorage.setItem("googleVisionApiKey", val); } catch {}
+  updateEngineInfo();
+  showMsg("cameraMsg", "✅ Kulcs mentve. A kézírás olvasás bekapcsolva.", "success");
+});
+document.getElementById("btnClearKey").addEventListener("click", () => {
+  googleVisionKey = "";
+  document.getElementById("gvKey").value = "";
+  try { localStorage.removeItem("googleVisionApiKey"); } catch {}
+  updateEngineInfo();
+  showMsg("cameraMsg", "🗑️ Kulcs törölve. Visszaálltunk a Tesseract motorra.", "info");
+});
+
+/* =========================================================
    INDÍTÁS
    ========================================================= */
 function init() {
   loadData();
+  loadKey();
+  document.getElementById("gvKey").value = googleVisionKey;
+  updateEngineInfo();
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
