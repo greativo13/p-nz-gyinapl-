@@ -144,8 +144,8 @@
     background: var(--input-bg); color: var(--text); font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: var(--green-accent); }
-  /* A hónap-mező kompakt, fix szélességű (iOS is betartja) */
-  input[type="month"] { width: 210px; max-width: 100%; text-align: center; }
+  /* A hónap-mező ugyanolyan széles, mint a többi beviteli mező */
+  input[type="month"] { width: 100%; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
