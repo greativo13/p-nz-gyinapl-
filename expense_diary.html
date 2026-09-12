@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pénzügyi Napló</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -30,10 +33,13 @@
     --cat-yellow: #eab308;
     --cat-pink: #ec4899;
     --cat-gray: #94a3a0;
+
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-ui);
     background: var(--page);
     min-height: 100vh;
     color: var(--text);
@@ -57,7 +63,7 @@
     border-radius: 0 0 26px 26px;
   }
   header .brand { display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  header h1 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
   header p { font-size: 13px; opacity: 0.8; margin-top: 3px; }
 
   /* ---------- Tabs ---------- */
@@ -90,7 +96,7 @@
   .panel.active { display: block; animation: fade 0.2s; }
   @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
 
-  h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); font-weight: 700; }
+  h2 { font-family: var(--font-display); font-size: 19px; margin-bottom: 14px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .section-head h2 { margin-bottom: 0; }
 
@@ -186,7 +192,7 @@
   /* ---------- Hero summary (egyenleg + körgyűrű) ---------- */
   .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
   .hero-label { font-size: 13px; color: var(--muted); font-weight: 600; }
-  .hero-total { font-size: 27px; font-weight: 800; margin-top: 3px; letter-spacing: -0.02em; }
+  .hero-total { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em; }
   .hero-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
   .donut { position: relative; width: 104px; height: 104px; border-radius: 50%; flex-shrink: 0; }
@@ -286,9 +292,25 @@
     animation: pop 0.2s;
   }
   @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
-  .modal h3 { font-size: 17px; margin-bottom: 16px; font-weight: 700; }
+  .modal h3 { font-family: var(--font-display); font-size: 20px; margin-bottom: 16px; font-weight: 600; letter-spacing: -0.01em; }
 
   .hint { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
+
+  /* Egyéni színválasztó */
+  .custom-color {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; margin-bottom: 16px;
+    border: 1.5px dashed var(--border); border-radius: 14px;
+  }
+  .custom-color label { font-weight: 600; color: #45564d; }
+  .custom-color input[type="color"] {
+    -webkit-appearance: none; appearance: none;
+    width: 54px; height: 40px; padding: 0; margin: 0;
+    border: 1.5px solid var(--border); border-radius: 10px; background: none; cursor: pointer;
+  }
+  .custom-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+  .custom-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 7px; }
+  .custom-color input[type="color"]::-moz-color-swatch { border: none; border-radius: 7px; }
 </style>
 </head>
 <body>
@@ -352,6 +374,10 @@
         <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
         <label>Szín</label>
         <div class="color-picker" id="newCatColors"></div>
+        <div class="custom-color">
+          <label for="newCatCustom" style="margin:0;">Egyéni szín</label>
+          <input type="color" id="newCatCustom" value="#1f9d5b">
+        </div>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
     </section>
@@ -392,10 +418,34 @@ const DEFAULT_CATEGORIES = {
 const COLOR_HEX = {
   green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0"
 };
-const COLOR_LABELS = {
-  green: "🟢 Zöld", blue: "🔵 Kék", yellow: "🟡 Sárga", pink: "🔴 Rózsaszín", gray: "⚫ Szürke"
-};
-const BASE_COLORS = ["green", "blue", "yellow", "pink", "gray"];
+
+// Választható színek új kategóriákhoz (alap 5 + továbbiak). Az érték HEX.
+const PRESET_COLORS = [
+  { name: "Zöld",      hex: "#1f9d5b" },
+  { name: "Kék",       hex: "#3b82f6" },
+  { name: "Sárga",     hex: "#eab308" },
+  { name: "Rózsaszín", hex: "#ec4899" },
+  { name: "Szürke",    hex: "#94a3a0" },
+  { name: "Türkiz",    hex: "#14b8a6" },
+  { name: "Indigó",    hex: "#6366f1" },
+  { name: "Lila",      hex: "#a855f7" },
+  { name: "Narancs",   hex: "#f97316" },
+  { name: "Piros",     hex: "#ef4444" },
+  { name: "Lime",      hex: "#84cc16" },
+  { name: "Égszín",    hex: "#0ea5e9" },
+  { name: "Barna",     hex: "#b45309" },
+  { name: "Sötétzöld", hex: "#0d3325" }
+];
+
+// Fekete vagy fehér szöveg a háttérszínhez (kontraszt)
+function textOn(hex) {
+  if (!hex || hex[0] !== "#") return "#ffffff";
+  const h = hex.length === 4
+    ? hex.slice(1).split("").map(c => c + c).join("")
+    : hex.slice(1);
+  const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 165 ? "#1f2937" : "#ffffff";
+}
 
 let expenseItems = [];
 let customCategories = {};
@@ -414,7 +464,12 @@ function saveCategories() { try { localStorage.setItem("customCategories", JSON.
 /* ---------- Kategória segédek ---------- */
 function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
-function catHex(key) { const c = allCategories(); const col = c[key] ? c[key].color : key; return COLOR_HEX[col] || "#94a3a0"; }
+function catHex(key) {
+  const c = allCategories();
+  const col = c[key] ? c[key].color : key;
+  if (typeof col === "string" && col[0] === "#") return col; // egyéni HEX szín
+  return COLOR_HEX[col] || "#94a3a0";                        // alap színnév
+}
 function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
 
 /* ---------- Üzenetek ---------- */
@@ -447,7 +502,9 @@ function buildColorPicker(containerId, initial, onSelect) {
   Object.keys(cats).forEach(key => {
     const c = cats[key];
     const btn = document.createElement("div");
-    btn.className = "color-btn c-" + c.color;
+    btn.className = "color-btn";
+    btn.style.background = catHex(key);
+    btn.style.color = textOn(catHex(key));
     btn.dataset.key = key;
     btn.textContent = c.name;
     if (key === initial) btn.classList.add("selected");
@@ -657,7 +714,7 @@ function renderCategories() {
     const isCustom = !DEFAULT_CATEGORIES[key];
     html += `
       <div class="cat-item">
-        <div class="cat-dot" style="background:${COLOR_HEX[c.color] || '#94a3a0'}"></div>
+        <div class="cat-dot" style="background:${catHex(key)}"></div>
         <div class="cat-name">${escapeHtml(c.name)}</div>
         ${isCustom
           ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>`
@@ -669,11 +726,13 @@ function renderCategories() {
 
   const container = document.getElementById("newCatColors");
   container.innerHTML = "";
-  BASE_COLORS.forEach((color, idx) => {
+  PRESET_COLORS.forEach((col, idx) => {
     const btn = document.createElement("div");
-    btn.className = "color-btn c-" + color;
-    btn.dataset.color = color;
-    btn.textContent = COLOR_LABELS[color];
+    btn.className = "color-btn";
+    btn.style.background = col.hex;
+    btn.style.color = textOn(col.hex);
+    btn.dataset.color = col.hex;
+    btn.textContent = col.name;
     if (idx === 0) btn.classList.add("selected");
     btn.addEventListener("click", () => {
       container.querySelectorAll(".color-btn").forEach(x => x.classList.remove("selected"));
@@ -681,6 +740,13 @@ function renderCategories() {
     });
     container.appendChild(btn);
   });
+}
+
+// Az új kategória kiválasztott színe: preset gomb, vagy ha egyik sincs kijelölve, az egyéni színválasztó
+function getNewCatColor() {
+  const sel = document.querySelector("#newCatColors .color-btn.selected");
+  if (sel) return sel.dataset.color;
+  return document.getElementById("newCatCustom").value;
 }
 
 function deleteCategory(key) {
@@ -701,8 +767,7 @@ function deleteCategory(key) {
 
 document.getElementById("btnAddCat").addEventListener("click", () => {
   const name = document.getElementById("newCatName").value.trim();
-  const sel = document.querySelector("#newCatColors .color-btn.selected");
-  const color = sel ? sel.dataset.color : null;
+  const color = getNewCatColor();
   if (!name) { showMsg("catMsg", "⚠️ Add meg a kategória nevét.", "error"); return; }
   if (!color) { showMsg("catMsg", "⚠️ Válassz színt.", "error"); return; }
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
@@ -727,6 +792,10 @@ function init() {
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
+  // Egyéni szín kiválasztásakor a preset gombok kijelölése törlődik
+  document.getElementById("newCatCustom").addEventListener("input", () => {
+    document.querySelectorAll("#newCatColors .color-btn").forEach(x => x.classList.remove("selected"));
+  });
   document.getElementById("mName").focus();
 }
 init();
