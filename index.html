@@ -178,8 +178,8 @@
 
   /* ---------- Lista eszköztár ---------- */
   .list-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .list-toolbar label { margin: 0; white-space: nowrap; }
-  .list-toolbar select { flex: 1; margin-bottom: 0; font-weight: 600; padding: 12px 14px; }
+  .list-toolbar .tb-ic { font-size: 18px; flex-shrink: 0; }
+  .list-toolbar select { flex: 1; min-width: 0; margin-bottom: 0; font-weight: 600; padding: 12px 14px; }
   .list-controls { display: flex; gap: 10px; margin-bottom: 14px; }
   .list-controls input { margin-bottom: 0; flex: 1.4; }
   .list-controls select { margin-bottom: 0; flex: 1; font-weight: 600; }
@@ -315,13 +315,13 @@
     <!-- ============ LISTA ============ -->
     <section class="panel" id="panel-list">
       <div class="list-toolbar" id="listToolbar" style="display:none">
-        <label for="monthFilter">📅 Hónap</label>
-        <select id="monthFilter"></select>
+        <span class="tb-ic" aria-hidden="true">📅</span>
+        <select id="monthFilter" aria-label="Hónap választása"></select>
       </div>
       <div id="summaryArea"></div>
 
       <div class="list-controls" id="listControls" style="display:none">
-        <input type="search" id="searchInput" placeholder="🔍 Keresés a tételek közt...">
+        <input type="search" id="searchInput" placeholder="🔍 Keresés...">
         <select id="sortSelect">
           <option value="date-desc">Legújabb elöl</option>
           <option value="amount-desc">Összeg ↓</option>
@@ -620,7 +620,7 @@ function renderList() {
 
   toolbar.style.display = "flex";
   let opts = `<option value="all">Összes hónap</option>`;
-  months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabel(m)}</option>`; });
+  months.forEach(m => { opts += `<option value="${m}" ${m === selectedMonth ? "selected" : ""}>${monthLabelShort(m)}</option>`; });
   filterSel.innerHTML = opts;
   filterSel.value = selectedMonth;
 
