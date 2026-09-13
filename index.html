@@ -146,8 +146,8 @@
     background: var(--input-bg); color: var(--text); font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: var(--green-accent); }
-  /* A hónap-mező ugyanakkora, mint a Tétel neve és Összeg mező */
-  input[type="month"] { width: 100%; }
+  /* A hónap-mező kompakt, keskeny, balra igazítva (nem tölti ki a sort) */
+  input[type="month"] { width: 210px; max-width: 100%; display: block; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
