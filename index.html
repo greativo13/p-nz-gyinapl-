@@ -146,8 +146,8 @@
     background: var(--input-bg); color: var(--text); font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: var(--green-accent); }
-  /* A hónap-mező ugyanolyan széles és igazítású, mint a többi beviteli mező */
-  input[type="month"] { width: 100%; text-align: left; }
+  /* A hónap-mező kompakt, nem tölti ki a teljes sort */
+  input[type="month"] { width: 210px; max-width: 100%; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -510,12 +510,12 @@
    ========================================================= */
 
 const DEFAULT_CATEGORIES = {
-  green:  { name: "Számlák",         color: "green",  icon: "🧾",  bucket: "need" },
-  blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️", bucket: "need" },
-  yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼",  bucket: "want" },
-  pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️", bucket: "want" },
-  gray:   { name: "Egyéb",           color: "gray",   icon: "📦",  bucket: "want" },
-  saving: { name: "Megtakarítás",    color: "#14b8a6", icon: "💰", bucket: "saving" }
+  green:  { name: "Számlák",         color: "green",  icon: "🧾",  bucket: "need",   subs: ["Rezsi", "Előfizetések", "Lakbér"] },
+  blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️", bucket: "need",   subs: ["Bevásárlás", "Étterem", "Kávé"] },
+  yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼",  bucket: "want",   subs: ["Marketing", "Eszközök"] },
+  pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️", bucket: "want",   subs: [] },
+  gray:   { name: "Egyéb",           color: "gray",   icon: "📦",  bucket: "want",   subs: [] },
+  saving: { name: "Megtakarítás",    color: "#14b8a6", icon: "💰", bucket: "saving", subs: [] }
 };
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒","💶","🎵"];
