@@ -158,6 +158,24 @@
   }
   .type-btn.active[data-type="expense"] { border-color: var(--danger); background: var(--err-bg); color: var(--err-text); }
   .type-btn.active[data-type="income"] { border-color: var(--income); background: var(--soft); color: var(--soft-text); }
+  .type-btn.active[data-bucket] { border-color: var(--green-accent); background: var(--soft); color: var(--soft-text); }
+
+  /* 50-30-20 kártya */
+  .budget-intro { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  .bud-row { margin-bottom: 15px; }
+  .bud-row:last-child { margin-bottom: 0; }
+  .bud-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 13px; }
+  .bud-name { font-weight: 700; }
+  .bud-name .bud-emoji { margin-right: 5px; }
+  .bud-vals { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bud-vals b { color: var(--text); }
+  .bud-track { position: relative; height: 16px; background: var(--chip); border-radius: 9px; }
+  .bud-fill { height: 100%; border-radius: 9px; min-width: 3px; transition: width 0.3s; }
+  .bud-fill.ok { background: var(--income); }
+  .bud-fill.over { background: var(--danger); }
+  .bud-fill.under { background: #eab308; }
+  .bud-target { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); opacity: 0.5; border-radius: 2px; }
+  .budget-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
   /* ---------- Color picker (kategória gombok) ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -233,7 +251,9 @@
   /* ---------- Kategóriák ---------- */
   .cat-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--card); border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow-row); }
   .cat-icon { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; color: #fff; }
-  .cat-name { flex: 1; font-weight: 600; }
+  .cat-info { flex: 1; min-width: 0; }
+  .cat-name { font-weight: 600; }
+  .cat-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .cat-badge { font-size: 11px; color: var(--muted); background: var(--chip); padding: 3px 10px; border-radius: 20px; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
 
@@ -374,6 +394,11 @@
           <summary>Ikon <span class="icon-current" id="iconPreview">🧾</span></summary>
           <div class="icon-picker" id="newCatIcons"></div>
         </details>
+        <label>Besorolás (50-30-20)</label>
+        <div class="type-toggle" id="newCatBucket">
+          <button type="button" class="type-btn active" data-bucket="need">🏠 Szükséglet</button>
+          <button type="button" class="type-btn" data-bucket="want">🛍️ Vágy</button>
+        </div>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
 
@@ -433,6 +458,11 @@
       <summary>Ikon <span class="icon-current" id="catEditIconPreview">🧾</span></summary>
       <div class="icon-picker" id="catEditIcons"></div>
     </details>
+    <label>Besorolás (50-30-20)</label>
+    <div class="type-toggle" id="catEditBucket">
+      <button type="button" class="type-btn" data-bucket="need">🏠 Szükséglet</button>
+      <button type="button" class="type-btn" data-bucket="want">🛍️ Vágy</button>
+    </div>
     <div class="btn-row">
       <button class="btn" id="btnCatSave">💾 Mentés</button>
       <button class="btn secondary" id="btnCatCancel">Mégse</button>
@@ -446,11 +476,11 @@
    ========================================================= */
 
 const DEFAULT_CATEGORIES = {
-  green:  { name: "Számlák",         color: "green",  icon: "🧾" },
-  blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️" },
-  yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼" },
-  pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️" },
-  gray:   { name: "Egyéb",           color: "gray",   icon: "📦" }
+  green:  { name: "Számlák",         color: "green",  icon: "🧾",  bucket: "need" },
+  blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️", bucket: "need" },
+  yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼",  bucket: "want" },
+  pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️", bucket: "want" },
+  gray:   { name: "Egyéb",           color: "gray",   icon: "📦",  bucket: "want" }
 };
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒","💶","🎵"];
@@ -483,6 +513,7 @@ function saveCategories() { try { localStorage.setItem("customCategories", JSON.
 function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
 function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
+function catBucket(key) { const c = allCategories(); return (c[key] && c[key].bucket) === "need" ? "need" : "want"; }
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
@@ -545,6 +576,17 @@ function getTypeToggle(containerId) {
   const b = document.querySelector("#" + containerId + " .type-btn.active");
   return b ? b.dataset.type : "expense";
 }
+/* általános kapcsoló (pl. besorolás) */
+function wirePlainToggle(containerId) {
+  document.querySelectorAll("#" + containerId + " .type-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+}
+function getBucket(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); return b && b.dataset.bucket === "need" ? "need" : "want"; }
+function setBucket(containerId, bucket) { document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.bucket === bucket)); }
 
 /* ---------- Színválasztó ---------- */
 function buildColorPicker(containerId, initial) {
@@ -617,6 +659,38 @@ document.getElementById("btnAddManual").addEventListener("click", submitManual);
 document.getElementById("mName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); } });
 document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitManual(); } });
 
+/* ---------- 50-30-20 kártya ---------- */
+function renderBudget(income, needs, wants, savings) {
+  if (income <= 0) {
+    return `<div class="card"><h2 style="margin-bottom:8px">🎯 50-30-20 szabály</h2><div class="budget-note">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
+  }
+  const rows = [
+    { emoji: "🏠", name: "Szükségletek", amount: needs,   target: 50, kind: "spend" },
+    { emoji: "🛍️", name: "Vágyak",       amount: wants,   target: 30, kind: "spend" },
+    { emoji: "💰", name: "Megtakarítás", amount: savings, target: 20, kind: "save" }
+  ];
+  let html = `<div class="card"><h2 style="margin-bottom:6px">🎯 50-30-20 szabály</h2><div class="budget-intro">A nettó bevételed ideális megoszlása · alap: ${formatFt(income)} bevétel.</div>`;
+  rows.forEach(r => {
+    const pct = Math.round(r.amount / income * 100);
+    const fillW = Math.max(0, Math.min(pct, 100));
+    let cls;
+    if (r.kind === "save") cls = pct >= r.target ? "ok" : (pct < 0 ? "over" : "under");
+    else cls = pct <= r.target ? "ok" : "over";
+    html += `
+      <div class="bud-row">
+        <div class="bud-head">
+          <span class="bud-name"><span class="bud-emoji">${r.emoji}</span>${r.name}</span>
+          <span class="bud-vals"><b>${pct}%</b> · ${formatFt(r.amount)} · cél ${r.target}%</span>
+        </div>
+        <div class="bud-track">
+          <div class="bud-fill ${cls}" style="width:${fillW}%"></div>
+          <div class="bud-target" style="left:${r.target}%"></div>
+        </div>
+      </div>`;
+  });
+  return html + `</div>`;
+}
+
 /* ---------- Lista / összesítés ---------- */
 function renderList() {
   const summaryArea = document.getElementById("summaryArea");
@@ -658,12 +732,13 @@ function renderList() {
   }
 
   /* összegek */
-  let income = 0, expense = 0;
+  let income = 0, expense = 0, needs = 0, wants = 0;
   const totals = {};
   monthView.forEach(it => {
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
     expense += amt;
+    if (catBucket(it.color) === "need") needs += amt; else wants += amt;
     if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
     totals[it.color].sum += amt;
     totals[it.color].count++;
@@ -716,7 +791,7 @@ function renderList() {
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-    </div>`;
+    </div>` + renderBudget(income, needs, wants, balance);
 
   /* tétel-lista: hónap + keresés + rendezés */
   controls.style.display = "flex";
@@ -831,7 +906,10 @@ function renderCategories() {
     html += `
       <div class="cat-item">
         <div class="cat-icon" style="background:${catHex(key)}">${catIcon(key)}</div>
-        <div class="cat-name">${escapeHtml(c.name)}</div>
+        <div class="cat-info">
+          <div class="cat-name">${escapeHtml(c.name)}</div>
+          <div class="cat-sub">${catBucket(key) === "need" ? "🏠 Szükséglet" : "🛍️ Vágy"}</div>
+        </div>
         <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés">✏️</button>
         ${isCustom ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>` : `<span class="cat-badge">alap</span>`}
       </div>`;
@@ -890,11 +968,12 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   const name = document.getElementById("newCatName").value.trim();
   const color = getNewCatColor();
   const icon = getIconPickerValue("newCatIcons");
+  const bucket = getBucket("newCatBucket");
   if (!name) { showMsg("catMsg", "⚠️ Add meg a kategória nevét.", "error"); return; }
   const exists = Object.values(allCategories()).some(c => c.name.trim().toLowerCase() === name.toLowerCase());
   if (exists) { showMsg("catMsg", "⚠️ Ilyen nevű kategória már létezik.", "error"); return; }
   const key = "custom_" + Date.now();
-  customCategories[key] = { name, color, icon };
+  customCategories[key] = { name, color, icon, bucket };
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
@@ -913,6 +992,7 @@ function openCatEdit(key) {
   buildIconPicker("catEditIcons", c.icon || "💸", "catEditIconPreview", "catEditIconCollapse");
   document.getElementById("catEditIconPreview").textContent = c.icon || "💸";
   document.getElementById("catEditIconCollapse").open = false;
+  setBucket("catEditBucket", catBucket(key));
   document.getElementById("catEditModal").classList.add("show");
 }
 function closeCatEdit() { document.getElementById("catEditModal").classList.remove("show"); catEditKey = null; }
@@ -927,7 +1007,7 @@ document.getElementById("btnCatSave").addEventListener("click", () => {
   const dupe = Object.entries(allCategories()).some(([k, c]) => k !== catEditKey && c.name.trim().toLowerCase() === name.toLowerCase());
   if (dupe) { alert("Ilyen nevű kategória már létezik."); return; }
   // alap és egyedi kategória is felülírható a customCategories-ben
-  customCategories[catEditKey] = { name, color, icon };
+  customCategories[catEditKey] = { name, color, icon, bucket: getBucket("catEditBucket") };
   saveCategories();
   closeCatEdit();
   renderCategories();
@@ -1010,6 +1090,8 @@ function init() {
   registerSW();
   document.getElementById("mMonth").value = currentMonth();
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
+  wirePlainToggle("newCatBucket");
+  wirePlainToggle("catEditBucket");
   buildColorPicker("manualColors", "green");
   renderList();
   renderCategories();
