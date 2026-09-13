@@ -184,6 +184,31 @@
   .bud-target { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); opacity: 0.5; border-radius: 2px; }
   .budget-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
+  /* Alkategória-bontás a listában */
+  .bd-row.has-subs { cursor: pointer; }
+  .bd-caret { font-size: 10px; color: var(--muted); margin-left: 4px; }
+  .bd-subs { margin: 8px 0 2px 22px; display: flex; flex-direction: column; gap: 8px; }
+  .bd-subrow { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+  .bd-subrow .bd-subamt { font-variant-numeric: tabular-nums; }
+
+  /* Kiadás-trend mini oszlopdiagram */
+  .trend { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+  .tr-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; min-width: 0; }
+  .tr-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+  .tr-bar { width: 100%; background: var(--chip); border-radius: 6px 6px 0 0; min-height: 3px; transition: height 0.3s; }
+  .tr-bar.sel { background: var(--green-accent); }
+  .tr-lbl { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .tr-val { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Másolás előző hónapból */
+  .copy-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
+  .copy-item input[type="checkbox"] { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--green-accent); }
+  .copy-item .ci-info { flex: 1; min-width: 0; }
+  .copy-item .ci-name { font-weight: 600; font-size: 14px; }
+  .copy-item .ci-cat { font-size: 12px; color: var(--muted); }
+  .copy-item .ci-amt { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; white-space: nowrap; }
+  #copyList { max-height: 46vh; overflow-y: auto; margin-bottom: 14px; }
+
   /* ---------- Color picker (kategória gombok) ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .color-btn {
@@ -374,6 +399,7 @@
         <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
       </div>
+      <button class="btn secondary" id="btnCopyPrev">📋 Előző havi tételek másolása</button>
     </section>
 
     <!-- ============ LISTA ============ -->
@@ -474,6 +500,19 @@
   </div>
 </div>
 
+<!-- ============ MÁSOLÁS ELŐZŐ HÓNAPBÓL MODAL ============ -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal">
+    <h3>📋 Másolás előző hónapból</h3>
+    <p class="hint" id="copyHint" style="margin:0 0 12px;"></p>
+    <div id="copyList"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnCopyDo">Kijelöltek hozzáadása</button>
+      <button class="btn secondary" id="btnCopyCancel">Mégse</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ KATEGÓRIA SZERKESZTÉS MODAL ============ -->
 <div class="modal-overlay" id="catEditModal">
   <div class="modal">
@@ -540,6 +579,7 @@ let selectedMonth = null;
 let entryType = "expense";      // bevitel típusa
 let searchQuery = "";
 let sortMode = "date-desc";
+let copyTargetMonth = null;
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
@@ -737,6 +777,46 @@ document.getElementById("btnAddManual").addEventListener("click", submitManual);
 document.getElementById("mName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("mAmount").focus(); } });
 document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitManual(); } });
 
+/* ---------- Másolás előző hónapból ---------- */
+function openCopyModal() {
+  const target = document.getElementById("mMonth").value || currentMonth();
+  copyTargetMonth = target;
+  const from = prevMonthOf(target);
+  const items = expenseItems.filter(it => (it.month || "") === from && (it.type || "expense") !== "income");
+  const list = document.getElementById("copyList");
+  document.getElementById("copyHint").textContent = `${monthLabel(from)} → ${monthLabel(target)} · pipáld ki, mit másoljak át.`;
+  const btnDo = document.getElementById("btnCopyDo");
+  if (!items.length) {
+    list.innerHTML = `<div class="empty" style="padding:24px">Nincs másolható tétel: ${escapeHtml(monthLabel(from))}.</div>`;
+    btnDo.style.display = "none";
+  } else {
+    btnDo.style.display = "";
+    let html = "";
+    items.forEach(it => {
+      const idx = expenseItems.indexOf(it);
+      html += `<label class="copy-item"><input type="checkbox" checked data-i="${idx}"><span class="ci-info"><span class="ci-name">${escapeHtml(it.name)}</span><br><span class="ci-cat">${escapeHtml(catName(it.color))}${it.sub ? " › " + escapeHtml(it.sub) : ""}</span></span><span class="ci-amt">${formatFt(it.amount)}</span></label>`;
+    });
+    list.innerHTML = html;
+  }
+  document.getElementById("copyModal").classList.add("show");
+}
+function doCopy() {
+  const target = copyTargetMonth || currentMonth();
+  let added = 0, skipped = 0;
+  document.querySelectorAll("#copyList input[type=checkbox]:checked").forEach(cb => {
+    const it = expenseItems[Number(cb.dataset.i)];
+    if (!it) return;
+    const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "");
+    if (res.ok) added++; else skipped++;
+  });
+  document.getElementById("copyModal").classList.remove("show");
+  showMsg("manualMsg", `✅ ${added} tétel átmásolva (${monthLabelShort(target)})${skipped ? ` · ${skipped} már létezett` : ""}.`, added ? "success" : "info");
+}
+document.getElementById("btnCopyPrev").addEventListener("click", openCopyModal);
+document.getElementById("btnCopyDo").addEventListener("click", doCopy);
+document.getElementById("btnCopyCancel").addEventListener("click", () => document.getElementById("copyModal").classList.remove("show"));
+document.getElementById("copyModal").addEventListener("click", (e) => { if (e.target.id === "copyModal") document.getElementById("copyModal").classList.remove("show"); });
+
 /* ---------- 50-30-20 kártya ---------- */
 function renderBudget(income, needs, wants, savings, leftover) {
   if (income <= 0) {
@@ -769,6 +849,32 @@ function renderBudget(income, needs, wants, savings, leftover) {
       </div>`;
   });
   return html + `</div>`;
+}
+
+/* ---------- Kiadás-trend (utolsó pár hónap) ---------- */
+function monthShortNoYear(m) { const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { month: "short" }).format(new Date(y, mo - 1, 1)); }
+function renderTrend() {
+  const map = {};
+  expenseItems.forEach(it => {
+    if ((it.type || "expense") === "income") return;
+    const b = catBucket(it.color);
+    if (b === "saving" || b === "business") return; // személyes költés trendje
+    const m = it.month || "";
+    if (!m) return;
+    map[m] = (map[m] || 0) + Number(it.amount);
+  });
+  const months = Object.keys(map).sort();
+  if (months.length < 2) return ""; // legalább 2 hónap kell a trendhez
+  const last = months.slice(-6);
+  const max = Math.max.apply(null, last.map(m => map[m]).concat([1]));
+  let bars = "";
+  last.forEach(m => {
+    const h = Math.max(Math.round(map[m] / max * 100), 3);
+    const sel = m === selectedMonth ? " sel" : "";
+    const val = map[m] >= 1000 ? Math.round(map[m] / 1000) + "e" : String(map[m]);
+    bars += `<div class="tr-col"><div class="tr-bar-wrap"><div class="tr-bar${sel}" style="height:${h}%"></div></div><div class="tr-val">${val}</div><div class="tr-lbl">${monthShortNoYear(m)}</div></div>`;
+  });
+  return `<div class="card"><h2 style="margin-bottom:12px">📈 Kiadás-trend</h2><div class="trend">${bars}</div></div>`;
 }
 
 /* ---------- Lista / összesítés ---------- */
@@ -814,6 +920,7 @@ function renderList() {
   /* összegek */
   let income = 0, needs = 0, wants = 0, savings = 0, business = 0;
   const totals = {};
+  const subTotals = {};
   monthView.forEach(it => {
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
@@ -824,6 +931,9 @@ function renderList() {
     if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
     totals[it.color].sum += amt;
     totals[it.color].count++;
+    const sname = it.sub || "";
+    if (!subTotals[it.color]) subTotals[it.color] = {};
+    subTotals[it.color][sname] = (subTotals[it.color][sname] || 0) + amt;
   });
   const spend = needs + wants;                          // személyes költés
   const balance = income - spend - savings - business;  // szabad keret
@@ -855,7 +965,24 @@ function renderList() {
 
   let bd = "";
   entries.forEach(e => {
-    bd += `<div class="bd-row"><span class="bd-dot" style="background:${catHex(e.key)}"></span><span class="bd-name">${escapeHtml(catName(e.key))}</span><span class="bd-count">${e.count} db</span><span class="bd-amount">${formatFt(e.sum)}</span></div>`;
+    const subs = subTotals[e.key] || {};
+    const subEntries = Object.keys(subs).map(s => ({ name: s, sum: subs[s] })).sort((a, b) => b.sum - a.sum);
+    const hasSubs = subEntries.some(se => se.name !== "");
+    bd += `<div class="bd-group">
+      <div class="bd-row ${hasSubs ? "has-subs" : ""}" ${hasSubs ? `data-toggle="${e.key}"` : ""}>
+        <span class="bd-dot" style="background:${catHex(e.key)}"></span>
+        <span class="bd-name">${escapeHtml(catName(e.key))}${hasSubs ? '<span class="bd-caret">▾</span>' : ""}</span>
+        <span class="bd-count">${e.count} db</span>
+        <span class="bd-amount">${formatFt(e.sum)}</span>
+      </div>`;
+    if (hasSubs) {
+      bd += `<div class="bd-subs" data-subs="${e.key}" hidden>`;
+      subEntries.forEach(se => {
+        bd += `<div class="bd-subrow"><span class="bd-subname">${se.name === "" ? "— nincs alkategória" : escapeHtml(se.name)}</span><span class="bd-subamt">${formatFt(se.sum)}</span></div>`;
+      });
+      bd += `</div>`;
+    }
+    bd += `</div>`;
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
@@ -876,7 +1003,18 @@ function renderList() {
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-    </div>` + renderBudget(income, needs, wants, savings, balance);
+    </div>` + renderBudget(income, needs, wants, savings, balance) + renderTrend();
+
+  // alkategória-bontás ki/be nyitása
+  summaryArea.querySelectorAll("[data-toggle]").forEach(el => {
+    el.addEventListener("click", () => {
+      const sub = summaryArea.querySelector('[data-subs="' + el.dataset.toggle + '"]');
+      if (!sub) return;
+      sub.hidden = !sub.hidden;
+      const caret = el.querySelector(".bd-caret");
+      if (caret) caret.textContent = sub.hidden ? "▾" : "▴";
+    });
+  });
 
   /* tétel-lista: hónap + keresés + rendezés */
   controls.style.display = "flex";
