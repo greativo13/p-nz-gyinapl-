@@ -159,6 +159,7 @@
   .type-btn.active[data-type="expense"] { border-color: var(--danger); background: var(--err-bg); color: var(--err-text); }
   .type-btn.active[data-type="income"] { border-color: var(--income); background: var(--soft); color: var(--soft-text); }
   .type-btn.active[data-bucket] { border-color: var(--green-accent); background: var(--soft); color: var(--soft-text); }
+  .type-toggle.three .type-btn { font-size: 11.5px; padding: 11px 3px; line-height: 1.2; }
 
   /* 50-30-20 kártya */
   .budget-intro { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
@@ -167,8 +168,11 @@
   .bud-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 13px; }
   .bud-name { font-weight: 700; }
   .bud-name .bud-emoji { margin-right: 5px; }
-  .bud-vals { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .bud-vals b { color: var(--text); }
+  .bud-amt { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bud-amt b { color: var(--text); }
+  .bud-goal { font-size: 12px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .budget-free { margin-top: 4px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+  .budget-free .bf-val { font-variant-numeric: tabular-nums; }
   .bud-track { position: relative; height: 16px; background: var(--chip); border-radius: 9px; }
   .bud-fill { height: 100%; border-radius: 9px; min-width: 3px; transition: width 0.3s; }
   .bud-fill.ok { background: var(--income); }
@@ -214,6 +218,7 @@
   .hero-flows { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
   .flow-in { color: var(--income); }
   .flow-out { color: var(--muted); }
+  .flow-save { color: #14b8a6; }
   .hero-compare { font-size: 12.5px; font-weight: 600; margin-top: 8px; }
   .cmp-up { color: var(--danger); }
   .cmp-down { color: var(--income); }
@@ -395,9 +400,10 @@
           <div class="icon-picker" id="newCatIcons"></div>
         </details>
         <label>Besorolás (50-30-20)</label>
-        <div class="type-toggle" id="newCatBucket">
+        <div class="type-toggle three" id="newCatBucket">
           <button type="button" class="type-btn active" data-bucket="need">🏠 Szükséglet</button>
           <button type="button" class="type-btn" data-bucket="want">🛍️ Vágy</button>
+          <button type="button" class="type-btn" data-bucket="saving">💰 Megtakarítás</button>
         </div>
         <button class="btn" id="btnAddCat">✨ Kategória létrehozása</button>
       </div>
@@ -459,9 +465,10 @@
       <div class="icon-picker" id="catEditIcons"></div>
     </details>
     <label>Besorolás (50-30-20)</label>
-    <div class="type-toggle" id="catEditBucket">
+    <div class="type-toggle three" id="catEditBucket">
       <button type="button" class="type-btn" data-bucket="need">🏠 Szükséglet</button>
       <button type="button" class="type-btn" data-bucket="want">🛍️ Vágy</button>
+      <button type="button" class="type-btn" data-bucket="saving">💰 Megtakarítás</button>
     </div>
     <div class="btn-row">
       <button class="btn" id="btnCatSave">💾 Mentés</button>
@@ -480,7 +487,8 @@ const DEFAULT_CATEGORIES = {
   blue:   { name: "Étkezés",         color: "blue",   icon: "🍽️", bucket: "need" },
   yellow: { name: "Vállalkozás",     color: "yellow", icon: "💼",  bucket: "want" },
   pink:   { name: "Impulzív kiadás", color: "pink",   icon: "🛍️", bucket: "want" },
-  gray:   { name: "Egyéb",           color: "gray",   icon: "📦",  bucket: "want" }
+  gray:   { name: "Egyéb",           color: "gray",   icon: "📦",  bucket: "want" },
+  saving: { name: "Megtakarítás",    color: "#14b8a6", icon: "💰", bucket: "saving" }
 };
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["🧾","🍽️","💼","🛍️","📦","🏠","🚗","⛽","💊","🎁","✈️","🎮","📱","👕","☕","💡","🏋️","🎓","🐶","🎬","💰","🛒","💶","🎵"];
@@ -513,7 +521,7 @@ function saveCategories() { try { localStorage.setItem("customCategories", JSON.
 function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
 function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
-function catBucket(key) { const c = allCategories(); return (c[key] && c[key].bucket) === "need" ? "need" : "want"; }
+function catBucket(key) { const c = allCategories(); const b = c[key] && c[key].bucket; return (b === "need" || b === "saving") ? b : "want"; }
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
@@ -585,7 +593,7 @@ function wirePlainToggle(containerId) {
     });
   });
 }
-function getBucket(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); return b && b.dataset.bucket === "need" ? "need" : "want"; }
+function getBucket(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); const v = b && b.dataset.bucket; return (v === "need" || v === "saving") ? v : "want"; }
 function setBucket(containerId, bucket) { document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.bucket === bucket)); }
 
 /* ---------- Színválasztó ---------- */
@@ -660,7 +668,7 @@ document.getElementById("mName").addEventListener("keydown", (e) => { if (e.key 
 document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitManual(); } });
 
 /* ---------- 50-30-20 kártya ---------- */
-function renderBudget(income, needs, wants, savings) {
+function renderBudget(income, needs, wants, savings, leftover) {
   if (income <= 0) {
     return `<div class="card"><h2 style="margin-bottom:8px">🎯 50-30-20 szabály</h2><div class="budget-note">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
   }
@@ -673,6 +681,7 @@ function renderBudget(income, needs, wants, savings) {
   rows.forEach(r => {
     const pct = Math.round(r.amount / income * 100);
     const fillW = Math.max(0, Math.min(pct, 100));
+    const targetFt = income * r.target / 100;
     let cls;
     if (r.kind === "save") cls = pct >= r.target ? "ok" : (pct < 0 ? "over" : "under");
     else cls = pct <= r.target ? "ok" : "over";
@@ -680,14 +689,17 @@ function renderBudget(income, needs, wants, savings) {
       <div class="bud-row">
         <div class="bud-head">
           <span class="bud-name"><span class="bud-emoji">${r.emoji}</span>${r.name}</span>
-          <span class="bud-vals"><b>${pct}%</b> · ${formatFt(r.amount)} · cél ${r.target}%</span>
+          <span class="bud-amt"><b>${formatFt(r.amount)}</b> · ${pct}%</span>
         </div>
         <div class="bud-track">
           <div class="bud-fill ${cls}" style="width:${fillW}%"></div>
           <div class="bud-target" style="left:${r.target}%"></div>
         </div>
+        <div class="bud-goal">Cél: ${formatFt(targetFt)} (${r.target}%)</div>
       </div>`;
   });
+  const freeCls = leftover < 0 ? "cmp-up" : "";
+  html += `<div class="budget-free"><span>💡 Szabad keret (be nem osztott)</span><span class="bf-val ${freeCls}">${formatFt(leftover)}</span></div>`;
   return html + `</div>`;
 }
 
@@ -732,36 +744,38 @@ function renderList() {
   }
 
   /* összegek */
-  let income = 0, expense = 0, needs = 0, wants = 0;
+  let income = 0, needs = 0, wants = 0, savings = 0;
   const totals = {};
   monthView.forEach(it => {
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
-    expense += amt;
-    if (catBucket(it.color) === "need") needs += amt; else wants += amt;
+    const bucket = catBucket(it.color);
+    if (bucket === "saving") { savings += amt; return; } // megtakarítás külön kezelve
+    if (bucket === "need") needs += amt; else wants += amt;
     if (!totals[it.color]) totals[it.color] = { sum: 0, count: 0 };
     totals[it.color].sum += amt;
     totals[it.color].count++;
   });
-  const balance = income - expense;
+  const spend = needs + wants;              // tényleges költés
+  const balance = income - spend - savings; // szabad keret (be nem osztott)
 
   /* körgyűrű (csak kiadás) */
   const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count })).sort((a, b) => b.sum - a.sum);
   let donutHtml = "";
-  if (expense > 0 && entries.length) {
+  if (spend > 0 && entries.length) {
     let acc = 0;
-    const stops = entries.map(e => { const s = acc / expense * 100; acc += e.sum; return `${catHex(e.key)} ${s}% ${acc / expense * 100}%`; }).join(", ");
+    const stops = entries.map(e => { const s = acc / spend * 100; acc += e.sum; return `${catHex(e.key)} ${s}% ${acc / spend * 100}%`; }).join(", ");
     const top = entries[0];
-    donutHtml = `<div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(top.sum / expense * 100)}%</b><span>${escapeHtml(catName(top.key))}</span></div></div>`;
+    donutHtml = `<div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(top.sum / spend * 100)}%</b><span>${escapeHtml(catName(top.key))}</span></div></div>`;
   }
 
   /* havi összehasonlítás (kiadás vs előző hónap) */
   let cmpHtml = "";
   if (selectedMonth !== "all") {
     const pm = prevMonthOf(selectedMonth);
-    const prevExpense = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income").reduce((s, it) => s + Number(it.amount), 0);
-    if (prevExpense > 0) {
-      const pct = Math.round((expense - prevExpense) / prevExpense * 100);
+    const prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && catBucket(it.color) !== "saving").reduce((s, it) => s + Number(it.amount), 0);
+    if (prevSpend > 0) {
+      const pct = Math.round((spend - prevSpend) / prevSpend * 100);
       const cls = pct > 0 ? "cmp-up" : (pct < 0 ? "cmp-down" : "cmp-flat");
       const arrow = pct > 0 ? "▲" : (pct < 0 ? "▼" : "＝");
       cmpHtml = `<div class="hero-compare ${cls}">${arrow} ${Math.abs(pct)}% kiadás az előző hónaphoz képest</div>`;
@@ -784,14 +798,15 @@ function renderList() {
           <div class="hero-total ${balance < 0 ? "neg" : ""}">${formatFt(balance)}</div>
           <div class="hero-flows">
             <span class="flow-in">▲ Bevétel ${formatFt(income)}</span>
-            <span class="flow-out">▼ Kiadás ${formatFt(expense)}</span>
+            <span class="flow-out">▼ Kiadás ${formatFt(spend)}</span>
+            ${savings > 0 ? `<span class="flow-save">◆ Megtakarítás ${formatFt(savings)}</span>` : ""}
           </div>
           ${cmpHtml}
         </div>
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-    </div>` + renderBudget(income, needs, wants, balance);
+    </div>` + renderBudget(income, needs, wants, savings, balance);
 
   /* tétel-lista: hónap + keresés + rendezés */
   controls.style.display = "flex";
