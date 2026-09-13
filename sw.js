@@ -1,5 +1,5 @@
 /* Pénzügyi Napló – Service Worker (offline támogatás) */
-const CACHE = "penzugyi-naplo-v9";
+const CACHE = "penzugyi-naplo-v10";
 const CORE = [
   "./",
   "./index.html",
@@ -25,11 +25,26 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-/* Cache-first, háttérben frissít (stale-while-revalidate).
-   Így offline is megy, de új verzió egy újratöltés után él. */
+/* HTML/oldal: HÁLÓZAT ELŐSZÖR (mindig friss, ha van net), offline a cache.
+   Egyéb fájl: cache előszőr, háttérben frissít. */
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  const isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req).then((m) => m || caches.match("./index.html")))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(req).then((cached) => {
