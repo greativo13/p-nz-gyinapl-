@@ -181,6 +181,11 @@
   .bud-target { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); opacity: 0.5; border-radius: 2px; }
   .budget-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
+  /* Túlköltés figyelmeztetés */
+  .warn-banner { background: var(--err-bg); color: var(--err-text); border: 1.5px solid var(--danger); border-radius: 14px; padding: 13px 15px; margin-bottom: 16px; font-size: 14px; font-weight: 600; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start; }
+  .warn-banner .wb-ic { font-size: 19px; flex-shrink: 0; }
+  .warn-banner b { font-weight: 800; }
+
   /* ---------- Color picker (kategória gombok) ---------- */
   .color-picker { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .color-btn {
@@ -790,7 +795,10 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = `
+  const warnHtml = balance < 0
+    ? `<div class="warn-banner"><span class="wb-ic">⚠️</span><span>Túlköltés ebben a hónapban: <b>${formatFt(-balance)}</b>. A kiadás és a megtakarítás együtt meghaladja a bevételt.</span></div>`
+    : "";
+  summaryArea.innerHTML = warnHtml + `
     <div class="card">
       <div class="hero-top">
         <div>
