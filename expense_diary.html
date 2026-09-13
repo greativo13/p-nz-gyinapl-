@@ -146,8 +146,8 @@
     background: var(--input-bg); color: var(--text); font-family: inherit;
   }
   input:focus, select:focus { outline: none; border-color: var(--green-accent); }
-  /* A hónap-mező ugyanolyan széles, mint a többi beviteli mező */
-  input[type="month"] { width: 100%; }
+  /* A hónap-mező ugyanolyan széles és igazítású, mint a többi beviteli mező */
+  input[type="month"] { width: 100%; text-align: left; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -282,6 +282,19 @@
   .icon-choice:active { transform: scale(0.92); }
   .icon-choice.selected { border-color: var(--green-accent); background: var(--soft); }
 
+  /* Alkategória chipek */
+  .sub-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .sub-chip { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--input-bg); color: var(--text); transition: all 0.12s; }
+  .sub-chip:active { transform: scale(0.95); }
+  .sub-chip.selected { border-color: var(--green-accent); background: var(--soft); color: var(--soft-text); }
+  .sub-edit { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .sub-edit:empty::before { content: "Még nincs alkategória."; color: var(--muted); font-size: 13px; }
+  .sub-edit .sub-tag { display: inline-flex; align-items: center; gap: 7px; padding: 7px 8px 7px 13px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .sub-edit .sub-tag button { border: none; background: var(--err-bg); color: var(--err-text); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; }
+  .sub-add-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .sub-add-row input { margin-bottom: 0; }
+  .sub-add-row .sub-add-btn { width: auto; min-height: 0; padding: 0 18px; margin-bottom: 0; white-space: nowrap; border-radius: 14px; }
+
   .data-actions { display: flex; flex-direction: column; gap: 0; }
 
   /* ---------- Modal ---------- */
@@ -349,6 +362,10 @@
         <div id="manualCatWrap">
           <label>Kategória</label>
           <div class="color-picker" id="manualColors"></div>
+          <div id="manualSubsWrap" style="display:none">
+            <label>Alkategória (opcionális)</label>
+            <div class="sub-picker" id="manualSubs"></div>
+          </div>
         </div>
 
         <button class="btn" id="btnAddManual">➕ Hozzáadás</button>
@@ -441,6 +458,10 @@
     <div id="editCatWrap">
       <label>Kategória</label>
       <div class="color-picker" id="editColors"></div>
+      <div id="editSubsWrap" style="display:none">
+        <label>Alkategória (opcionális)</label>
+        <div class="sub-picker" id="editSubs"></div>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn" id="btnSaveEdit">💾 Mentés</button>
@@ -469,6 +490,12 @@
       <button type="button" class="type-btn" data-bucket="need">🏠 Szükséglet</button>
       <button type="button" class="type-btn" data-bucket="want">🛍️ Vágy</button>
       <button type="button" class="type-btn" data-bucket="saving">💰 Megtakarítás</button>
+    </div>
+    <label>Alkategóriák</label>
+    <div class="sub-edit" id="catEditSubsList"></div>
+    <div class="sub-add-row">
+      <input type="text" id="catEditSubInput" placeholder="Új alkategória neve..." autocomplete="off">
+      <button type="button" class="btn secondary sub-add-btn" id="catEditSubAdd">Hozzáad</button>
     </div>
     <div class="btn-row">
       <button class="btn" id="btnCatSave">💾 Mentés</button>
@@ -522,6 +549,7 @@ function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCa
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
 function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
 function catBucket(key) { const c = allCategories(); const b = c[key] && c[key].bucket; return (b === "need" || b === "saving") ? b : "want"; }
+function catSubs(key) { const c = allCategories(); return (c[key] && Array.isArray(c[key].subs)) ? c[key].subs : []; }
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
@@ -597,7 +625,7 @@ function getBucket(containerId) { const b = document.querySelector("#" + contain
 function setBucket(containerId, bucket) { document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.bucket === bucket)); }
 
 /* ---------- Színválasztó ---------- */
-function buildColorPicker(containerId, initial) {
+function buildColorPicker(containerId, initial, onSelect) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
   const cats = allCategories();
@@ -613,9 +641,42 @@ function buildColorPicker(containerId, initial) {
     btn.addEventListener("click", () => {
       container.querySelectorAll(".color-btn").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
+      if (onSelect) onSelect(key);
     });
     container.appendChild(btn);
   });
+}
+
+/* alkategória-választó (chip-ek) */
+function renderSubPicker(wrapId, pickerId, catKey, selectedSub) {
+  const wrap = document.getElementById(wrapId);
+  const picker = document.getElementById(pickerId);
+  const subs = catSubs(catKey);
+  if (!subs.length) { wrap.style.display = "none"; picker.innerHTML = ""; return; }
+  wrap.style.display = "";
+  picker.innerHTML = "";
+  subs.forEach(s => {
+    const chip = document.createElement("div");
+    chip.className = "sub-chip";
+    chip.textContent = s;
+    chip.dataset.sub = s;
+    if (s === selectedSub) chip.classList.add("selected");
+    chip.addEventListener("click", () => {
+      const wasSel = chip.classList.contains("selected");
+      picker.querySelectorAll(".sub-chip").forEach(x => x.classList.remove("selected"));
+      if (!wasSel) chip.classList.add("selected"); // újbóli kattintás = kijelölés levétele
+    });
+    picker.appendChild(chip);
+  });
+}
+function getSubValue(pickerId) {
+  const sel = document.querySelector("#" + pickerId + " .sub-chip.selected");
+  return sel ? sel.dataset.sub : "";
+}
+/* Bevitel kategória + alkategória választó együtt */
+function buildManualPicker(initial) {
+  buildColorPicker("manualColors", initial, key => renderSubPicker("manualSubsWrap", "manualSubs", key, ""));
+  renderSubPicker("manualSubsWrap", "manualSubs", initial, "");
 }
 function getPickerValue(containerId) {
   const sel = document.querySelector("#" + containerId + " .color-btn.selected");
@@ -623,27 +684,29 @@ function getPickerValue(containerId) {
 }
 
 /* ---------- Duplikátum ---------- */
-function isDuplicate(name, amount, color, month, type, ignoreIndex) {
+function isDuplicate(name, amount, color, month, type, sub, ignoreIndex) {
   const n = name.trim().toLowerCase();
   return expenseItems.some((it, i) => {
     if (i === ignoreIndex) return false;
     return it.name.trim().toLowerCase() === n && Number(it.amount) === Number(amount) &&
-           it.color === color && (it.month || "") === (month || "") && (it.type || "expense") === type;
+           it.color === color && (it.month || "") === (month || "") && (it.type || "expense") === type &&
+           (it.sub || "") === (sub || "");
   });
 }
 
 /* ---------- Bevitel ---------- */
-function addEntry(name, amount, color, month, type) {
+function addEntry(name, amount, color, month, type, sub) {
   name = (name || "").trim();
   amount = Number(amount);
   month = month || currentMonth();
   type = type === "income" ? "income" : "expense";
+  sub = sub || "";
   if (!name) return { ok: false, reason: "A tétel neve kötelező." };
   if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
-  if (type === "income") color = null;                       // bevételnél nincs kategória
+  if (type === "income") { color = null; sub = ""; }         // bevételnél nincs kategória/alkategória
   else if (!color) return { ok: false, reason: "Válassz kategóriát." };
-  if (isDuplicate(name, amount, color, month, type)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
-  expenseItems.push({ name, amount, color, month, type });
+  if (isDuplicate(name, amount, color, month, type, sub)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
+  expenseItems.push({ name, amount, color, month, type, sub });
   saveItems();
   return { ok: true };
 }
@@ -654,11 +717,13 @@ function submitManual() {
   const month = document.getElementById("mMonth").value || currentMonth();
   const type = getTypeToggle("typeToggle");
   const color = type === "income" ? null : getPickerValue("manualColors");
-  const res = addEntry(nameEl.value, amountEl.value, color, month, type);
+  const sub = type === "income" ? "" : getSubValue("manualSubs");
+  const res = addEntry(nameEl.value, amountEl.value, color, month, type, sub);
   if (res.ok) {
     const t = type === "income" ? "Bevétel" : "Kiadás";
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${monthLabelShort(month)}`, "success");
     nameEl.value = ""; amountEl.value = ""; nameEl.focus();
+    document.querySelectorAll("#manualSubs .sub-chip").forEach(c => c.classList.remove("selected"));
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
   }
@@ -698,8 +763,6 @@ function renderBudget(income, needs, wants, savings, leftover) {
         <div class="bud-goal">Cél: ${formatFt(targetFt)} (${r.target}%)</div>
       </div>`;
   });
-  const freeCls = leftover < 0 ? "cmp-up" : "";
-  html += `<div class="budget-free"><span>💡 Szabad keret (be nem osztott)</span><span class="bf-val ${freeCls}">${formatFt(leftover)}</span></div>`;
   return html + `</div>`;
 }
 
@@ -835,7 +898,7 @@ function renderList() {
           <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? "💰" : catIcon(it.color)}</div>
           <div class="exp-info">
             <div class="exp-name">${escapeHtml(it.name)}</div>
-            <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color))} · ${monthLabelShort(it.month)}</div>
+            <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${monthLabelShort(it.month)}</div>
           </div>
           <div class="exp-right">
             <span class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</span>
@@ -886,7 +949,8 @@ function openEdit(i) {
   document.getElementById("editMonth").value = it.month || currentMonth();
   setTypeToggle("editTypeToggle", it.type || "expense");
   document.getElementById("editCatWrap").style.display = (it.type === "income") ? "none" : "";
-  buildColorPicker("editColors", it.color);
+  buildColorPicker("editColors", it.color, key => renderSubPicker("editSubsWrap", "editSubs", key, ""));
+  renderSubPicker("editSubsWrap", "editSubs", it.color, it.sub || "");
   document.getElementById("editModal").classList.add("show");
 }
 function closeEdit() { document.getElementById("editModal").classList.remove("show"); editIndex = null; }
@@ -899,11 +963,12 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   const month = document.getElementById("editMonth").value || currentMonth();
   const type = getTypeToggle("editTypeToggle");
   const color = type === "income" ? null : getPickerValue("editColors");
+  const sub = type === "income" ? "" : getSubValue("editSubs");
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (type === "expense" && !color) { alert("Válassz kategóriát."); return; }
-  if (isDuplicate(name, amount, color, month, type, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
-  expenseItems[editIndex] = { name, amount, color, month, type };
+  if (isDuplicate(name, amount, color, month, type, sub, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
+  expenseItems[editIndex] = { name, amount, color, month, type, sub };
   saveItems();
   closeEdit();
   renderList();
@@ -923,7 +988,7 @@ function renderCategories() {
         <div class="cat-icon" style="background:${catHex(key)}">${catIcon(key)}</div>
         <div class="cat-info">
           <div class="cat-name">${escapeHtml(c.name)}</div>
-          <div class="cat-sub">${catBucket(key) === "need" ? "🏠 Szükséglet" : "🛍️ Vágy"}</div>
+          <div class="cat-sub">${catBucket(key) === "need" ? "🏠 Szükséglet" : (catBucket(key) === "saving" ? "💰 Megtakarítás" : "🛍️ Vágy")}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
         </div>
         <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés">✏️</button>
         ${isCustom ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>` : `<span class="cat-badge">alap</span>`}
@@ -975,7 +1040,7 @@ function deleteCategory(key) {
     if (used > 0) { expenseItems = expenseItems.filter(it => it.color !== key); saveItems(); }
     renderCategories();
     const cur = getPickerValue("manualColors");
-    buildColorPicker("manualColors", allCategories()[cur] ? cur : "green");
+    buildManualPicker(allCategories()[cur] ? cur : "green");
   }
 }
 
@@ -992,7 +1057,7 @@ document.getElementById("btnAddCat").addEventListener("click", () => {
   saveCategories();
   document.getElementById("newCatName").value = "";
   renderCategories();
-  buildColorPicker("manualColors", getPickerValue("manualColors") || "green");
+  buildManualPicker(getPickerValue("manualColors") || "green");
   showMsg("catMsg", "✅ Kategória létrehozva!", "success");
 });
 
@@ -1008,7 +1073,36 @@ function openCatEdit(key) {
   document.getElementById("catEditIconPreview").textContent = c.icon || "💸";
   document.getElementById("catEditIconCollapse").open = false;
   setBucket("catEditBucket", catBucket(key));
+  catEditSubs = catSubs(key).slice();
+  renderCatEditSubs();
   document.getElementById("catEditModal").classList.add("show");
+}
+
+let catEditSubs = [];
+function renderCatEditSubs() {
+  const box = document.getElementById("catEditSubsList");
+  box.innerHTML = "";
+  catEditSubs.forEach((s, i) => {
+    const tag = document.createElement("div");
+    tag.className = "sub-tag";
+    const span = document.createElement("span");
+    span.textContent = s;
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.textContent = "✕"; btn.title = "Törlés";
+    btn.addEventListener("click", () => { catEditSubs.splice(i, 1); renderCatEditSubs(); });
+    tag.appendChild(span); tag.appendChild(btn);
+    box.appendChild(tag);
+  });
+}
+function addCatEditSub() {
+  const inp = document.getElementById("catEditSubInput");
+  const v = inp.value.trim();
+  if (!v) return;
+  if (catEditSubs.some(s => s.toLowerCase() === v.toLowerCase())) { inp.value = ""; return; }
+  catEditSubs.push(v);
+  inp.value = "";
+  renderCatEditSubs();
+  inp.focus();
 }
 function closeCatEdit() { document.getElementById("catEditModal").classList.remove("show"); catEditKey = null; }
 document.getElementById("btnCatCancel").addEventListener("click", closeCatEdit);
@@ -1022,11 +1116,11 @@ document.getElementById("btnCatSave").addEventListener("click", () => {
   const dupe = Object.entries(allCategories()).some(([k, c]) => k !== catEditKey && c.name.trim().toLowerCase() === name.toLowerCase());
   if (dupe) { alert("Ilyen nevű kategória már létezik."); return; }
   // alap és egyedi kategória is felülírható a customCategories-ben
-  customCategories[catEditKey] = { name, color, icon, bucket: getBucket("catEditBucket") };
+  customCategories[catEditKey] = { name, color, icon, bucket: getBucket("catEditBucket"), subs: catEditSubs.slice() };
   saveCategories();
   closeCatEdit();
   renderCategories();
-  buildColorPicker("manualColors", getPickerValue("manualColors") || "green");
+  buildManualPicker(getPickerValue("manualColors") || "green");
   showMsg("catMsg", "✅ Kategória frissítve!", "success");
 });
 
@@ -1046,8 +1140,8 @@ function exportJSON() {
 }
 function csvCell(v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function exportCSV() {
-  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Hónap"]];
-  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), catName(it.color), it.month || ""]));
+  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Hónap"]];
+  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", it.month || ""]));
   const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
   downloadFile("penzugyi-naplo.csv", "﻿" + csv, "text/csv;charset=utf-8");
   showMsg("catMsg", "✅ CSV (Excel) letöltve.", "success");
@@ -1068,7 +1162,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       customCategories = data.customCategories || {};
       saveItems(); saveCategories();
       selectedMonth = currentMonth();
-      buildColorPicker("manualColors", "green");
+      buildManualPicker("green");
       renderCategories();
       renderList();
       showMsg("catMsg", "✅ Adatok visszaállítva!", "success");
@@ -1107,7 +1201,9 @@ function init() {
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
-  buildColorPicker("manualColors", "green");
+  document.getElementById("catEditSubAdd").addEventListener("click", addCatEditSub);
+  document.getElementById("catEditSubInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCatEditSub(); } });
+  buildManualPicker("green");
   renderList();
   renderCategories();
   document.getElementById("mName").focus();
