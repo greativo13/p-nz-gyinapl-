@@ -594,17 +594,19 @@ let entryType = "expense";      // bevitel típusa
 let searchQuery = "";
 let sortMode = "date-desc";
 let copyTargetMonth = null;
+let hiddenDefaults = [];
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
   try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; } catch { expenseItems = []; }
   try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
+  try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
 }
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
-function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); } catch {} }
+function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
 
 /* ---------- Kategória segédek ---------- */
-function allCategories() { return Object.assign({}, DEFAULT_CATEGORIES, customCategories); }
+function allCategories() { const cats = Object.assign({}, DEFAULT_CATEGORIES, customCategories); hiddenDefaults.forEach(k => delete cats[k]); return cats; }
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
 function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "💸"; }
 function catBucket(key) { const c = allCategories(); const b = c[key] && c[key].bucket; return (b === "need" || b === "saving" || b === "business") ? b : "want"; }
@@ -1166,7 +1168,6 @@ function renderCategories() {
   let html = "";
   Object.keys(cats).forEach(key => {
     const c = cats[key];
-    const isCustom = !DEFAULT_CATEGORIES[key];
     html += `
       <div class="cat-item">
         <div class="cat-icon" style="background:${catHex(key)}">${catIcon(key)}</div>
@@ -1175,7 +1176,7 @@ function renderCategories() {
           <div class="cat-sub">${catBucket(key) === "need" ? "🏠 Szükséglet" : (catBucket(key) === "saving" ? "💰 Megtakarítás" : (catBucket(key) === "business" ? "💼 Vállalkozás" : "🛍️ Vágy"))}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
         </div>
         <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés">✏️</button>
-        ${isCustom ? `<button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>` : `<span class="cat-badge">alap</span>`}
+        <button class="icon-btn del" data-delcat="${key}" title="Törlés">🗑️</button>
       </div>`;
   });
   area.innerHTML = html;
@@ -1213,18 +1214,20 @@ function getIconPickerValue(boxId) {
 function getNewCatColor() { return document.getElementById("newCatCustom").value; }
 
 function deleteCategory(key) {
-  const c = customCategories[key];
+  const c = allCategories()[key];
   if (!c) return;
   const used = expenseItems.filter(it => it.color === key).length;
   let msg = `Biztosan törlöd a(z) "${c.name}" kategóriát?`;
   if (used > 0) msg += `\n\n⚠️ ${used} tétel használja ezt a kategóriát – azok is törlődnek!`;
   if (confirm(msg)) {
+    if (DEFAULT_CATEGORIES[key] && !hiddenDefaults.includes(key)) hiddenDefaults.push(key); // alap kategória elrejtése
     delete customCategories[key];
     saveCategories();
     if (used > 0) { expenseItems = expenseItems.filter(it => it.color !== key); saveItems(); }
     renderCategories();
     const cur = getPickerValue("manualColors");
-    buildManualPicker(allCategories()[cur] ? cur : "green");
+    const keys = Object.keys(allCategories());
+    buildManualPicker(allCategories()[cur] ? cur : (keys[0] || ""));
   }
 }
 
@@ -1318,7 +1321,7 @@ function downloadFile(name, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 function exportJSON() {
-  const data = JSON.stringify({ app: "penzugyi-naplo", version: 2, exportedAt: new Date().toISOString(), expenseItems, customCategories }, null, 2);
+  const data = JSON.stringify({ app: "penzugyi-naplo", version: 2, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults }, null, 2);
   downloadFile("penzugyi-naplo-mentes.json", data, "application/json");
   showMsg("catMsg", "✅ JSON mentés letöltve.", "success");
 }
@@ -1344,6 +1347,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (!confirm(`Visszaállítás: ${data.expenseItems.length} tétel és ${Object.keys(data.customCategories || {}).length} egyedi kategória.\n\nEz FELÜLÍRJA a jelenlegi adatokat. Folytatod?`)) return;
       expenseItems = data.expenseItems;
       customCategories = data.customCategories || {};
+      hiddenDefaults = Array.isArray(data.hiddenDefaults) ? data.hiddenDefaults : [];
       saveItems(); saveCategories();
       selectedMonth = currentMonth();
       buildManualPicker("green");
