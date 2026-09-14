@@ -372,8 +372,8 @@
   .hint { font-size: 12px; color: var(--muted); margin-top: -6px; margin-bottom: 14px; }
 
   /* Phosphor ikonok igazítása szöveg mellett */
-  h2 .ph, h3 .ph, .btn .ph, .type-btn .ph, label .ph { vertical-align: -0.12em; }
-  .btn .ph, h2 .ph, h3 .ph { margin-right: 3px; }
+  h2 .ph-fill, h3 .ph-fill, .btn .ph-fill, .type-btn .ph-fill, label .ph-fill { vertical-align: -0.12em; }
+  .btn .ph-fill, h2 .ph-fill, h3 .ph-fill { margin-right: 3px; }
 </style>
 </head>
 <body>
@@ -402,21 +402,21 @@
   </header>
 
   <nav class="bottom-nav">
-    <button class="tab active" data-panel="list"><span class="ic"><i class="ph ph-chart-pie-slice"></i></span>Áttekintés</button>
-    <button class="tab tab-center" data-panel="manual" aria-label="Új tétel"><span class="ic"><i class="ph ph-plus"></i></span></button>
-    <button class="tab" data-panel="categories"><span class="ic"><i class="ph ph-tag"></i></span>Kategóriák</button>
+    <button class="tab active" data-panel="list"><span class="ic"><i class="ph-fill ph-chart-pie-slice"></i></span>Áttekintés</button>
+    <button class="tab tab-center" data-panel="manual" aria-label="Új tétel"><span class="ic"><i class="ph-fill ph-plus"></i></span></button>
+    <button class="tab" data-panel="categories"><span class="ic"><i class="ph-fill ph-tag"></i></span>Kategóriák</button>
   </nav>
 
   <div class="content">
 
     <!-- ============ BEVITEL ============ -->
     <section class="panel" id="panel-manual">
-      <h2><i class="ph ph-pencil-simple"></i> Új tétel</h2>
+      <h2><i class="ph-fill ph-pencil-simple"></i> Új tétel</h2>
       <div class="msg" id="manualMsg"></div>
       <div class="card">
         <div class="type-toggle" id="typeToggle">
-          <button type="button" class="type-btn active" data-type="expense"><i class="ph ph-arrow-up"></i> Kiadás</button>
-          <button type="button" class="type-btn" data-type="income"><i class="ph ph-arrow-down"></i> Bevétel</button>
+          <button type="button" class="type-btn active" data-type="expense"><i class="ph-fill ph-arrow-up"></i> Kiadás</button>
+          <button type="button" class="type-btn" data-type="income"><i class="ph-fill ph-arrow-down"></i> Bevétel</button>
         </div>
 
         <label for="mName">Tétel neve</label>
@@ -437,16 +437,16 @@
           </div>
         </div>
 
-        <button class="btn" id="btnAddManual"><i class="ph ph-plus"></i> Hozzáadás</button>
+        <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
       </div>
-      <button class="btn secondary" id="btnCopyPrev"><i class="ph ph-copy"></i> Előző havi tételek másolása</button>
+      <button class="btn secondary" id="btnCopyPrev"><i class="ph-fill ph-copy"></i> Előző havi tételek másolása</button>
     </section>
 
     <!-- ============ LISTA ============ -->
     <section class="panel active" id="panel-list">
       <div class="list-toolbar" id="listToolbar" style="display:none">
-        <span class="tb-ic" aria-hidden="true"><i class="ph ph-calendar-blank"></i></span>
+        <span class="tb-ic" aria-hidden="true"><i class="ph-fill ph-calendar-blank"></i></span>
         <select id="monthFilter" aria-label="Hónap választása"></select>
       </div>
       <div id="summaryArea"></div>
@@ -463,17 +463,17 @@
 
       <div id="expenseListArea"></div>
       <hr class="divider" id="clearDivider" style="display:none">
-      <button class="btn danger" id="btnClearAll" style="display:none"><i class="ph ph-trash"></i> Az összes adat törlése</button>
+      <button class="btn danger" id="btnClearAll" style="display:none"><i class="ph-fill ph-trash"></i> Az összes adat törlése</button>
     </section>
 
     <!-- ============ KATEGÓRIÁK ============ -->
     <section class="panel" id="panel-categories">
-      <h2><i class="ph ph-tag"></i> Kategóriák</h2>
+      <h2><i class="ph-fill ph-tag"></i> Kategóriák</h2>
       <div class="msg" id="catMsg"></div>
       <div id="catListArea"></div>
 
       <hr class="divider">
-      <h2><i class="ph ph-plus"></i> Új kategória</h2>
+      <h2><i class="ph-fill ph-plus"></i> Új kategória</h2>
       <div class="card">
         <label for="newCatName">Kategória neve</label>
         <input type="text" id="newCatName" placeholder="pl. Sport, Utazás..." autocomplete="off">
@@ -483,28 +483,28 @@
           <input type="color" id="newCatCustom" value="#1f9d5b">
         </div>
         <details class="icon-collapse" id="iconCollapse">
-          <summary>Ikon <span class="icon-current" id="iconPreview"><i class="ph ph-receipt"></i></span></summary>
+          <summary>Ikon <span class="icon-current" id="iconPreview"><i class="ph-fill ph-receipt"></i></span></summary>
           <div class="icon-picker" id="newCatIcons"></div>
         </details>
         <label>Besorolás (50-30-20)</label>
         <div class="type-toggle grid2" id="newCatBucket">
-          <button type="button" class="type-btn active" data-bucket="need"><i class="ph ph-house"></i> Szükséglet</button>
-          <button type="button" class="type-btn" data-bucket="want"><i class="ph ph-shopping-bag"></i> Vágy</button>
-          <button type="button" class="type-btn" data-bucket="saving"><i class="ph ph-piggy-bank"></i> Megtakarítás</button>
-          <button type="button" class="type-btn" data-bucket="business"><i class="ph ph-briefcase"></i> Vállalkozás</button>
+          <button type="button" class="type-btn active" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
+          <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
+          <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
+          <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
         </div>
-        <button class="btn" id="btnAddCat"><i class="ph ph-plus-circle"></i> Kategória létrehozása</button>
+        <button class="btn" id="btnAddCat"><i class="ph-fill ph-plus-circle"></i> Kategória létrehozása</button>
       </div>
 
       <hr class="divider">
-      <h2><i class="ph ph-floppy-disk"></i> Adatok</h2>
+      <h2><i class="ph-fill ph-floppy-disk"></i> Adatok</h2>
       <div class="card data-actions">
         <label class="view-toggle"><input type="checkbox" id="toggle5030"> 🎯 50-30-20 kimutatás a Listán</label>
         <div class="btn-row">
-          <button class="btn secondary" id="btnExportJSON"><i class="ph ph-download-simple"></i> Mentés (JSON)</button>
-          <button class="btn secondary" id="btnExportCSV"><i class="ph ph-download-simple"></i> Excel (CSV)</button>
+          <button class="btn secondary" id="btnExportJSON"><i class="ph-fill ph-download-simple"></i> Mentés (JSON)</button>
+          <button class="btn secondary" id="btnExportCSV"><i class="ph-fill ph-download-simple"></i> Excel (CSV)</button>
         </div>
-        <button class="btn secondary" id="btnImport"><i class="ph ph-upload-simple"></i> Visszaállítás fájlból</button>
+        <button class="btn secondary" id="btnImport"><i class="ph-fill ph-upload-simple"></i> Visszaállítás fájlból</button>
         <input type="file" id="importFile" accept="application/json,.json" style="display:none">
         <p class="hint" style="margin:6px 0 0;">A mentés a böngésződben tárolódik. Rendszeresen készíts biztonsági mentést, hogy ne veszítsd el az adataidat böngésző-törlésnél vagy eszközváltásnál.</p>
       </div>
@@ -516,10 +516,10 @@
 <!-- ============ TÉTEL SZERKESZTÉS MODAL ============ -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
-    <h3><i class="ph ph-pencil-simple"></i> Tétel szerkesztése</h3>
+    <h3><i class="ph-fill ph-pencil-simple"></i> Tétel szerkesztése</h3>
     <div class="type-toggle" id="editTypeToggle">
-      <button type="button" class="type-btn" data-type="expense"><i class="ph ph-arrow-up"></i> Kiadás</button>
-      <button type="button" class="type-btn" data-type="income"><i class="ph ph-arrow-down"></i> Bevétel</button>
+      <button type="button" class="type-btn" data-type="expense"><i class="ph-fill ph-arrow-up"></i> Kiadás</button>
+      <button type="button" class="type-btn" data-type="income"><i class="ph-fill ph-arrow-down"></i> Bevétel</button>
     </div>
     <label for="editName">Tétel neve</label>
     <input type="text" id="editName" autocomplete="off">
@@ -536,7 +536,7 @@
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn" id="btnSaveEdit"><i class="ph ph-check"></i> Mentés</button>
+      <button class="btn" id="btnSaveEdit"><i class="ph-fill ph-check"></i> Mentés</button>
       <button class="btn secondary" id="btnCancelEdit">Mégse</button>
     </div>
   </div>
@@ -545,7 +545,7 @@
 <!-- ============ MÁSOLÁS ELŐZŐ HÓNAPBÓL MODAL ============ -->
 <div class="modal-overlay" id="copyModal">
   <div class="modal">
-    <h3><i class="ph ph-copy"></i> Másolás előző hónapból</h3>
+    <h3><i class="ph-fill ph-copy"></i> Másolás előző hónapból</h3>
     <p class="hint" id="copyHint" style="margin:0 0 12px;"></p>
     <div id="copyList"></div>
     <div class="btn-row">
@@ -558,7 +558,7 @@
 <!-- ============ KATEGÓRIA SZERKESZTÉS MODAL ============ -->
 <div class="modal-overlay" id="catEditModal">
   <div class="modal">
-    <h3><i class="ph ph-pencil-simple"></i> Kategória szerkesztése</h3>
+    <h3><i class="ph-fill ph-pencil-simple"></i> Kategória szerkesztése</h3>
     <label for="catEditName">Név</label>
     <input type="text" id="catEditName" autocomplete="off">
     <label for="catEditColor">Szín</label>
@@ -567,15 +567,15 @@
       <input type="color" id="catEditColor" value="#1f9d5b">
     </div>
     <details class="icon-collapse" id="catEditIconCollapse">
-      <summary>Ikon <span class="icon-current" id="catEditIconPreview"><i class="ph ph-receipt"></i></span></summary>
+      <summary>Ikon <span class="icon-current" id="catEditIconPreview"><i class="ph-fill ph-receipt"></i></span></summary>
       <div class="icon-picker" id="catEditIcons"></div>
     </details>
     <label>Besorolás (50-30-20)</label>
     <div class="type-toggle grid2" id="catEditBucket">
-      <button type="button" class="type-btn" data-bucket="need"><i class="ph ph-house"></i> Szükséglet</button>
-      <button type="button" class="type-btn" data-bucket="want"><i class="ph ph-shopping-bag"></i> Vágy</button>
-      <button type="button" class="type-btn" data-bucket="saving"><i class="ph ph-piggy-bank"></i> Megtakarítás</button>
-      <button type="button" class="type-btn" data-bucket="business"><i class="ph ph-briefcase"></i> Vállalkozás</button>
+      <button type="button" class="type-btn" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
+      <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
+      <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
+      <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
     </div>
     <label>Alkategóriák</label>
     <div class="sub-edit" id="catEditSubsList"></div>
@@ -584,7 +584,7 @@
       <button type="button" class="btn secondary sub-add-btn" id="catEditSubAdd">Hozzáad</button>
     </div>
     <div class="btn-row">
-      <button class="btn" id="btnCatSave"><i class="ph ph-check"></i> Mentés</button>
+      <button class="btn" id="btnCatSave"><i class="ph-fill ph-check"></i> Mentés</button>
       <button class="btn secondary" id="btnCatCancel">Mégse</button>
     </div>
   </div>
@@ -605,7 +605,7 @@ const DEFAULT_CATEGORIES = {
 };
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["receipt","fork-knife","shopping-bag","shopping-cart","house","car","gas-pump","pill","first-aid-kit","gift","airplane","train-simple","game-controller","device-mobile","phone","t-shirt","coffee","lightbulb","barbell","graduation-cap","dog","film-slate","music-notes","coins","piggy-bank","wallet","credit-card","briefcase","bank","currency-circle-dollar","heart","package"];
-function iconHtml(icon) { return /^[a-z][a-z0-9-]+$/.test(icon || "") ? `<i class="ph ph-${icon}"></i>` : (icon || ""); }
+function iconHtml(icon) { return /^[a-z][a-z0-9-]+$/.test(icon || "") ? `<i class="ph-fill ph-${icon}"></i>` : (icon || ""); }
 
 function textOn(hex) {
   if (!hex || hex[0] !== "#") return "#ffffff";
@@ -683,7 +683,7 @@ function applyTheme(t) {
   try { localStorage.setItem("theme", t); } catch {}
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = t === "dark" ? "#0d3325" : "#14432f";
-  document.getElementById("themeToggle").innerHTML = t === "dark" ? '<i class="ph ph-sun"></i>' : '<i class="ph ph-moon"></i>';
+  document.getElementById("themeToggle").innerHTML = t === "dark" ? '<i class="ph-fill ph-sun"></i>' : '<i class="ph-fill ph-moon"></i>';
 }
 
 /* ---------- Tabok ---------- */
@@ -879,7 +879,7 @@ document.getElementById("copyModal").addEventListener("click", (e) => { if (e.ta
 /* ---------- 50-30-20 kártya ---------- */
 function renderBudget(income, needs, wants, savings, leftover) {
   if (!show5030) return "";
-  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph ph-target"></i> 50-30-20 szabály</h2><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés">✕</button></div>`;
+  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-target"></i> 50-30-20 szabály</h2><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés">✕</button></div>`;
   if (income <= 0) {
     return `<div class="card">${head}<div class="budget-note" style="margin-top:10px">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
   }
@@ -935,7 +935,7 @@ function renderTrend() {
     const val = map[m] >= 1000 ? Math.round(map[m] / 1000) + "e" : String(map[m]);
     bars += `<div class="tr-col"><div class="tr-bar-wrap"><div class="tr-bar${sel}" style="height:${h}%"></div></div><div class="tr-val">${val}</div><div class="tr-lbl">${monthShortNoYear(m)}</div></div>`;
   });
-  return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph ph-chart-line-up"></i> Kiadás-trend</h2><div class="trend">${bars}</div></div>`;
+  return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph-fill ph-chart-line-up"></i> Kiadás-trend</h2><div class="trend">${bars}</div></div>`;
 }
 
 /* ---------- Lista / összesítés ---------- */
@@ -1109,16 +1109,16 @@ function renderList() {
       const accent = isIncome ? "#17a35a" : catHex(it.color);
       lHtml += `
         <div class="exp-item" style="background:${accent}1a; border-color:${accent}59">
-          <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? '<i class="ph ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</div>
+          <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? '<i class="ph-fill ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</div>
           <div class="exp-info">
             <div class="exp-name">${escapeHtml(it.name)}</div>
             <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${monthLabelShort(it.month)}</div>
             <div class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</div>
           </div>
           <div class="exp-actions">
-            <button class="icon-btn copy" data-copy="${i}" title="Másolás következő hónapra"><i class="ph ph-copy"></i></button>
-            <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés"><i class="ph ph-pencil-simple"></i></button>
-            <button class="icon-btn del" data-del="${i}" title="Törlés"><i class="ph ph-trash"></i></button>
+            <button class="icon-btn copy" data-copy="${i}" title="Másolás következő hónapra"><i class="ph-fill ph-copy"></i></button>
+            <button class="icon-btn edit" data-edit="${i}" title="Szerkesztés"><i class="ph-fill ph-pencil-simple"></i></button>
+            <button class="icon-btn del" data-del="${i}" title="Törlés"><i class="ph-fill ph-trash"></i></button>
           </div>
         </div>`;
     });
@@ -1214,10 +1214,10 @@ function renderCategories() {
         <div class="cat-icon" style="background:${catHex(key)}">${iconHtml(catIcon(key))}</div>
         <div class="cat-info">
           <div class="cat-name">${escapeHtml(c.name)}</div>
-          <div class="cat-sub">${catBucket(key) === "need" ? '<i class="ph ph-house"></i> Szükséglet' : (catBucket(key) === "saving" ? '<i class="ph ph-piggy-bank"></i> Megtakarítás' : (catBucket(key) === "business" ? '<i class="ph ph-briefcase"></i> Vállalkozás' : '<i class="ph ph-shopping-bag"></i> Vágy'))}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
+          <div class="cat-sub">${catBucket(key) === "need" ? '<i class="ph-fill ph-house"></i> Szükséglet' : (catBucket(key) === "saving" ? '<i class="ph-fill ph-piggy-bank"></i> Megtakarítás' : (catBucket(key) === "business" ? '<i class="ph-fill ph-briefcase"></i> Vállalkozás' : '<i class="ph-fill ph-shopping-bag"></i> Vágy'))}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
         </div>
-        <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés"><i class="ph ph-pencil-simple"></i></button>
-        <button class="icon-btn del" data-delcat="${key}" title="Törlés"><i class="ph ph-trash"></i></button>
+        <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés"><i class="ph-fill ph-pencil-simple"></i></button>
+        <button class="icon-btn del" data-delcat="${key}" title="Törlés"><i class="ph-fill ph-trash"></i></button>
       </div>`;
   });
   area.innerHTML = html;
