@@ -606,6 +606,7 @@ const DEFAULT_CATEGORIES = {
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["receipt","fork-knife","shopping-bag","shopping-cart","house","car","gas-pump","pill","first-aid-kit","gift","airplane","train-simple","game-controller","device-mobile","phone","t-shirt","coffee","lightbulb","barbell","graduation-cap","dog","film-slate","music-notes","coins","piggy-bank","wallet","credit-card","briefcase","bank","currency-circle-dollar","heart","package"];
 function iconHtml(icon) { return /^[a-z][a-z0-9-]+$/.test(icon || "") ? `<i class="ph-fill ph-${icon}"></i>` : (icon || ""); }
+const EMOJI_TO_PH = { "🧾":"receipt","🍽️":"fork-knife","💼":"briefcase","🛍️":"shopping-bag","📦":"package","🏠":"house","🚗":"car","⛽":"gas-pump","💊":"pill","🎁":"gift","✈️":"airplane","🎮":"game-controller","📱":"device-mobile","👕":"t-shirt","☕":"coffee","💡":"lightbulb","🏋️":"barbell","🎓":"graduation-cap","🐶":"dog","🎬":"film-slate","💰":"piggy-bank","🛒":"shopping-cart","💶":"currency-circle-dollar","🎵":"music-notes","💸":"coins" };
 
 function textOn(hex) {
   if (!hex || hex[0] !== "#") return "#ffffff";
@@ -632,6 +633,13 @@ function loadData() {
   try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
+  // egyszeri migráció: régi emoji-ikonok → Phosphor nevek
+  let migrated = false;
+  Object.keys(customCategories).forEach(k => {
+    const c = customCategories[k];
+    if (c && c.icon && EMOJI_TO_PH[c.icon]) { c.icon = EMOJI_TO_PH[c.icon]; migrated = true; }
+  });
+  if (migrated) saveCategories();
 }
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
