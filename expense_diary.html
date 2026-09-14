@@ -190,6 +190,10 @@
   .bud-fill.under { background: #eab308; }
   .bud-target { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); opacity: 0.5; border-radius: 2px; }
   .budget-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .budget-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .bud-hide { border: none; background: var(--chip); color: var(--muted); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; font-size: 13px; flex-shrink: 0; }
+  .view-toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--chip-text); font-size: 14px; margin-bottom: 12px; cursor: pointer; }
+  .view-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--green-accent); flex-shrink: 0; }
 
   /* Alkategória-bontás a listában */
   .bd-row.has-subs { cursor: pointer; }
@@ -472,6 +476,7 @@
       <hr class="divider">
       <h2>💾 Adatok</h2>
       <div class="card data-actions">
+        <label class="view-toggle"><input type="checkbox" id="toggle5030"> 🎯 50-30-20 kimutatás a Listán</label>
         <div class="btn-row">
           <button class="btn secondary" id="btnExportJSON">⬇️ Mentés (JSON)</button>
           <button class="btn secondary" id="btnExportCSV">⬇️ Excel (CSV)</button>
@@ -595,15 +600,18 @@ let searchQuery = "";
 let sortMode = "date-desc";
 let copyTargetMonth = null;
 let hiddenDefaults = [];
+let show5030 = true;
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
   try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; } catch { expenseItems = []; }
   try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
+  try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
 }
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
+function saveView() { try { localStorage.setItem("show5030", show5030); } catch {} }
 
 /* ---------- Kategória segédek ---------- */
 function allCategories() { const cats = Object.assign({}, DEFAULT_CATEGORIES, customCategories); hiddenDefaults.forEach(k => delete cats[k]); return cats; }
@@ -846,15 +854,17 @@ document.getElementById("copyModal").addEventListener("click", (e) => { if (e.ta
 
 /* ---------- 50-30-20 kártya ---------- */
 function renderBudget(income, needs, wants, savings, leftover) {
+  if (!show5030) return "";
+  const head = `<div class="budget-head"><h2 style="margin:0">🎯 50-30-20 szabály</h2><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés">✕</button></div>`;
   if (income <= 0) {
-    return `<div class="card"><h2 style="margin-bottom:8px">🎯 50-30-20 szabály</h2><div class="budget-note">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
+    return `<div class="card">${head}<div class="budget-note" style="margin-top:10px">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
   }
   const rows = [
     { emoji: "🏠", name: "Szükségletek", amount: needs,   target: 50, kind: "spend" },
     { emoji: "🛍️", name: "Vágyak",       amount: wants,   target: 30, kind: "spend" },
     { emoji: "💰", name: "Megtakarítás", amount: savings, target: 20, kind: "save" }
   ];
-  let html = `<div class="card"><h2 style="margin-bottom:6px">🎯 50-30-20 szabály</h2><div class="budget-intro">A nettó bevételed ideális megoszlása · alap: ${formatFt(income)} bevétel.</div>`;
+  let html = `<div class="card">${head}<div class="budget-intro" style="margin-top:6px">A nettó bevételed ideális megoszlása · alap: ${formatFt(income)} bevétel.</div>`;
   rows.forEach(r => {
     const pct = Math.round(r.amount / income * 100);
     const fillW = Math.max(0, Math.min(pct, 100));
@@ -1032,6 +1042,13 @@ function renderList() {
       <div class="hero-breakdown">${bd}</div>
     </div>` + renderBudget(income, needs, wants, savings, balance) + renderTrend();
 
+  // 50-30-20 elrejtése
+  const hideBtn = summaryArea.querySelector("[data-hide5030]");
+  if (hideBtn) hideBtn.addEventListener("click", () => {
+    show5030 = false; saveView(); renderList();
+    toast("🎯 50-30-20 elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
+  });
+
   // alkategória-bontás ki/be nyitása
   summaryArea.querySelectorAll("[data-toggle]").forEach(el => {
     el.addEventListener("click", () => {
@@ -1187,6 +1204,8 @@ function renderCategories() {
   buildIconPicker("newCatIcons", ICON_CHOICES[0], "iconPreview", "iconCollapse");
   const preview = document.getElementById("iconPreview");
   if (preview) preview.textContent = ICON_CHOICES[0];
+  const t5030 = document.getElementById("toggle5030");
+  if (t5030) t5030.checked = show5030;
 }
 
 function buildIconPicker(boxId, selectedIcon, previewId, collapseId) {
@@ -1389,6 +1408,7 @@ function init() {
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
+  document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); });
   document.getElementById("catEditSubAdd").addEventListener("click", addCatEditSub);
   document.getElementById("catEditSubInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCatEditSub(); } });
   buildManualPicker("green");
