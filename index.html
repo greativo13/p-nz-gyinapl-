@@ -1214,7 +1214,7 @@ function renderCategories() {
         <div class="cat-icon" style="background:${catHex(key)}">${iconHtml(catIcon(key))}</div>
         <div class="cat-info">
           <div class="cat-name">${escapeHtml(c.name)}</div>
-          <div class="cat-sub">${catBucket(key) === "need" ? "<i class="ph ph-house"></i> Szükséglet" : (catBucket(key) === "saving" ? "<i class="ph ph-piggy-bank"></i> Megtakarítás" : (catBucket(key) === "business" ? "<i class="ph ph-briefcase"></i> Vállalkozás" : "<i class="ph ph-shopping-bag"></i> Vágy"))}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
+          <div class="cat-sub">${catBucket(key) === "need" ? '<i class="ph ph-house"></i> Szükséglet' : (catBucket(key) === "saving" ? '<i class="ph ph-piggy-bank"></i> Megtakarítás' : (catBucket(key) === "business" ? '<i class="ph ph-briefcase"></i> Vállalkozás' : '<i class="ph ph-shopping-bag"></i> Vágy'))}${catSubs(key).length ? " · " + catSubs(key).length + " alkategória" : ""}</div>
         </div>
         <button class="icon-btn edit" data-editcat="${key}" title="Szerkesztés"><i class="ph ph-pencil-simple"></i></button>
         <button class="icon-btn del" data-delcat="${key}" title="Törlés"><i class="ph ph-trash"></i></button>
