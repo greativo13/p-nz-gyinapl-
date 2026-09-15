@@ -196,7 +196,7 @@
   .bud-row:last-child { margin-bottom: 0; }
   .bud-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 13px; }
   .bud-name { font-weight: 700; }
-  .bud-name .bud-emoji { margin-right: 6px; color: var(--green-accent); }
+  .bud-name .bud-emoji { margin-right: 6px; }
   .bud-name .bud-emoji i { font-size: 16px; vertical-align: -2px; }
   .bud-amt { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .bud-amt b { color: var(--text); }
@@ -943,9 +943,9 @@ function renderBudget(income, needs, wants, savings, leftover) {
     return `<div class="card">${head}<div class="budget-note" style="margin-top:10px">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
   }
   const rows = [
-    { icon: "house",       name: "Szükségletek", amount: needs,   target: 50, kind: "spend" },
-    { icon: "shopping-bag", name: "Vágyak",       amount: wants,   target: 30, kind: "spend" },
-    { icon: "piggy-bank",  name: "Megtakarítás", amount: savings, target: 20, kind: "save" }
+    { icon: "house",        color: "#3b82f6", name: "Szükségletek", amount: needs,   target: 50, kind: "spend" },
+    { icon: "shopping-bag", color: "#ec4899", name: "Vágyak",       amount: wants,   target: 30, kind: "spend" },
+    { icon: "piggy-bank",   color: "#14b8a6", name: "Megtakarítás", amount: savings, target: 20, kind: "save" }
   ];
   let html = `<div class="card">${head}<div class="budget-intro" style="margin-top:6px">A nettó bevételed ideális megoszlása · alap: ${formatFt(income)} bevétel.</div>`;
   rows.forEach(r => {
@@ -958,7 +958,7 @@ function renderBudget(income, needs, wants, savings, leftover) {
     html += `
       <div class="bud-row">
         <div class="bud-head">
-          <span class="bud-name"><span class="bud-emoji"><i class="ph-fill ph-${r.icon}"></i></span>${r.name}</span>
+          <span class="bud-name"><span class="bud-emoji" style="color:${r.color}"><i class="ph-fill ph-${r.icon}"></i></span>${r.name}</span>
           <span class="bud-amt"><b>${formatFt(r.amount)}</b> · ${pct}%</span>
         </div>
         <div class="bud-track">
