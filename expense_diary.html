@@ -523,6 +523,8 @@
       <h2><i class="ph-fill ph-floppy-disk"></i> Adatok</h2>
       <div class="card data-actions">
         <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> 50-30-20 kimutatás a Listán</label>
+        <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
+        <label class="view-toggle" id="toggleSaveBalWrap"><input type="checkbox" id="toggleSaveBal"> <i class="ph-fill ph-piggy-bank"></i> Megtakarítás csökkentse az egyenleget</label>
         <div class="btn-row">
           <button class="btn secondary" id="btnExportJSON"><i class="ph-fill ph-download-simple"></i> Mentés (JSON)</button>
           <button class="btn secondary" id="btnExportCSV"><i class="ph-fill ph-download-simple"></i> Excel (CSV)</button>
@@ -575,10 +577,24 @@
       <button type="button" class="type-btn" data-v="yes">Igen</button>
       <button type="button" class="type-btn active" data-v="no">Nem</button>
     </div>
+    <div id="obBizBalWrap" hidden>
+      <label>A vállalkozás kiadásai csökkentsék a fő egyenleget?</label>
+      <div class="type-toggle" id="obBizBal">
+        <button type="button" class="type-btn active" data-v="yes">Igen</button>
+        <button type="button" class="type-btn" data-v="no">Nem, külön</button>
+      </div>
+    </div>
     <label>Szeretnéd követni a megtakarítást?</label>
     <div class="type-toggle" id="obSave">
       <button type="button" class="type-btn active" data-v="yes">Igen</button>
       <button type="button" class="type-btn" data-v="no">Nem</button>
+    </div>
+    <div id="obSaveBalWrap">
+      <label>A megtakarítás csökkentse a fő egyenleget?</label>
+      <div class="type-toggle" id="obSaveBal">
+        <button type="button" class="type-btn active" data-v="yes">Igen</button>
+        <button type="button" class="type-btn" data-v="no">Nem, félretett pénz</button>
+      </div>
     </div>
     <label>Mutassuk az 50-30-20 kimutatást?</label>
     <div class="type-toggle" id="obRule">
@@ -695,6 +711,7 @@ let copyTargetMonth = null;
 let hiddenDefaults = [];
 let show5030 = true;
 let rule5030 = { need: 50, want: 30, save: 20 };
+let balanceInc = { biz: true, save: true }; // beleszámítson-e az egyenlegbe
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
@@ -705,6 +722,10 @@ function loadData() {
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
     if (r && [r.need, r.want, r.save].every(n => Number.isFinite(n))) rule5030 = { need: r.need, want: r.want, save: r.save };
+  } catch {}
+  try {
+    const b = JSON.parse(localStorage.getItem("balanceInc") || "null");
+    if (b) balanceInc = { biz: b.biz !== false, save: b.save !== false };
   } catch {}
   // egyszeri migráció: régi emoji-ikonok → Phosphor nevek
   let migrated = false;
@@ -718,6 +739,7 @@ function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
 function saveView() { try { localStorage.setItem("show5030", show5030); } catch {} }
 function saveRule() { try { localStorage.setItem("rule5030", JSON.stringify(rule5030)); } catch {} }
+function saveBalanceInc() { try { localStorage.setItem("balanceInc", JSON.stringify(balanceInc)); } catch {} }
 function ruleLabel() { return `${rule5030.need}-${rule5030.want}-${rule5030.save}`; }
 
 /* ---------- Kategória segédek ---------- */
@@ -1121,7 +1143,7 @@ function renderList() {
     subTotals[it.color][sname] = (subTotals[it.color][sname] || 0) + amt;
   });
   const spend = needs + wants;                          // személyes költés
-  const balance = income - spend - savings - business;  // szabad keret
+  const balance = income - spend - (balanceInc.save ? savings : 0) - (balanceInc.biz ? business : 0);  // szabad keret
 
   /* körgyűrű (csak kiadás) */
   const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count })).sort((a, b) => b.sum - a.sum);
@@ -1362,6 +1384,13 @@ function renderCategories() {
   if (preview) preview.innerHTML = iconHtml(ICON_CHOICES[0]);
   const t5030 = document.getElementById("toggle5030");
   if (t5030) t5030.checked = show5030;
+  // egyenleg-beállítások: csak akkor mutatjuk, ha van ilyen bucket-ű kategória
+  const allCats = allCategories();
+  const hasBiz = Object.values(allCats).some(c => c.bucket === "business");
+  const hasSave = Object.values(allCats).some(c => c.bucket === "saving");
+  const tBiz = document.getElementById("toggleBizBal"), tSave = document.getElementById("toggleSaveBal");
+  if (tBiz) { tBiz.checked = balanceInc.biz; document.getElementById("toggleBizBalWrap").hidden = !hasBiz; }
+  if (tSave) { tSave.checked = balanceInc.save; document.getElementById("toggleSaveBalWrap").hidden = !hasSave; }
 }
 
 function buildIconPicker(boxId, selectedIcon, previewId, collapseId) {
@@ -1555,11 +1584,17 @@ function registerSW() {
 /* ---------- Onboarding ---------- */
 function getOb(id) { const b = document.querySelector("#" + id + " .type-btn.active"); return b ? b.dataset.v : "yes"; }
 function finishOnboard() {
-  if (getOb("obBiz") === "no" && !hiddenDefaults.includes("yellow")) hiddenDefaults.push("yellow");
-  if (getOb("obSave") === "no" && !hiddenDefaults.includes("saving")) hiddenDefaults.push("saving");
+  const hasBiz = getOb("obBiz") === "yes";
+  const hasSave = getOb("obSave") === "yes";
+  if (!hasBiz && !hiddenDefaults.includes("yellow")) hiddenDefaults.push("yellow");
+  if (!hasSave && !hiddenDefaults.includes("saving")) hiddenDefaults.push("saving");
   show5030 = getOb("obRule") === "yes";
+  balanceInc = {
+    biz: hasBiz ? getOb("obBizBal") === "yes" : true,
+    save: hasSave ? getOb("obSaveBal") === "yes" : true
+  };
   try { localStorage.setItem("onboarded", "1"); } catch {}
-  saveCategories(); saveView();
+  saveCategories(); saveView(); saveBalanceInc();
   document.getElementById("onboardModal").classList.remove("show");
   buildManualPicker("green");
   renderCategories();
@@ -1581,12 +1616,23 @@ function init() {
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
-  document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); });
+  document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); renderList(); });
+  document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
+  document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("catEditSubAdd").addEventListener("click", addCatEditSub);
   document.getElementById("catEditSubInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCatEditSub(); } });
   wirePlainToggle("obBiz");
   wirePlainToggle("obSave");
   wirePlainToggle("obRule");
+  wirePlainToggle("obBizBal");
+  wirePlainToggle("obSaveBal");
+  // követő-kérdések csak akkor, ha releváns
+  document.querySelectorAll("#obBiz .type-btn").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("obBizBalWrap").hidden = b.dataset.v !== "yes";
+  }));
+  document.querySelectorAll("#obSave .type-btn").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("obSaveBalWrap").hidden = b.dataset.v !== "yes";
+  }));
   document.getElementById("btnOnboard").addEventListener("click", finishOnboard);
   document.getElementById("btnRuleSave").addEventListener("click", saveRuleEdit);
   document.getElementById("btnRuleCancel").addEventListener("click", () => document.getElementById("ruleModal").classList.remove("show"));
