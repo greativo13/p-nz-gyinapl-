@@ -211,7 +211,17 @@
   .bud-target { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); opacity: 0.5; border-radius: 2px; }
   .budget-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
   .budget-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .bud-head-btns { display: flex; gap: 6px; flex-shrink: 0; }
   .bud-hide { border: none; background: var(--chip); color: var(--muted); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; font-size: 13px; flex-shrink: 0; }
+  .bud-hide:hover { color: var(--text); }
+  .rule-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; }
+  .rule-row label { font-weight: 700; font-size: 14px; display: flex; align-items: center; }
+  .rule-row .bud-emoji i { font-size: 17px; vertical-align: -3px; margin-right: 6px; }
+  .rule-in { display: flex; align-items: center; gap: 5px; font-weight: 700; color: var(--muted); }
+  .rule-in input { width: 68px; text-align: center; font-weight: 800; font-size: 15px; }
+  .rule-sum { font-size: 12.5px; margin: 8px 0 14px; display: flex; align-items: center; gap: 6px; }
+  .rule-sum.ok { color: var(--income); }
+  .rule-sum.warn { color: #b45309; }
   .view-toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--chip-text); font-size: 14px; margin-bottom: 12px; cursor: pointer; }
   .view-toggle input { width: 20px; height: 20px; margin: 0; accent-color: var(--green-accent); flex-shrink: 0; }
 
@@ -579,6 +589,23 @@
   </div>
 </div>
 
+<!-- ============ 50-30-20 ARÁNY SZERKESZTÉS MODAL ============ -->
+<div class="modal-overlay" id="ruleModal">
+  <div class="modal">
+    <h3><i class="ph-fill ph-target"></i> Arány szerkesztése</h3>
+    <p class="hint" style="margin-top:-6px;">Oszd fel a nettó bevételedet tetszés szerint. Az ideális 50-30-20, de bárhogy beállíthatod.</p>
+    <div class="rule-row"><label style="margin:0"><span class="bud-emoji" style="color:#3b82f6"><i class="ph-fill ph-house"></i></span> Szükségletek</label><div class="rule-in"><input type="number" id="ruleNeed" min="0" max="100" inputmode="numeric">%</div></div>
+    <div class="rule-row"><label style="margin:0"><span class="bud-emoji" style="color:#ec4899"><i class="ph-fill ph-shopping-bag"></i></span> Vágyak</label><div class="rule-in"><input type="number" id="ruleWant" min="0" max="100" inputmode="numeric">%</div></div>
+    <div class="rule-row"><label style="margin:0"><span class="bud-emoji" style="color:#14b8a6"><i class="ph-fill ph-piggy-bank"></i></span> Megtakarítás</label><div class="rule-in"><input type="number" id="ruleSave" min="0" max="100" inputmode="numeric">%</div></div>
+    <div class="rule-sum" id="ruleSum"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnRuleSave"><i class="ph-fill ph-check"></i> Mentés</button>
+      <button class="btn secondary" id="btnRuleReset">50-30-20</button>
+    </div>
+    <button class="btn secondary" id="btnRuleCancel" style="margin-top:8px">Mégse</button>
+  </div>
+</div>
+
 <!-- ============ MÁSOLÁS ELŐZŐ HÓNAPBÓL MODAL ============ -->
 <div class="modal-overlay" id="copyModal">
   <div class="modal">
@@ -667,6 +694,7 @@ let sortMode = "date-desc";
 let copyTargetMonth = null;
 let hiddenDefaults = [];
 let show5030 = true;
+let rule5030 = { need: 50, want: 30, save: 20 };
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
@@ -674,6 +702,10 @@ function loadData() {
   try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
+  try {
+    const r = JSON.parse(localStorage.getItem("rule5030") || "null");
+    if (r && [r.need, r.want, r.save].every(n => Number.isFinite(n))) rule5030 = { need: r.need, want: r.want, save: r.save };
+  } catch {}
   // egyszeri migráció: régi emoji-ikonok → Phosphor nevek
   let migrated = false;
   Object.keys(customCategories).forEach(k => {
@@ -685,6 +717,8 @@ function loadData() {
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
 function saveView() { try { localStorage.setItem("show5030", show5030); } catch {} }
+function saveRule() { try { localStorage.setItem("rule5030", JSON.stringify(rule5030)); } catch {} }
+function ruleLabel() { return `${rule5030.need}-${rule5030.want}-${rule5030.save}`; }
 
 /* ---------- Kategória segédek ---------- */
 function allCategories() { const cats = Object.assign({}, DEFAULT_CATEGORIES, customCategories); hiddenDefaults.forEach(k => delete cats[k]); return cats; }
@@ -938,14 +972,14 @@ document.getElementById("copyModal").addEventListener("click", (e) => { if (e.ta
 /* ---------- 50-30-20 kártya ---------- */
 function renderBudget(income, needs, wants, savings, leftover) {
   if (!show5030) return "";
-  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-target"></i> 50-30-20 szabály</h2><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div>`;
+  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-target"></i> ${ruleLabel()} szabály</h2><div class="bud-head-btns"><button class="bud-hide" data-edit5030 title="Arány szerkesztése" aria-label="Arány szerkesztése"><i class="ph-fill ph-pencil-simple"></i></button><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div></div>`;
   if (income <= 0) {
-    return `<div class="card">${head}<div class="budget-note" style="margin-top:10px">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>50%</b> szükséglet · <b>30%</b> vágy · <b>20%</b> megtakarítás.</div></div>`;
+    return `<div class="card">${head}<div class="budget-note" style="margin-top:10px">Adj hozzá <b>bevételt</b> (pl. fizetést) ehhez a hónaphoz, és megmutatom, hogyan oszlik meg a nettó jövedelmed: <b>${rule5030.need}%</b> szükséglet · <b>${rule5030.want}%</b> vágy · <b>${rule5030.save}%</b> megtakarítás.</div></div>`;
   }
   const rows = [
-    { icon: "house",        color: "#3b82f6", name: "Szükségletek", amount: needs,   target: 50, kind: "spend" },
-    { icon: "shopping-bag", color: "#ec4899", name: "Vágyak",       amount: wants,   target: 30, kind: "spend" },
-    { icon: "piggy-bank",   color: "#14b8a6", name: "Megtakarítás", amount: savings, target: 20, kind: "save" }
+    { icon: "house",        color: "#3b82f6", name: "Szükségletek", amount: needs,   target: rule5030.need, kind: "spend" },
+    { icon: "shopping-bag", color: "#ec4899", name: "Vágyak",       amount: wants,   target: rule5030.want, kind: "spend" },
+    { icon: "piggy-bank",   color: "#14b8a6", name: "Megtakarítás", amount: savings, target: rule5030.save, kind: "save" }
   ];
   let html = `<div class="card">${head}<div class="budget-intro" style="margin-top:6px">A nettó bevételed ideális megoszlása · alap: ${formatFt(income)} bevétel.</div>`;
   rows.forEach(r => {
@@ -969,6 +1003,37 @@ function renderBudget(income, needs, wants, savings, leftover) {
       </div>`;
   });
   return html + `</div>`;
+}
+
+/* ---------- 50-30-20 arány szerkesztése ---------- */
+function updateRuleSum() {
+  const n = Number(document.getElementById("ruleNeed").value) || 0;
+  const w = Number(document.getElementById("ruleWant").value) || 0;
+  const s = Number(document.getElementById("ruleSave").value) || 0;
+  const sum = n + w + s;
+  const el = document.getElementById("ruleSum");
+  if (sum === 100) el.innerHTML = `<i class="ph-fill ph-check-circle"></i> Összesen: 100% — tökéletes`;
+  else el.innerHTML = `<i class="ph-fill ph-warning-circle"></i> Összesen: ${sum}% (a három szám adja ki a 100%-ot)`;
+  el.className = "rule-sum" + (sum === 100 ? " ok" : " warn");
+}
+function openRuleEdit() {
+  document.getElementById("ruleNeed").value = rule5030.need;
+  document.getElementById("ruleWant").value = rule5030.want;
+  document.getElementById("ruleSave").value = rule5030.save;
+  updateRuleSum();
+  document.getElementById("ruleModal").classList.add("show");
+}
+function saveRuleEdit() {
+  let n = Math.round(Number(document.getElementById("ruleNeed").value) || 0);
+  let w = Math.round(Number(document.getElementById("ruleWant").value) || 0);
+  let s = Math.round(Number(document.getElementById("ruleSave").value) || 0);
+  n = Math.max(0, Math.min(100, n)); w = Math.max(0, Math.min(100, w)); s = Math.max(0, Math.min(100, s));
+  if (n + w + s !== 100) { toast("⚠ A három aránynak együtt 100%-ot kell kiadnia (most " + (n + w + s) + "%)"); return; }
+  rule5030 = { need: n, want: w, save: s };
+  saveRule();
+  document.getElementById("ruleModal").classList.remove("show");
+  renderList();
+  toast("🎯 Arány frissítve: " + ruleLabel());
 }
 
 /* ---------- Trend (bevétel vs. kiadás, utolsó pár hónap) ---------- */
@@ -1135,8 +1200,10 @@ function renderList() {
   const hideBtn = summaryArea.querySelector("[data-hide5030]");
   if (hideBtn) hideBtn.addEventListener("click", () => {
     show5030 = false; saveView(); renderList();
-    toast("🎯 50-30-20 elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
+    toast("🎯 " + ruleLabel() + " elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
   });
+  const editBtn = summaryArea.querySelector("[data-edit5030]");
+  if (editBtn) editBtn.addEventListener("click", openRuleEdit);
 
   // alkategória-bontás ki/be nyitása
   summaryArea.querySelectorAll("[data-toggle]").forEach(el => {
@@ -1521,6 +1588,15 @@ function init() {
   wirePlainToggle("obSave");
   wirePlainToggle("obRule");
   document.getElementById("btnOnboard").addEventListener("click", finishOnboard);
+  document.getElementById("btnRuleSave").addEventListener("click", saveRuleEdit);
+  document.getElementById("btnRuleCancel").addEventListener("click", () => document.getElementById("ruleModal").classList.remove("show"));
+  document.getElementById("btnRuleReset").addEventListener("click", () => {
+    document.getElementById("ruleNeed").value = 50;
+    document.getElementById("ruleWant").value = 30;
+    document.getElementById("ruleSave").value = 20;
+    updateRuleSum();
+  });
+  ["ruleNeed", "ruleWant", "ruleSave"].forEach(id => document.getElementById(id).addEventListener("input", updateRuleSum));
   buildManualPicker("green");
   renderList();
   renderCategories();
