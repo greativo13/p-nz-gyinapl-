@@ -189,6 +189,8 @@
   .type-toggle.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .type-toggle.grid2 .type-btn { font-size: 12.5px; padding: 12px 4px; }
   .flow-biz { color: #b45309; }
+  .lbl-hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .exp-bucket { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; margin-left: 2px; }
 
   /* 50-30-20 kártya */
   .budget-intro { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
@@ -458,6 +460,13 @@
             <label>Alkategória (opcionális)</label>
             <div class="sub-picker" id="manualSubs"></div>
           </div>
+          <label>Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
+          <div class="type-toggle grid2" id="manualBucket">
+            <button type="button" class="type-btn" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
+            <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
+            <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
+            <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
+          </div>
         </div>
 
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
@@ -558,6 +567,13 @@
       <div id="editSubsWrap" style="display:none">
         <label>Alkategória (opcionális)</label>
         <div class="sub-picker" id="editSubs"></div>
+      </div>
+      <label>Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
+      <div class="type-toggle grid2" id="editBucket">
+        <button type="button" class="type-btn" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
+        <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
+        <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
+        <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
       </div>
     </div>
     <div class="btn-row">
@@ -747,6 +763,9 @@ function allCategories() { const cats = Object.assign({}, DEFAULT_CATEGORIES, cu
 function catName(key) { const c = allCategories(); return c[key] ? c[key].name : key; }
 function catIcon(key) { const c = allCategories(); return (c[key] && c[key].icon) || "coins"; }
 function catBucket(key) { const c = allCategories(); const b = c[key] && c[key].bucket; return (b === "need" || b === "saving" || b === "business") ? b : "want"; }
+/* tétel-szintű besorolás: felülírás, ha van, egyébként a kategória alapértelmezése */
+function itemBucket(it) { const b = it && it.bucket; return (b === "need" || b === "want" || b === "saving" || b === "business") ? b : catBucket(it.color); }
+function bucketMeta(b) { return b === "need" ? { i: "house", t: "Szükséglet" } : b === "saving" ? { i: "piggy-bank", t: "Megtakarítás" } : b === "business" ? { i: "briefcase", t: "Vállalkozás" } : { i: "shopping-bag", t: "Vágy" }; }
 function catSubs(key) { const c = allCategories(); return (c[key] && Array.isArray(c[key].subs)) ? c[key].subs : []; }
 function catLimit(key) { const c = allCategories(); return (c[key] && Number(c[key].limit)) || 0; }
 function catHex(key) {
@@ -887,8 +906,12 @@ function getSubValue(pickerId) {
 }
 /* Bevitel kategória + alkategória választó együtt */
 function buildManualPicker(initial) {
-  buildColorPicker("manualColors", initial, key => renderSubPicker("manualSubsWrap", "manualSubs", key, ""));
+  buildColorPicker("manualColors", initial, key => {
+    renderSubPicker("manualSubsWrap", "manualSubs", key, "");
+    setBucket("manualBucket", catBucket(key)); // kategóriaváltáskor visszaáll az alapértelmezettre
+  });
   renderSubPicker("manualSubsWrap", "manualSubs", initial, "");
+  if (initial) setBucket("manualBucket", catBucket(initial));
 }
 function getPickerValue(containerId) {
   const sel = document.querySelector("#" + containerId + " .color-btn.selected");
@@ -907,7 +930,7 @@ function isDuplicate(name, amount, color, month, type, sub, ignoreIndex) {
 }
 
 /* ---------- Bevitel ---------- */
-function addEntry(name, amount, color, month, type, sub) {
+function addEntry(name, amount, color, month, type, sub, bucket) {
   name = (name || "").trim();
   amount = Number(amount);
   month = month || currentMonth();
@@ -918,7 +941,10 @@ function addEntry(name, amount, color, month, type, sub) {
   if (type === "income") { color = null; sub = ""; }         // bevételnél nincs kategória/alkategória
   else if (!color) return { ok: false, reason: "Válassz kategóriát." };
   if (isDuplicate(name, amount, color, month, type, sub)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
-  expenseItems.push({ name, amount, color, month, type, sub });
+  const item = { name, amount, color, month, type, sub };
+  // csak akkor tároljuk a felülírást, ha eltér a kategória alapértelmezésétől
+  if (type !== "income" && bucket && bucket !== catBucket(color)) item.bucket = bucket;
+  expenseItems.push(item);
   saveItems();
   return { ok: true };
 }
@@ -930,13 +956,15 @@ function submitManual() {
   const type = getTypeToggle("typeToggle");
   const color = type === "income" ? null : getPickerValue("manualColors");
   const sub = type === "income" ? "" : getSubValue("manualSubs");
-  const res = addEntry(nameEl.value, amountEl.value, color, month, type, sub);
+  const bucketSel = type === "income" ? null : getBucket("manualBucket");
+  const res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel);
   if (res.ok) {
     const t = type === "income" ? "Bevétel" : "Kiadás";
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${monthLabelShort(month)}`, "success");
     nameEl.value = ""; amountEl.value = "";
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip").forEach(c => c.classList.remove("selected"));
+    if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
     if (type !== "income") {
       const lim = catLimit(color);
       if (lim > 0) {
@@ -981,7 +1009,7 @@ function doCopy() {
   document.querySelectorAll("#copyList input[type=checkbox]:checked").forEach(cb => {
     const it = expenseItems[Number(cb.dataset.i)];
     if (!it) return;
-    const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "");
+    const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket);
     if (res.ok) added++; else skipped++;
   });
   document.getElementById("copyModal").classList.remove("show");
@@ -1068,7 +1096,7 @@ function renderTrend() {
     const m = it.month || "";
     if (!m) return;
     if ((it.type || "expense") === "income") { inc[m] = (inc[m] || 0) + Number(it.amount); return; }
-    const b = catBucket(it.color);
+    const b = itemBucket(it);
     if (b === "saving" || b === "business") return; // személyes költés
     exp[m] = (exp[m] || 0) + Number(it.amount);
   });
@@ -1133,7 +1161,7 @@ function renderList() {
   monthView.forEach(it => {
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
-    const bucket = catBucket(it.color);
+    const bucket = itemBucket(it);
     if (bucket === "saving") { savings += amt; return; }     // megtakarítás külön
     if (bucket === "business") { business += amt; return; }  // vállalkozás: kimarad a szabályból
     if (bucket === "need") needs += amt; else wants += amt;
@@ -1161,7 +1189,7 @@ function renderList() {
   let cmpHtml = "";
   if (selectedMonth !== "all") {
     const pm = prevMonthOf(selectedMonth);
-    const prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && catBucket(it.color) !== "saving" && catBucket(it.color) !== "business").reduce((s, it) => s + Number(it.amount), 0);
+    const prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && itemBucket(it) !== "saving" && itemBucket(it) !== "business").reduce((s, it) => s + Number(it.amount), 0);
     if (prevSpend > 0) {
       const pct = Math.round((spend - prevSpend) / prevSpend * 100);
       const cls = pct > 0 ? "cmp-up" : (pct < 0 ? "cmp-down" : "cmp-flat");
@@ -1268,7 +1296,7 @@ function renderList() {
           <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? '<i class="ph-fill ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</div>
           <div class="exp-info">
             <div class="exp-name">${escapeHtml(it.name)}</div>
-            <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${monthLabelShort(it.month)}</div>
+            <div class="exp-cat">${isIncome ? "Bevétel" : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${monthLabelShort(it.month)}${(!isIncome && it.bucket) ? ` <span class="exp-bucket"><i class="ph-fill ph-${bucketMeta(it.bucket).i}"></i> ${bucketMeta(it.bucket).t}</span>` : ""}</div>
             <div class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</div>
           </div>
           <div class="exp-actions">
@@ -1306,7 +1334,7 @@ function copyItemToNextMonth(i) {
   const it = expenseItems[i];
   if (!it) return;
   const target = nextMonthOf(it.month || currentMonth());
-  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "");
+  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket);
   if (res.ok) {
     toast(`📋 „${it.name}" átmásolva: ${monthLabelShort(target)}`);
     renderList();
@@ -1332,8 +1360,12 @@ function openEdit(i) {
   document.getElementById("editMonth").value = it.month || currentMonth();
   setTypeToggle("editTypeToggle", it.type || "expense");
   document.getElementById("editCatWrap").style.display = (it.type === "income") ? "none" : "";
-  buildColorPicker("editColors", it.color, key => renderSubPicker("editSubsWrap", "editSubs", key, ""));
+  buildColorPicker("editColors", it.color, key => {
+    renderSubPicker("editSubsWrap", "editSubs", key, "");
+    setBucket("editBucket", catBucket(key));
+  });
   renderSubPicker("editSubsWrap", "editSubs", it.color, it.sub || "");
+  if (it.type !== "income") setBucket("editBucket", itemBucket(it));
   document.getElementById("editModal").classList.add("show");
 }
 function closeEdit() { document.getElementById("editModal").classList.remove("show"); editIndex = null; }
@@ -1351,7 +1383,10 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (type === "expense" && !color) { alert("Válassz kategóriát."); return; }
   if (isDuplicate(name, amount, color, month, type, sub, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
-  expenseItems[editIndex] = { name, amount, color, month, type, sub };
+  const bucketSel = type === "income" ? null : getBucket("editBucket");
+  const item = { name, amount, color, month, type, sub };
+  if (type !== "income" && bucketSel && bucketSel !== catBucket(color)) item.bucket = bucketSel;
+  expenseItems[editIndex] = item;
   saveItems();
   closeEdit();
   renderList();
@@ -1618,6 +1653,8 @@ function init() {
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
+  wirePlainToggle("manualBucket");
+  wirePlainToggle("editBucket");
   document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); renderList(); });
   document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
