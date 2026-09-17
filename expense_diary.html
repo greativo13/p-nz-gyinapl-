@@ -1564,7 +1564,7 @@ function downloadFile(name, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 function exportJSON() {
-  const data = JSON.stringify({ app: "penzugyi-naplo", version: 2, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults }, null, 2);
+  const data = JSON.stringify({ app: "penzugyi-naplo", version: 3, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults, settings: { rule5030, balanceInc, show5030 } }, null, 2);
   downloadFile("penzugyi-naplo-mentes.json", data, "application/json");
   try { localStorage.setItem("lastBackup", String(Date.now())); } catch {}
   showMsg("catMsg", "✅ JSON mentés letöltve.", "success");
@@ -1593,6 +1593,11 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       customCategories = data.customCategories || {};
       hiddenDefaults = Array.isArray(data.hiddenDefaults) ? data.hiddenDefaults : [];
       saveItems(); saveCategories();
+      // beállítások visszaállítása (ha a mentés tartalmazza – régebbi fájlnál kimarad)
+      const st = data.settings || {};
+      if (st.rule5030 && [st.rule5030.need, st.rule5030.want, st.rule5030.save].every(n => Number.isFinite(n))) { rule5030 = { need: st.rule5030.need, want: st.rule5030.want, save: st.rule5030.save }; saveRule(); }
+      if (st.balanceInc) { balanceInc = { biz: st.balanceInc.biz !== false, save: st.balanceInc.save !== false }; saveBalanceInc(); }
+      if (typeof st.show5030 === "boolean") { show5030 = st.show5030; saveView(); }
       selectedMonth = currentMonth();
       buildManualPicker("green");
       renderCategories();
