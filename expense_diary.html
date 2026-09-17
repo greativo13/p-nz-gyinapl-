@@ -930,7 +930,7 @@ function isDuplicate(name, amount, color, month, type, sub, ignoreIndex) {
 }
 
 /* ---------- Bevitel ---------- */
-function addEntry(name, amount, color, month, type, sub, bucket) {
+function addEntry(name, amount, color, month, type, sub, bucket, force) {
   name = (name || "").trim();
   amount = Number(amount);
   month = month || currentMonth();
@@ -940,7 +940,7 @@ function addEntry(name, amount, color, month, type, sub, bucket) {
   if (!amount || amount <= 0 || isNaN(amount)) return { ok: false, reason: "Adj meg érvényes összeget." };
   if (type === "income") { color = null; sub = ""; }         // bevételnél nincs kategória/alkategória
   else if (!color) return { ok: false, reason: "Válassz kategóriát." };
-  if (isDuplicate(name, amount, color, month, type, sub)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum)." };
+  if (!force && isDuplicate(name, amount, color, month, type, sub)) return { ok: false, reason: "Ez a tétel már létezik ebben a hónapban (duplikátum).", dup: true };
   const item = { name, amount, color, month, type, sub };
   // csak akkor tároljuk a felülírást, ha eltér a kategória alapértelmezésétől
   if (type !== "income" && bucket && bucket !== catBucket(color)) item.bucket = bucket;
@@ -957,7 +957,14 @@ function submitManual() {
   const color = type === "income" ? null : getPickerValue("manualColors");
   const sub = type === "income" ? "" : getSubValue("manualSubs");
   const bucketSel = type === "income" ? null : getBucket("manualBucket");
-  const res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel);
+  let res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel);
+  if (!res.ok && res.dup) {
+    if (confirm(`Úgy tűnik, ez a tétel már szerepel ebben a hónapban:\n\n„${nameEl.value.trim()}" – ${formatFt(amountEl.value)}\n\nMégis hozzáadod?`)) {
+      res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel, true);
+    } else {
+      return; // mégsem
+    }
+  }
   if (res.ok) {
     const t = type === "income" ? "Bevétel" : "Kiadás";
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${monthLabelShort(month)}`, "success");
@@ -1382,7 +1389,9 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (!name) { alert("A tétel neve kötelező."); return; }
   if (!amount || amount <= 0) { alert("Adj meg érvényes összeget."); return; }
   if (type === "expense" && !color) { alert("Válassz kategóriát."); return; }
-  if (isDuplicate(name, amount, color, month, type, sub, editIndex)) { alert("Ez a módosítás egy már létező tétellel egyezne (duplikátum)."); return; }
+  if (isDuplicate(name, amount, color, month, type, sub, editIndex)) {
+    if (!confirm(`Ez a módosítás egy már létező tétellel egyezne:\n\n„${name}" – ${formatFt(amount)}\n\nMégis mented?`)) return;
+  }
   const bucketSel = type === "income" ? null : getBucket("editBucket");
   const item = { name, amount, color, month, type, sub };
   if (type !== "income" && bucketSel && bucketSel !== catBucket(color)) item.bucket = bucketSel;
