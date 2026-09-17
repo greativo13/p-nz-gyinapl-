@@ -190,6 +190,18 @@
   .type-toggle.grid2 .type-btn { font-size: 12.5px; padding: 12px 4px; }
   .flow-biz { color: #b45309; }
   .lbl-hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  /* Coach */
+  .coach-verdict { font-weight: 700; font-size: 14px; margin: 6px 0 12px; }
+  .coach-verdict.good { color: var(--income); }
+  .coach-verdict.warn { color: #b45309; }
+  .coach-verdict.bad { color: var(--danger); }
+  .coach-tip { display: flex; gap: 9px; align-items: flex-start; padding: 9px 11px; border-radius: 12px; background: var(--chip); margin-bottom: 8px; font-size: 13px; line-height: 1.5; color: var(--text); }
+  .coach-tip:last-child { margin-bottom: 0; }
+  .coach-tip i { font-size: 17px; margin-top: 1px; flex-shrink: 0; color: var(--muted); }
+  .coach-tip.good i { color: var(--income); }
+  .coach-tip.warn i { color: #eab308; }
+  .coach-tip.bad i { color: var(--danger); }
+  .coach-tip.info i { color: var(--green-accent); }
   .exp-bucket { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; margin-left: 2px; }
 
   /* 50-30-20 kártya */
@@ -531,6 +543,7 @@
       <hr class="divider">
       <h2><i class="ph-fill ph-floppy-disk"></i> Adatok</h2>
       <div class="card data-actions">
+        <label class="view-toggle"><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
         <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> 50-30-20 kimutatás a Listán</label>
         <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
         <label class="view-toggle" id="toggleSaveBalWrap"><input type="checkbox" id="toggleSaveBal"> <i class="ph-fill ph-piggy-bank"></i> Megtakarítás csökkentse az egyenleget</label>
@@ -726,6 +739,7 @@ let sortMode = "date-desc";
 let copyTargetMonth = null;
 let hiddenDefaults = [];
 let show5030 = true;
+let showCoach = true;
 let rule5030 = { need: 50, want: 30, save: 20 };
 let balanceInc = { biz: true, save: true }; // beleszámítson-e az egyenlegbe
 
@@ -735,6 +749,7 @@ function loadData() {
   try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
+  try { const s = localStorage.getItem("showCoach"); showCoach = s === null ? true : s === "true"; } catch { showCoach = true; }
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
     if (r && [r.need, r.want, r.save].every(n => Number.isFinite(n))) rule5030 = { need: r.need, want: r.want, save: r.save };
@@ -754,6 +769,7 @@ function loadData() {
 function saveItems() { try { localStorage.setItem("expenseItems", JSON.stringify(expenseItems)); } catch {} }
 function saveCategories() { try { localStorage.setItem("customCategories", JSON.stringify(customCategories)); localStorage.setItem("hiddenDefaults", JSON.stringify(hiddenDefaults)); } catch {} }
 function saveView() { try { localStorage.setItem("show5030", show5030); } catch {} }
+function saveCoach() { try { localStorage.setItem("showCoach", showCoach); } catch {} }
 function saveRule() { try { localStorage.setItem("rule5030", JSON.stringify(rule5030)); } catch {} }
 function saveBalanceInc() { try { localStorage.setItem("balanceInc", JSON.stringify(balanceInc)); } catch {} }
 function ruleLabel() { return [rule5030.need, rule5030.want, rule5030.save].filter(n => n > 0).join("-"); }
@@ -1028,6 +1044,78 @@ document.getElementById("btnCopyCancel").addEventListener("click", () => documen
 document.getElementById("copyModal").addEventListener("click", (e) => { if (e.target.id === "copyModal") document.getElementById("copyModal").classList.remove("show"); });
 
 /* ---------- 50-30-20 kártya ---------- */
+/* ---------- Pénzügyi coach (beépített, szabály-alapú) ---------- */
+function renderCoach(ctx) {
+  if (!showCoach) return "";
+  const { income, needs, wants, savings, business, spend, balance, entries } = ctx;
+  if (income <= 0 && spend <= 0) return "";
+
+  const isPast = selectedMonth !== "all" && selectedMonth < currentMonth();
+  const title = selectedMonth === "all" ? "Összegzés" : (isPast ? "Havi értékelés" : "Hónap eddig");
+  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-compass"></i> Coach · ${title}</h2><button class="bud-hide" data-hidecoach title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div>`;
+
+  const pct = (v) => income > 0 ? Math.round(v / income * 100) : 0;
+  const savePct = pct(savings), wantPct = pct(wants), needPct = pct(needs);
+
+  // előző hónap kiadása (személyes)
+  let prevSpend = 0;
+  if (selectedMonth !== "all") {
+    const pm = prevMonthOf(selectedMonth);
+    prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && itemBucket(it) !== "saving" && itemBucket(it) !== "business").reduce((s, it) => s + Number(it.amount), 0);
+  }
+
+  const tips = [];
+  // 1) túlköltés
+  if (balance < 0) {
+    tips.push({ ic: "warning", cls: "bad", t: `Ebben az időszakban <b>${formatFt(-balance)}</b>-tal többet költöttél, mint a bevételed. Érdemes átnézni a legnagyobb tételeket.` });
+  } else if (income > 0) {
+    tips.push({ ic: "check-circle", cls: "good", t: `Pozitív egyenleg: <b>${formatFt(balance)}</b> maradt a hónap végére. Szép munka!` });
+  }
+  // 2) megtakarítás
+  if (income > 0) {
+    if (savings <= 0) {
+      tips.push({ ic: "piggy-bank", cls: "warn", t: `Ebben a hónapban még nem tettél félre. Már a bevételed ${rule5030.save || 20}%-a (≈ <b>${formatFt(income * (rule5030.save || 20) / 100)}</b>) is sokat számít hosszú távon.` });
+    } else if (rule5030.save > 0 && savePct < rule5030.save) {
+      const diff = Math.max(0, income * rule5030.save / 100 - savings);
+      tips.push({ ic: "piggy-bank", cls: "warn", t: `Megtakarítás: <b>${savePct}%</b> (célod: ${rule5030.save}%). Még kb. <b>${formatFt(diff)}</b> hiányzik a célhoz.` });
+    } else if (rule5030.save > 0) {
+      tips.push({ ic: "piggy-bank", cls: "good", t: `Megtakarítás: <b>${savePct}%</b> — eléred a ${rule5030.save}%-os célt. 👏` });
+    }
+  }
+  // 3) vágyak
+  if (income > 0 && rule5030.want > 0 && wantPct > rule5030.want + 5) {
+    tips.push({ ic: "shopping-bag", cls: "warn", t: `A vágyakra a bevételed <b>${wantPct}%</b>-át költötted (cél: ${rule5030.want}%). Itt lehet a legkönnyebben faragni.` });
+  }
+  // 4) legnagyobb kategória
+  if (entries && entries.length && spend > 0) {
+    const top = entries[0];
+    tips.push({ ic: "chart-pie-slice", cls: "info", t: `A legnagyobb kiadási kategóriád: <b>${escapeHtml(catName(top.key))}</b> — ${formatFt(top.sum)} (a kiadások ${Math.round(top.sum / spend * 100)}%-a).` });
+  }
+  // 5) keret-túllépés
+  if (entries) {
+    const over = entries.filter(e => { const l = catLimit(e.key); return l > 0 && e.sum > l; });
+    if (over.length) {
+      const o = over[0];
+      tips.push({ ic: "warning-circle", cls: "bad", t: `<b>${escapeHtml(catName(o.key))}</b>: túllépted a havi keretet (${formatFt(o.sum)} / ${formatFt(catLimit(o.key))}).` });
+    }
+  }
+  // 6) előző hónaphoz képest
+  if (prevSpend > 0) {
+    const d = Math.round((spend - prevSpend) / prevSpend * 100);
+    if (d >= 10) tips.push({ ic: "trend-up", cls: "warn", t: `<b>${d}%</b>-kal többet költöttél, mint előző hónapban.` });
+    else if (d <= -10) tips.push({ ic: "trend-down", cls: "good", t: `<b>${Math.abs(d)}%</b>-kal kevesebbet költöttél, mint előző hónapban. 👍` });
+  }
+
+  // értékelő fejléc-hangulat
+  let verdict, vcls;
+  if (balance < 0) { verdict = "Feszes hónap – érdemes fékezni egy kicsit."; vcls = "bad"; }
+  else if (income > 0 && savePct >= rule5030.save && (rule5030.want === 0 || wantPct <= rule5030.want)) { verdict = "Kiváló hónap! Tartod az arányokat. 🌟"; vcls = "good"; }
+  else { verdict = "Rendben haladsz, van még hova fejlődni."; vcls = "warn"; }
+
+  const list = tips.slice(0, 5).map(t => `<div class="coach-tip ${t.cls}"><i class="ph-fill ph-${t.ic}"></i><span>${t.t}</span></div>`).join("");
+  return `<div class="card">${head}<div class="coach-verdict ${vcls}">${verdict}</div>${list}</div>`;
+}
+
 function renderBudget(income, needs, wants, savings, leftover) {
   if (!show5030) return "";
   const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-target"></i> ${ruleLabel()} szabály</h2><div class="bud-head-btns"><button class="bud-hide" data-edit5030 title="Arány szerkesztése" aria-label="Arány szerkesztése"><i class="ph-fill ph-pencil-simple"></i></button><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div></div>`;
@@ -1253,7 +1341,7 @@ function renderList() {
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-    </div>` + renderBudget(income, needs, wants, savings, balance) + renderTrend();
+    </div>` + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderBudget(income, needs, wants, savings, balance) + renderTrend();
 
   // 50-30-20 elrejtése
   const hideBtn = summaryArea.querySelector("[data-hide5030]");
@@ -1263,6 +1351,11 @@ function renderList() {
   });
   const editBtn = summaryArea.querySelector("[data-edit5030]");
   if (editBtn) editBtn.addEventListener("click", openRuleEdit);
+  const hideCoachBtn = summaryArea.querySelector("[data-hidecoach]");
+  if (hideCoachBtn) hideCoachBtn.addEventListener("click", () => {
+    showCoach = false; saveCoach(); renderList();
+    toast("🧭 Coach elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
+  });
 
   // alkategória-bontás ki/be nyitása
   summaryArea.querySelectorAll("[data-toggle]").forEach(el => {
@@ -1430,6 +1523,8 @@ function renderCategories() {
   if (preview) preview.innerHTML = iconHtml(ICON_CHOICES[0]);
   const t5030 = document.getElementById("toggle5030");
   if (t5030) t5030.checked = show5030;
+  const tCoach = document.getElementById("toggleCoach");
+  if (tCoach) tCoach.checked = showCoach;
   // egyenleg-beállítások: csak akkor mutatjuk, ha van ilyen bucket-ű kategória
   const allCats = allCategories();
   const hasBiz = Object.values(allCats).some(c => c.bucket === "business");
@@ -1573,7 +1668,7 @@ function downloadFile(name, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 function exportJSON() {
-  const data = JSON.stringify({ app: "penzugyi-naplo", version: 3, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults, settings: { rule5030, balanceInc, show5030 } }, null, 2);
+  const data = JSON.stringify({ app: "penzugyi-naplo", version: 3, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults, settings: { rule5030, balanceInc, show5030, showCoach } }, null, 2);
   downloadFile("penzugyi-naplo-mentes.json", data, "application/json");
   try { localStorage.setItem("lastBackup", String(Date.now())); } catch {}
   showMsg("catMsg", "✅ JSON mentés letöltve.", "success");
@@ -1607,6 +1702,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (st.rule5030 && [st.rule5030.need, st.rule5030.want, st.rule5030.save].every(n => Number.isFinite(n))) { rule5030 = { need: st.rule5030.need, want: st.rule5030.want, save: st.rule5030.save }; saveRule(); }
       if (st.balanceInc) { balanceInc = { biz: st.balanceInc.biz !== false, save: st.balanceInc.save !== false }; saveBalanceInc(); }
       if (typeof st.show5030 === "boolean") { show5030 = st.show5030; saveView(); }
+      if (typeof st.showCoach === "boolean") { showCoach = st.showCoach; saveCoach(); }
       selectedMonth = currentMonth();
       buildManualPicker("green");
       renderCategories();
@@ -1670,6 +1766,7 @@ function init() {
   wirePlainToggle("manualBucket");
   wirePlainToggle("editBucket");
   document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); renderList(); });
+  document.getElementById("toggleCoach").addEventListener("change", (e) => { showCoach = e.target.checked; saveCoach(); renderList(); });
   document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("catEditSubAdd").addEventListener("click", addCatEditSub);
