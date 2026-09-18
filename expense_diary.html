@@ -215,6 +215,10 @@
   .bud-amt { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .bud-amt b { color: var(--text); }
   .bud-goal { font-size: 12px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .bud-remain { font-weight: 700; }
+  .bud-remain.ok { color: var(--income); }
+  .bud-remain.under { color: #b45309; }
+  .bud-remain.over { color: var(--danger); }
   .budget-free { margin-top: 4px; padding-top: 13px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
   .budget-free .bf-val { font-variant-numeric: tabular-nums; }
   .bud-track { position: relative; height: 16px; background: var(--chip); border-radius: 9px; }
@@ -1136,6 +1140,15 @@ function renderBudget(income, needs, wants, savings, leftover) {
     let cls;
     if (r.kind === "save") cls = pct >= r.target ? "ok" : (pct < 0 ? "over" : "under");
     else cls = pct <= r.target ? "ok" : "over";
+    const remaining = targetFt - r.amount;
+    let remTxt, remCls;
+    if (r.kind === "save") {
+      if (remaining > 0) { remTxt = `még ${formatFt(remaining)} a célig`; remCls = "under"; }
+      else { remTxt = `cél felett (+${formatFt(-remaining)})`; remCls = "ok"; }
+    } else {
+      if (remaining >= 0) { remTxt = `még ${formatFt(remaining)}`; remCls = "ok"; }
+      else { remTxt = `${formatFt(-remaining)} túllépés`; remCls = "over"; }
+    }
     html += `
       <div class="bud-row">
         <div class="bud-head">
@@ -1146,7 +1159,7 @@ function renderBudget(income, needs, wants, savings, leftover) {
           <div class="bud-fill ${cls}" style="width:${fillW}%"></div>
           <div class="bud-target" style="left:${r.target}%"></div>
         </div>
-        <div class="bud-goal">Cél: ${formatFt(targetFt)} (${r.target}%)</div>
+        <div class="bud-goal">Cél: ${formatFt(targetFt)} (${r.target}%) <span class="bud-remain ${remCls}">· ${remTxt}</span></div>
       </div>`;
   });
   return html + `</div>`;
