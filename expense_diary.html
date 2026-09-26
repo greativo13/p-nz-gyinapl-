@@ -207,6 +207,9 @@
   .ocr-row .ocr-cat { width: 100%; }
   .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
   .ai-prov { margin: 0 0 10px 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
+  .key-ok { color: var(--income); font-weight: 600; }
+  .key-bad { color: var(--danger); font-weight: 600; line-height: 1.5; }
+  #keyStatus .ph-spinner { animation: ocrspin 0.9s linear infinite; display: inline-block; }
   .ai-prov a { color: var(--green-accent); font-weight: 600; }
   .ai-prov code { background: var(--chip); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
   .ocr-ai-tip { font-size: 12.5px; color: var(--soft-text); background: var(--soft); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }  /* Coach */
@@ -575,7 +578,7 @@
         </ul>
         <p class="hint" style="margin:0 0 10px;">A kulcs csak a te böngésződben tárolódik. <b>Fontos:</b> az ingyenes AI-szolgáltatók a beküldött képet felhasználhatják a modelljeik fejlesztésére – ne olvass be számlaszámot vagy más érzékeny adatot tartalmazó képet.</p>
         <label for="geminiKey">AI API kulcs</label>
-        <input type="password" id="geminiKey" placeholder="sk-or-… vagy AIza…" autocomplete="off">
+        <input type="text" id="geminiKey" placeholder="sk-or-… vagy AIza…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
         <div class="btn-row" style="margin-top:10px">
           <button class="btn secondary" id="btnSaveKey"><i class="ph-fill ph-check"></i> Kulcs mentése</button>
           <button class="btn secondary" id="btnClearKey">Törlés</button>
@@ -815,7 +818,7 @@ function loadData() {
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
   try { const s = localStorage.getItem("showCoach"); showCoach = s === null ? true : s === "true"; } catch { showCoach = true; }
-  try { geminiKey = localStorage.getItem("geminiKey") || ""; } catch { geminiKey = ""; }
+  try { geminiKey = String(localStorage.getItem("geminiKey") || "").replace(/[\s​-‍⁠﻿"'`„”«»]/g, ""); } catch { geminiKey = ""; }
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
     if (r && [r.need, r.want, r.save].every(n => Number.isFinite(n))) rule5030 = { need: r.need, want: r.want, save: r.save };
@@ -1312,6 +1315,27 @@ async function runOcrAI(file) {
   }
 }
 function startOcr(file) { if (geminiKey) runOcrAI(file); else runOcr(file); }
+/* kulcs tisztítása: szóköz, sortörés, láthatatlan karakterek, idézőjelek eltávolítása (mobilos másolásnál gyakori) */
+function cleanKey(v) { return String(v || "").replace(/[\s​-‍⁠﻿"'`„”«»]/g, ""); }
+/* kulcs ellenőrzése a szolgáltatónál; {ok, msg} */
+async function validateKey(k) {
+  const shape = `A beírt kulcs eleje: „${k.slice(0, 7)}…", hossza: ${k.length} karakter.`;
+  if (isOpenRouterKey(k)) {
+    const r = await fetch("https://openrouter.ai/api/v1/key", { headers: { Authorization: "Bearer " + k } });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) return { ok: true, msg: "Érvényes OpenRouter kulcs" + (j.data && j.data.is_free_tier ? " (ingyenes csomag)" : "") + "." };
+    let hint = "";
+    if (/^sk-or-v1-/i.test(k) && k.length !== 73) hint = " A teljes kulcs általában 73 karakter – valószínűleg csak egy része lett kimásolva.";
+    return { ok: false, msg: `Az OpenRouter nem fogadta el: ${(j.error && j.error.message) || "HTTP " + r.status}. ${shape}${hint} Tipp: az OpenRouter a kulcsot csak egyszer, létrehozáskor mutatja meg teljes hosszában – a kulcslistában látható rövidített minta nem működik. Hozz létre új kulcsot, és rögtön a felugró ablakból másold ki (Copy gomb).` };
+  }
+  if (/^AIza/.test(k)) {
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { headers: { "x-goog-api-key": k } });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) return { ok: true, msg: "Érvényes Gemini kulcs." };
+    return { ok: false, msg: `A Google nem fogadta el: ${(j.error && j.error.message) || "HTTP " + r.status}. ${shape} A Gemini-kulcs általában 39 karakter.` };
+  }
+  return { ok: false, msg: `Ez nem tűnik OpenRouter (sk-or-…) vagy Gemini (AIza…) kulcsnak. ${shape} Ellenőrizd, hogy a teljes kulcsot illesztetted-e be.` };
+}
 /* a céldhónapban már szereplő tételek jelölése (ugyanaz a screenshot kétszer → ne kerüljön be duplán) */
 function flagOcrDuplicates() {
   const month = document.getElementById("mMonth").value || currentMonth();
@@ -2169,12 +2193,27 @@ function init() {
   document.getElementById("toggleCoach").addEventListener("change", (e) => { showCoach = e.target.checked; saveCoach(); renderList(); });
   document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
-  document.getElementById("btnSaveKey").addEventListener("click", () => {
-    const v = document.getElementById("geminiKey").value.trim();
+  document.getElementById("btnSaveKey").addEventListener("click", async () => {
+    const field = document.getElementById("geminiKey");
+    const st = document.getElementById("keyStatus");
+    const btn = document.getElementById("btnSaveKey");
+    const v = cleanKey(field.value);
+    field.value = v;
+    if (!v) { st.innerHTML = "Előbb illeszd be a kulcsot a mezőbe."; return; }
+    btn.disabled = true;
+    st.innerHTML = '<i class="ph-fill ph-spinner"></i> Kulcs ellenőrzése…';
+    let res;
+    try { res = await validateKey(v); }
+    catch { res = { ok: true, offline: true, msg: "Nem sikerült ellenőrizni (nincs internet?) – elmentettem, beolvasáskor kiderül, jó-e." }; }
+    btn.disabled = false;
+    if (!res.ok) {
+      st.innerHTML = `<span class="key-bad"><i class="ph-fill ph-x-circle"></i> ${escapeHtml(res.msg)}</span>`;
+      return; // hibás kulcsot nem mentünk el
+    }
     geminiKey = v;
-    try { if (v) localStorage.setItem("geminiKey", v); else localStorage.removeItem("geminiKey"); } catch {}
-    updateKeyStatus(); refreshOcrButton();
-    showMsg("catMsg", v ? `✅ AI kulcs mentve – a beolvasás mostantól ${isOpenRouterKey(v) ? "OpenRoutert" : "Geminit"} használ.` : "Kulcs törölve.", "success");
+    try { localStorage.setItem("geminiKey", v); } catch {}
+    refreshOcrButton();
+    st.innerHTML = `<span class="key-ok"><i class="ph-fill ph-check-circle"></i> ${escapeHtml(res.msg)} Elmentve – a beolvasás mostantól ${isOpenRouterKey(v) ? "OpenRoutert" : "Geminit"} használ.</span>`;
   });
   document.getElementById("btnClearKey").addEventListener("click", () => {
     geminiKey = ""; document.getElementById("geminiKey").value = "";
