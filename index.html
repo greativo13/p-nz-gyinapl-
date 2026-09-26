@@ -207,6 +207,10 @@
   .ocr-row .ocr-cat { width: 100%; }
   .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
   .ai-prov { margin: 0 0 10px 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
+  #updBanner { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 9999; display: flex; align-items: center; gap: 12px; background: var(--brand); color: #fff; padding: 9px 10px 9px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100% - 32px); }
+  #updBanner button { border: none; background: #fff; color: var(--brand); font-weight: 700; border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  .app-version { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 10px; }
+  .ocr-engine { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
   .key-ok { color: var(--income); font-weight: 600; }
   .key-bad { color: var(--danger); font-weight: 600; line-height: 1.5; }
   #keyStatus .ph-spinner { animation: ocrspin 0.9s linear infinite; display: inline-block; }
@@ -601,6 +605,7 @@
         <input type="file" id="importFile" accept="application/json,.json" style="display:none">
         <p class="hint" style="margin:6px 0 0;">A mentés a böngésződben tárolódik. Rendszeresen készíts biztonsági mentést, hogy ne veszítsd el az adataidat böngésző-törlésnél vagy eszközváltásnál.</p>
       </div>
+      <p class="app-version" id="appVersion"></p>
     </section>
 
   </div>
@@ -706,6 +711,7 @@
       <p class="hint" style="margin:0 0 8px;">Ellenőrizd és javítsd a felismert tételeket és a kategóriát, majd add hozzá a kipipáltakat.</p>
       <p class="ocr-ai-tip" id="ocrAiTip" hidden><i class="ph-fill ph-sparkle"></i> Pontatlan? Kapcsold be az ingyenes AI-beolvasást: Kategóriák → AI beolvasás.</p>
       <div class="ocr-rows" id="ocrRows"></div>
+      <p class="ocr-engine" id="ocrEngine"></p>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn" id="btnOcrAdd"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
         <button class="btn secondary" id="btnOcrCancel">Mégse</button>
@@ -1185,6 +1191,7 @@ async function runOcr(file) {
     if (!ocrCandidates.length) throw new Error("Nem találtam felismerhető tételt a képen. Próbálj élesebb screenshotot, ahol jól látszanak az összegek.");
     const fallback = Object.keys(allCategories())[0] || "green";
     ocrCandidates.forEach(c => { const g = guessCategory(c.name); c.color = g ? g.color : fallback; c.sub = g ? g.sub : ""; });
+    document.getElementById("ocrEngine").textContent = `Felismerő: beépített (kevésbé pontos) · ${APP_VERSION}`;
     document.getElementById("ocrStatus").hidden = true;
     flagOcrDuplicates();
     renderOcrRows();
@@ -1196,6 +1203,8 @@ async function runOcr(file) {
   }
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
+const APP_VERSION = "v54"; // az sw.js CACHE verziójával együtt léptetjük
+let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
 function parseHuf(v) {
@@ -1213,7 +1222,7 @@ async function geminiRequest(body) {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey }, body: JSON.stringify(body)
     });
     const j = await r.json().catch(() => ({}));
-    if (r.ok) return j;
+    if (r.ok) { lastAiModel = model; return j; }
     const msg = (j.error && j.error.message) || ("HTTP " + r.status);
     if (r.status === 404 || /not found|not supported/i.test(msg)) { lastErr = new Error(msg); continue; } // próbáld a következő modellt
     throw new Error(msg);
@@ -1250,7 +1259,7 @@ async function openRouterRequest(prompt, b64, mime) {
     if (r.ok && j.choices && j.choices[0]) {
       const c = j.choices[0].message && j.choices[0].message.content;
       const text = Array.isArray(c) ? c.map(p => p.text || "").join("") : (c || "");
-      if (text.trim()) return text;
+      if (text.trim()) { lastAiModel = model; return text; }
       lastErr = new Error("Üres válasz a modelltől."); continue;
     }
     lastErr = new Error(msg || "Ismeretlen hiba"); // foglalt / limit / nincs végpont → következő modell
@@ -1299,6 +1308,7 @@ async function runOcrAI(file) {
       return { name: String(o.name).trim().slice(0, 40), amount: parseHuf(o.amount), use: true, color, sub };
     });
     if (!ocrCandidates.length) throw new Error("Az AI nem talált tételt a képen. Próbálj tisztább képet.");
+    document.getElementById("ocrEngine").textContent = `Felismerő: AI · ${viaOR ? "OpenRouter" : "Gemini"} · ${lastAiModel} · ${APP_VERSION}`;
     document.getElementById("ocrStatus").hidden = true;
     flagOcrDuplicates();
     renderOcrRows();
@@ -2145,9 +2155,30 @@ function escapeHtml(str) {
 
 /* ---------- PWA: service worker regisztráció (offline) ---------- */
 function registerSW() {
-  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
-    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
-  }
+  if (!("serviceWorker" in navigator) || location.protocol.indexOf("http") !== 0) return;
+  // új verzió átvételekor frissítsük az oldalt (a kezdőképernyős app magától nem tölt újra)
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return; // első telepítéskor nem kell újratölteni
+    const busy = document.querySelector(".modal-overlay.show") || document.getElementById("mName").value || document.getElementById("mAmount").value;
+    if (busy) { showUpdateBanner(); return; } // épp gépel / ablak nyitva → ne veszítsen adatot
+    reloading = true; location.reload();
+  });
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      // előtérbe hozáskor ellenőrizze, van-e új verzió
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+    }).catch(() => {});
+  });
+}
+function showUpdateBanner() {
+  if (document.getElementById("updBanner")) return;
+  const b = document.createElement("div");
+  b.id = "updBanner";
+  b.innerHTML = '<span><i class="ph-fill ph-arrow-clockwise"></i> Új verzió érhető el</span><button type="button">Frissítés</button>';
+  b.querySelector("button").addEventListener("click", () => location.reload());
+  document.body.appendChild(b);
 }
 
 /* ---------- Onboarding ---------- */
@@ -2181,6 +2212,7 @@ function init() {
   });
 
   registerSW();
+  document.getElementById("appVersion").textContent = "Pénzügyi Napló " + APP_VERSION;
   refreshAutoMonth();
   // háttérből előtérbe hozva is frissüljön a bevitel hónapja (hónapforduló)
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshAutoMonth(); });
