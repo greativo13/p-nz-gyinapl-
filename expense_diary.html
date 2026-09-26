@@ -196,12 +196,14 @@
   .ocr-status .ph-spinner { font-size: 20px; animation: ocrspin 0.9s linear infinite; color: var(--green-accent); }
   @keyframes ocrspin { to { transform: rotate(360deg); } }
   .ocr-err-txt { color: var(--err-text); font-size: 14px; line-height: 1.5; margin: 4px 0 14px; }
-  .ocr-rows { max-height: 42vh; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
-  .ocr-row { display: flex; align-items: center; gap: 8px; }
+  .ocr-rows { max-height: 46vh; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+  .ocr-row { display: flex; flex-direction: column; gap: 6px; padding: 9px; border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg); }
+  .ocr-row-top { display: flex; align-items: center; gap: 8px; }
   .ocr-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--green-accent); margin: 0; }
   .ocr-row .ocr-name { flex: 1 1 auto; min-width: 0; }
-  .ocr-row .ocr-amt { width: 96px; flex-shrink: 0; text-align: right; }
-  .ocr-row input[type="text"], .ocr-row input[type="number"] { padding: 9px 10px; font-size: 14px; }
+  .ocr-row .ocr-amt { width: 92px; flex-shrink: 0; text-align: right; }
+  .ocr-row input[type="text"], .ocr-row input[type="number"], .ocr-row .ocr-cat { padding: 9px 10px; font-size: 14px; }
+  .ocr-row .ocr-cat { width: 100%; }
   /* Coach */
   .coach-verdict { font-weight: 700; font-size: 14px; margin: 6px 0 12px; }
   .coach-verdict.good { color: var(--income); }
@@ -675,9 +677,7 @@
     <h3><i class="ph-fill ph-camera"></i> Screenshot beolvasása</h3>
     <div id="ocrStatus" class="ocr-status"><i class="ph-fill ph-spinner"></i> <span id="ocrStatusTxt">Kép feldolgozása…</span></div>
     <div id="ocrResult" hidden>
-      <p class="hint" style="margin:0 0 8px;">Ellenőrizd és javítsd a felismert tételeket, majd add hozzá a kipipáltakat.</p>
-      <label>Kategória az importhoz</label>
-      <div class="color-picker" id="ocrColors"></div>
+      <p class="hint" style="margin:0 0 8px;">Ellenőrizd és javítsd a felismert tételeket és a kategóriát, majd add hozzá a kipipáltakat.</p>
       <div class="ocr-rows" id="ocrRows"></div>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn" id="btnOcrAdd"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
@@ -1045,6 +1045,39 @@ document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.ke
 
 /* ---------- Screenshot beolvasás (OCR) ---------- */
 let ocrCandidates = [];
+const deburr = (s) => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+/* bolt-név → kategória (szín) + alkategória tipp */
+const OCR_RULES = [
+  { color: "blue",  sub: "Bevásárlás", k: ["tesco","lidl","aldi","spar","penny","auchan","cba","coop","prima","interfood","kifli","groby","g'roby","real","match","dm-drogerie"] },
+  { color: "blue",  sub: "Étterem",    k: ["mcdonald","kfc","burger king","burgerking","pizza","wokbar","pad thai","padthai","street food","bisztro","bistro","etterem","restaurant","subway","don pepe","kifőzde","kifozde","gyros","kebab"] },
+  { color: "blue",  sub: "Kávé",       k: ["starbucks","costa coffee","tchibo","california coffee","coffee","kave"] },
+  { color: "pink",  sub: "Rendelés",   k: ["wolt","foodpanda","bolt food","boltfood","netpincer"] },
+  { color: "green", sub: "Közlekedés", k: ["bkk","budapestgo","budapest go","mav","volan","mvk","tuke","fotaxi","fő taxi","city taxi"," taxi","parkol","parking","start jegy"] },
+  { color: "green", sub: "Közlekedés", k: ["mol","omv","shell","lukoil","orlen","benzin","tolto","toltoallomas"] },
+  { color: "green", sub: "Háztartás",  k: ["rossmann","muller","mueller","jysk","ikea","pepco","tedi","kika","obi","praktiker"] },
+  { color: "green", sub: "Egészség",   k: ["patika","gyogyszertar","benu","apteka","pharmacy","vitamin","optika","fogasz","medicover","dm "] },
+  { color: "pink",  sub: "Ruha",       k: ["decathlon","hervis","intersport","sportisimo","nike","adidas","h&m","zara","c&a","sinsay","reserved","ccc","deichmann","about you","aboutyou","zalando","answear","vinted","tommy","new yorker","newyorker","pull&bear","bershka"] },
+  { color: "pink",  sub: "Streaming",  k: ["netflix","disney","spotify","hbo","youtube","apple.com","itunes","prime video","audible","google one","google storage"] },
+  { color: "pink",  sub: "Nasi",       k: ["cukrasz","pekseg","fornetti","edesseg","desszert"] },
+  { color: "yellow",sub: "Szoftver",   k: ["claude","anthropic","openai","chatgpt","microsoft","office365","capcut","canva","adobe","notion","figma","github","google workspace"] },
+  { color: "yellow",sub: "Könyvelés",  k: ["konyvelo","konyveles"] },
+  { color: "gray",  sub: "",           k: ["media markt","mediamarkt","euronics","emag","alza","allegro","temu","aliexpress","ebay","amazon"] }
+];
+function guessCategory(name) {
+  const n = deburr(name);
+  const cats = allCategories();
+  for (const rule of OCR_RULES) {
+    for (const kw of rule.k) {
+      const k = deburr(kw);
+      const hit = k.length <= 3 ? new RegExp("\\b" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b").test(n) : n.includes(k);
+      if (hit && cats[rule.color]) {
+        const subs = catSubs(rule.color);
+        return { color: rule.color, sub: (rule.sub && subs.includes(rule.sub)) ? rule.sub : "" };
+      }
+    }
+  }
+  return null;
+}
 function loadTesseract() {
   return new Promise((resolve, reject) => {
     if (window.Tesseract) return resolve(window.Tesseract);
@@ -1111,8 +1144,9 @@ async function runOcr(file) {
     await worker.terminate();
     ocrCandidates = parseOcrCandidates(data.text || "");
     if (!ocrCandidates.length) throw new Error("Nem találtam felismerhető tételt a képen. Próbálj élesebb screenshotot, ahol jól látszanak az összegek.");
+    const fallback = Object.keys(allCategories())[0] || "green";
+    ocrCandidates.forEach(c => { const g = guessCategory(c.name); c.color = g ? g.color : fallback; c.sub = g ? g.sub : ""; });
     document.getElementById("ocrStatus").hidden = true;
-    buildColorPicker("ocrColors", (Object.keys(allCategories())[0] || "green"), () => {});
     renderOcrRows();
     document.getElementById("ocrResult").hidden = false;
   } catch (err) {
@@ -1123,18 +1157,29 @@ async function runOcr(file) {
 }
 function renderOcrRows() {
   const box = document.getElementById("ocrRows");
+  const cats = allCategories();
+  const catOpts = Object.keys(cats).map(k => ({ key: k, name: cats[k].name })).sort((a, b) => a.name.localeCompare(b.name, "hu"));
   box.innerHTML = "";
   ocrCandidates.forEach((c, i) => {
     const row = document.createElement("div");
     row.className = "ocr-row";
-    row.innerHTML = `<input type="checkbox" ${c.use ? "checked" : ""} data-ocr-use="${i}" aria-label="Hozzáadás">
-      <input type="text" class="ocr-name" value="${escapeHtml(c.name)}" data-ocr-name="${i}">
-      <input type="number" class="ocr-amt" value="${c.amount}" data-ocr-amt="${i}" inputmode="numeric">`;
+    const opts = catOpts.map(o => `<option value="${o.key}" ${o.key === c.color ? "selected" : ""}>${escapeHtml(o.name)}</option>`).join("");
+    row.innerHTML = `<div class="ocr-row-top">
+        <input type="checkbox" ${c.use ? "checked" : ""} data-ocr-use="${i}" aria-label="Hozzáadás">
+        <input type="text" class="ocr-name" value="${escapeHtml(c.name)}" data-ocr-name="${i}">
+        <input type="number" class="ocr-amt" value="${c.amount}" data-ocr-amt="${i}" inputmode="numeric">
+      </div>
+      <select class="ocr-cat" data-ocr-cat="${i}">${opts}</select>`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-ocr-use]").forEach(el => el.addEventListener("change", e => ocrCandidates[+e.target.dataset.ocrUse].use = e.target.checked));
   box.querySelectorAll("[data-ocr-name]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrName].name = e.target.value));
   box.querySelectorAll("[data-ocr-amt]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrAmt].amount = Number(e.target.value)));
+  box.querySelectorAll("[data-ocr-cat]").forEach(el => el.addEventListener("change", e => {
+    const c = ocrCandidates[+e.target.dataset.ocrCat];
+    c.color = e.target.value;
+    if (c.sub && !catSubs(c.color).includes(c.sub)) c.sub = ""; // ha a régi alkategória nem illik az új kategóriához
+  }));
 }
 function closeOcr() { document.getElementById("ocrModal").classList.remove("show"); ocrCandidates = []; }
 document.getElementById("btnOcr").addEventListener("click", () => document.getElementById("ocrFile").click());
@@ -1143,13 +1188,12 @@ document.getElementById("btnOcrCancel").addEventListener("click", closeOcr);
 document.getElementById("btnOcrClose").addEventListener("click", closeOcr);
 document.getElementById("ocrModal").addEventListener("click", e => { if (e.target.id === "ocrModal") closeOcr(); });
 document.getElementById("btnOcrAdd").addEventListener("click", () => {
-  const color = getPickerValue("ocrColors");
-  if (!color) { alert("Válassz kategóriát az importhoz."); return; }
   const month = document.getElementById("mMonth").value || currentMonth();
   let added = 0, skipped = 0;
   ocrCandidates.filter(c => c.use).forEach(c => {
-    if (!c.name || !c.amount || c.amount <= 0) { skipped++; return; }
-    const res = addEntry(c.name, c.amount, color, month, "expense", "", undefined, true);
+    if (!c.name || !c.amount || c.amount <= 0 || !c.color) { skipped++; return; }
+    const sub = (c.sub && catSubs(c.color).includes(c.sub)) ? c.sub : "";
+    const res = addEntry(c.name, c.amount, c.color, month, "expense", sub, undefined, true);
     if (res.ok) added++; else skipped++;
   });
   closeOcr();
