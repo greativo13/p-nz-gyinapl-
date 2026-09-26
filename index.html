@@ -1089,13 +1089,40 @@ function loadTesseract() {
     document.head.appendChild(s);
   });
 }
+/* Kép előfeldolgozás: szürkeárnyalat + sötét téma invertálása + felnagyítás → jobb OCR */
+async function preprocessImage(file) {
+  try {
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
+    const scale = Math.min(2.5, Math.max(1, 1500 / img.width));
+    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const ctx = cv.getContext("2d");
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    const id = ctx.getImageData(0, 0, w, h), d = id.data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) { const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; d[i] = d[i + 1] = d[i + 2] = g; sum += g; }
+    const avg = sum / (d.length / 4);
+    const invert = avg < 128; // sötét háttér → invertálás
+    for (let i = 0; i < d.length; i += 4) {
+      let v = invert ? 255 - d[i] : d[i];
+      // enyhe kontrasztnyújtás
+      v = v < 90 ? 0 : (v > 170 ? 255 : Math.round((v - 90) / 80 * 255));
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(id, 0, 0);
+    return await new Promise(r => cv.toBlob(r, "image/png"));
+  } catch { return file; } // ha bármi hiba, az eredetivel próbálkozunk
+}
 function parseOcrCandidates(text) {
   const out = [];
   const lines = (text || "").split(/\r?\n/);
   const amountRe = /(-?\d{1,3}(?:[ . ]\d{3})+|-?\d{3,})(?:[.,]\d{1,2})?/g;
   const skipRe = /\b(egyenleg|összesen|osszesen|balance|záró|zaro|nyitó|nyito|időszak|idoszak|dátum|datum|tranzakci|kimutat|számlaszám|szamlaszam|total|elérhető|elerheto)\b/i;
-  const timeRe = /^\s*\d{1,2}[:.]\d{2}\b/;                 // részletsor: "15:17 · -120 Ft"
+  const timeRe = /\b\d{1,2}[:.]\d{2}\b/;                   // részletsor bárhol: "15:17 · -120 Ft" (OCR-előtaggal is)
   const dayRe = /^\s*(ma|tegnap|today|yesterday|hétfő|hetfo|kedd|szerda|csütörtök|csutortok|péntek|pentek|szombat|vasárnap|vasarnap)\b/i;
+  const letters = (s) => (s.match(/[a-záéíóöőúüűA-ZÁÉÍÓÖŐÚÜŰ]/g) || []).length;
   const cleanName = (s) => s.replace(/\bFt\b|\bHUF\b/gi, " ").replace(/[~_*"'`]{1,}/g, " ").replace(/\s{2,}/g, " ").replace(/[|•·:;+\-–—.,]+$/g, "").replace(/^[|•·:;+\-–—.,]+/g, "").trim();
   let pendingName = "";
   lines.forEach(line => {
@@ -1115,13 +1142,13 @@ function parseOcrCandidates(text) {
     if (!best) {
       // összeg nélküli sor → lehet a következő összeg neve (oszlopos elrendezés)
       const t = cleanName(raw);
-      if (t.length >= 3) pendingName = t;
+      if (letters(t) >= 3) pendingName = t;
       return;
     }
     let name = cleanName(raw.replace(best.str, " "));
-    if (name.length < 3 && pendingName) name = pendingName; // oszlopos: előző sor a név
+    if (letters(name) < 3 && pendingName && letters(pendingName) >= 3) name = pendingName; // oszlopos: előző sor a név
     pendingName = "";
-    if (name.length < 3) return;              // értelmetlen név (pl. napi összeg maradéka) → kihagy
+    if (letters(name) < 3) return;            // szimbólum/szám-szemét (pl. "© 210) [Fi") → kihagy
     if (name.length > 40) name = name.slice(0, 40);
     out.push({ name, amount: best.num, use: true });
   });
@@ -1137,11 +1164,13 @@ async function runOcr(file) {
   stTxt.textContent = "Felismerő betöltése…";
   try {
     const T = await loadTesseract();
+    stTxt.textContent = "Kép előkészítése…";
+    const prepped = await preprocessImage(file);
     stTxt.textContent = "Szöveg felismerése… (első alkalommal a nyelvi csomag letöltése eltarthat)";
     const worker = await T.createWorker("hun+eng", 1, {
       logger: msg => { if (msg.status === "recognizing text") stTxt.textContent = "Felismerés… " + Math.round((msg.progress || 0) * 100) + "%"; }
     });
-    const { data } = await worker.recognize(file);
+    const { data } = await worker.recognize(prepped);
     await worker.terminate();
     ocrCandidates = parseOcrCandidates(data.text || "");
     if (!ocrCandidates.length) throw new Error("Nem találtam felismerhető tételt a képen. Próbálj élesebb screenshotot, ahol jól látszanak az összegek.");
