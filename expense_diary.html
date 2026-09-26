@@ -193,6 +193,7 @@
   /* OCR / screenshot beolvasás */
   .ocr-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
   .ocr-status { display: flex; align-items: center; gap: 9px; padding: 14px 4px; color: var(--muted); font-size: 14px; }
+  .ocr-status[hidden] { display: none; }
   .ocr-status .ph-spinner { font-size: 20px; animation: ocrspin 0.9s linear infinite; color: var(--green-accent); }
   @keyframes ocrspin { to { transform: rotate(360deg); } }
   .ocr-err-txt { color: var(--err-text); font-size: 14px; line-height: 1.5; margin: 4px 0 14px; }
