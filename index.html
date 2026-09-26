@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; } /* a hidden attribútum mindig nyerjen a display-szabályokkal szemben */
 
   :root {
     /* felületi tokenek – VILÁGOS (minimalista, zöld akcenttel) */
@@ -193,7 +194,6 @@
   /* OCR / screenshot beolvasás */
   .ocr-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
   .ocr-status { display: flex; align-items: center; gap: 9px; padding: 14px 4px; color: var(--muted); font-size: 14px; }
-  .ocr-status[hidden] { display: none; }
   .ocr-status .ph-spinner { font-size: 20px; animation: ocrspin 0.9s linear infinite; color: var(--green-accent); }
   @keyframes ocrspin { to { transform: rotate(360deg); } }
   .ocr-err-txt { color: var(--err-text); font-size: 14px; line-height: 1.5; margin: 4px 0 14px; }
@@ -205,7 +205,8 @@
   .ocr-row .ocr-amt { width: 92px; flex-shrink: 0; text-align: right; }
   .ocr-row input[type="text"], .ocr-row input[type="number"], .ocr-row .ocr-cat { padding: 9px 10px; font-size: 14px; }
   .ocr-row .ocr-cat { width: 100%; }
-  /* Coach */
+  .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
+  .ocr-ai-tip { font-size: 12.5px; color: var(--soft-text); background: var(--soft); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }  /* Coach */
   .coach-verdict { font-weight: 700; font-size: 14px; margin: 6px 0 12px; }
   .coach-verdict.good { color: var(--income); }
   .coach-verdict.warn { color: #b45309; }
@@ -692,6 +693,7 @@
     <div id="ocrStatus" class="ocr-status"><i class="ph-fill ph-spinner"></i> <span id="ocrStatusTxt">Kép feldolgozása…</span></div>
     <div id="ocrResult" hidden>
       <p class="hint" style="margin:0 0 8px;">Ellenőrizd és javítsd a felismert tételeket és a kategóriát, majd add hozzá a kipipáltakat.</p>
+      <p class="ocr-ai-tip" id="ocrAiTip" hidden><i class="ph-fill ph-sparkle"></i> Pontatlan? Kapcsold be az ingyenes AI-beolvasást: Kategóriák → AI beolvasás.</p>
       <div class="ocr-rows" id="ocrRows"></div>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn" id="btnOcrAdd"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
@@ -853,6 +855,14 @@ function currentMonth() { const d = new Date(); return d.getFullYear() + "-" + S
 function monthLabel(m) { if (!m) return "Nincs hónap"; const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(new Date(y, mo - 1, 1)); }
 function monthLabelShort(m) { if (!m) return "—"; const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(new Date(y, mo - 1, 1)); }
 function prevMonthOf(m) { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 2, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+/* hónapforduló kezelése háttérben nyitva hagyott appnál: ha a mező még az automatikusan beállított hónapon áll, lépjen tovább */
+let autoMonth = null;
+function refreshAutoMonth() {
+  const el = document.getElementById("mMonth");
+  if (!el) return;
+  const cur = currentMonth();
+  if (autoMonth === null || el.value === autoMonth || !el.value) { el.value = cur; autoMonth = cur; }
+}
 function nextMonthOf(m) { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
 
 /* ---------- Lebegő visszajelzés (toast) ---------- */
@@ -892,6 +902,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById("panel-" + tab.dataset.panel).classList.add("active");
     if (tab.dataset.panel === "list") { selectedMonth = currentMonth(); renderList(); }
     if (tab.dataset.panel === "categories") renderCategories();
+    if (tab.dataset.panel === "manual") refreshAutoMonth();
     // az „Új tétel" panelen nem fókuszálunk automatikusan – a billentyűzet csak akkor jöjjön fel, ha a mezőbe koppintanak
   });
 });
@@ -1164,6 +1175,7 @@ async function runOcr(file) {
     const fallback = Object.keys(allCategories())[0] || "green";
     ocrCandidates.forEach(c => { const g = guessCategory(c.name); c.color = g ? g.color : fallback; c.sub = g ? g.sub : ""; });
     document.getElementById("ocrStatus").hidden = true;
+    flagOcrDuplicates();
     renderOcrRows();
     document.getElementById("ocrResult").hidden = false;
   } catch (err) {
@@ -1173,7 +1185,30 @@ async function runOcr(file) {
   }
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
+/* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
+function parseHuf(v) {
+  if (typeof v === "number") return Math.round(Math.abs(v));
+  let s = String(v || "").replace(/[\s ]/g, "").replace(/ft|huf/gi, "").replace(/^[-+]/, "");
+  s = s.replace(/[.,]\d{1,2}$/, "");        // tizedes rész (pl. ",00") levágása
+  s = s.replace(/[.,]/g, "");                // ezres elválasztók
+  const n = parseInt(s, 10);
+  return isNaN(n) ? 0 : n;
+}
+async function geminiRequest(body) {
+  let lastErr = null;
+  for (const model of GEMINI_MODELS) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey }, body: JSON.stringify(body)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) return j;
+    const msg = (j.error && j.error.message) || ("HTTP " + r.status);
+    if (r.status === 404 || /not found|not supported/i.test(msg)) { lastErr = new Error(msg); continue; } // próbáld a következő modellt
+    throw new Error(msg);
+  }
+  throw lastErr || new Error("Nem érhető el Gemini modell.");
+}
 function fileToBase64(file) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
 }
@@ -1192,11 +1227,7 @@ async function runOcrAI(file) {
       contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type || "image/png", data: b64 } }] }],
       generationConfig: { temperature: 0, response_mime_type: "application/json" }
     };
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiKey)}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+    const j = await geminiRequest(body);
     let txt = "";
     try { txt = j.candidates[0].content.parts[0].text; } catch { txt = ""; }
     let arr;
@@ -1205,15 +1236,16 @@ async function runOcrAI(file) {
     const cats = allCategories();
     const byName = {}; Object.keys(cats).forEach(k => byName[deburr(cats[k].name)] = k);
     const fallback = Object.keys(cats)[0] || "green";
-    ocrCandidates = arr.filter(o => o && o.name && Number(o.amount) > 0).map(o => {
+    ocrCandidates = arr.filter(o => o && o.name && parseHuf(o.amount) > 0).map(o => {
       let color = byName[deburr(o.category || "")];
       if (!color) { const g = guessCategory(o.name); color = g ? g.color : fallback; }
       const g2 = guessCategory(o.name);
       const sub = (g2 && g2.color === color) ? g2.sub : "";
-      return { name: String(o.name).slice(0, 40), amount: Math.round(Number(o.amount)), use: true, color, sub };
+      return { name: String(o.name).trim().slice(0, 40), amount: parseHuf(o.amount), use: true, color, sub };
     });
     if (!ocrCandidates.length) throw new Error("Az AI nem talált tételt a képen. Próbálj tisztább képet.");
     document.getElementById("ocrStatus").hidden = true;
+    flagOcrDuplicates();
     renderOcrRows();
     document.getElementById("ocrResult").hidden = false;
   } catch (err) {
@@ -1227,6 +1259,20 @@ async function runOcrAI(file) {
   }
 }
 function startOcr(file) { if (geminiKey) runOcrAI(file); else runOcr(file); }
+/* a céldhónapban már szereplő tételek jelölése (ugyanaz a screenshot kétszer → ne kerüljön be duplán) */
+function flagOcrDuplicates() {
+  const month = document.getElementById("mMonth").value || currentMonth();
+  const counts = {};
+  expenseItems.forEach(it => {
+    if ((it.month || "") !== month || (it.type || "expense") === "income") return;
+    const k = deburr(it.name).trim() + "|" + Number(it.amount);
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  ocrCandidates.forEach(c => {
+    const k = deburr(c.name).trim() + "|" + Number(c.amount);
+    if (counts[k] > 0) { c.dup = true; c.use = false; counts[k]--; } else c.dup = false;
+  });
+}
 function updateKeyStatus() {
   const el = document.getElementById("keyStatus"); if (!el) return;
   el.innerHTML = geminiKey ? '<i class="ph-fill ph-check-circle" style="color:var(--income)"></i> AI beolvasás bekapcsolva (Gemini).' : 'Nincs kulcs – a beolvasás a beépített (kevésbé pontos) felismerőt használja.';
@@ -1236,6 +1282,8 @@ function refreshOcrButton() {
   b.innerHTML = geminiKey ? '<i class="ph-fill ph-sparkle"></i> Screenshot beolvasása (AI)' : '<i class="ph-fill ph-camera"></i> Screenshot / kép beolvasása';
 }
 function renderOcrRows() {
+  const tip = document.getElementById("ocrAiTip");
+  if (tip) tip.hidden = !!geminiKey;
   const box = document.getElementById("ocrRows");
   const cats = allCategories();
   const catOpts = Object.keys(cats).map(k => ({ key: k, name: cats[k].name })).sort((a, b) => a.name.localeCompare(b.name, "hu"));
@@ -1249,7 +1297,7 @@ function renderOcrRows() {
         <input type="text" class="ocr-name" value="${escapeHtml(c.name)}" data-ocr-name="${i}">
         <input type="number" class="ocr-amt" value="${c.amount}" data-ocr-amt="${i}" inputmode="numeric">
       </div>
-      <select class="ocr-cat" data-ocr-cat="${i}">${opts}</select>`;
+      <select class="ocr-cat" data-ocr-cat="${i}">${opts}</select>${c.dup ? `<div class="ocr-dup"><i class="ph-fill ph-info"></i> Már szerepel ebben a hónapban – ezért nincs kipipálva</div>` : ""}`;
     box.appendChild(row);
   });
   box.querySelectorAll("[data-ocr-use]").forEach(el => el.addEventListener("change", e => ocrCandidates[+e.target.dataset.ocrUse].use = e.target.checked));
@@ -1354,7 +1402,8 @@ function renderCoach(ctx) {
   if (balance < 0) {
     tips.push({ ic: "warning", cls: "bad", t: `Ebben az időszakban <b>${formatFt(-balance)}</b>-tal többet költöttél, mint a bevételed. Érdemes átnézni a legnagyobb tételeket.` });
   } else if (income > 0) {
-    tips.push({ ic: "check-circle", cls: "good", t: `Pozitív egyenleg: <b>${formatFt(balance)}</b> maradt a hónap végére. Szép munka!` });
+    const when = selectedMonth === "all" ? "maradt összesen" : (isPast ? "maradt a hónap végére" : "a mérleged eddig ebben a hónapban");
+    tips.push({ ic: "check-circle", cls: "good", t: `Pozitív egyenleg: <b>${formatFt(balance)}</b> ${when}.${isPast ? " Szép munka!" : ""}` });
   }
   // 2) megtakarítás
   if (income > 0) {
@@ -1597,12 +1646,12 @@ function renderList() {
     bd += `<div class="bd-group">
       <div class="bd-row ${hasSubs ? "has-subs" : ""}" ${hasSubs ? `data-toggle="${e.key}"` : ""}>
         <span class="bd-dot" style="background:${catHex(e.key)}"></span>
-        <span class="bd-name">${escapeHtml(catName(e.key))}${hasSubs ? '<span class="bd-caret">▾</span>' : ""}</span>
+        <span class="bd-name">${escapeHtml(catName(e.key))}${hasSubs ? '<span class="bd-caret">▴</span>' : ""}</span>
         <span class="bd-count">${e.count} db</span>
         <span class="bd-amount">${formatFt(e.sum)}</span>
       </div>`;
     if (hasSubs) {
-      bd += `<div class="bd-subs" data-subs="${e.key}" hidden>`;
+      bd += `<div class="bd-subs" data-subs="${e.key}">`;
       subEntries.forEach(se => {
         bd += `<div class="bd-subrow"><span class="bd-subname">${se.name === "" ? "— nincs alkategória" : escapeHtml(se.name)}</span><span class="bd-subamt">${formatFt(se.sum)}</span></div>`;
       });
@@ -2055,7 +2104,9 @@ function init() {
   });
 
   registerSW();
-  document.getElementById("mMonth").value = currentMonth();
+  refreshAutoMonth();
+  // háttérből előtérbe hozva is frissüljön a bevitel hónapja (hónapforduló)
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshAutoMonth(); });
   wireTypeToggle("typeToggle", (t) => { entryType = t; document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : ""; });
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
