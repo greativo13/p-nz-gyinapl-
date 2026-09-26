@@ -190,6 +190,18 @@
   .type-toggle.grid2 .type-btn { font-size: 12.5px; padding: 12px 4px; }
   .flow-biz { color: #b45309; }
   .lbl-hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  /* OCR / screenshot beolvasás */
+  .ocr-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
+  .ocr-status { display: flex; align-items: center; gap: 9px; padding: 14px 4px; color: var(--muted); font-size: 14px; }
+  .ocr-status .ph-spinner { font-size: 20px; animation: ocrspin 0.9s linear infinite; color: var(--green-accent); }
+  @keyframes ocrspin { to { transform: rotate(360deg); } }
+  .ocr-err-txt { color: var(--err-text); font-size: 14px; line-height: 1.5; margin: 4px 0 14px; }
+  .ocr-rows { max-height: 42vh; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+  .ocr-row { display: flex; align-items: center; gap: 8px; }
+  .ocr-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--green-accent); margin: 0; }
+  .ocr-row .ocr-name { flex: 1 1 auto; min-width: 0; }
+  .ocr-row .ocr-amt { width: 96px; flex-shrink: 0; text-align: right; }
+  .ocr-row input[type="text"], .ocr-row input[type="number"] { padding: 9px 10px; font-size: 14px; }
   /* Coach */
   .coach-verdict { font-weight: 700; font-size: 14px; margin: 6px 0 12px; }
   .coach-verdict.good { color: var(--income); }
@@ -454,6 +466,8 @@
     <section class="panel" id="panel-manual">
       <h2><i class="ph-fill ph-pencil-simple"></i> Új tétel</h2>
       <div class="msg" id="manualMsg"></div>
+      <button class="btn secondary ocr-btn" id="btnOcr"><i class="ph-fill ph-camera"></i> Screenshot / kép beolvasása</button>
+      <input type="file" id="ocrFile" accept="image/*" style="display:none">
       <div class="card">
         <div class="type-toggle" id="typeToggle">
           <button type="button" class="type-btn active" data-type="expense"><i class="ph-fill ph-arrow-up"></i> Kiadás</button>
@@ -652,6 +666,28 @@
       <button class="btn secondary" id="btnRuleReset">50-30-20</button>
     </div>
     <button class="btn secondary" id="btnRuleCancel" style="margin-top:8px">Mégse</button>
+  </div>
+</div>
+
+<!-- ============ SCREENSHOT BEOLVASÁS (OCR) MODAL ============ -->
+<div class="modal-overlay" id="ocrModal">
+  <div class="modal">
+    <h3><i class="ph-fill ph-camera"></i> Screenshot beolvasása</h3>
+    <div id="ocrStatus" class="ocr-status"><i class="ph-fill ph-spinner"></i> <span id="ocrStatusTxt">Kép feldolgozása…</span></div>
+    <div id="ocrResult" hidden>
+      <p class="hint" style="margin:0 0 8px;">Ellenőrizd és javítsd a felismert tételeket, majd add hozzá a kipipáltakat.</p>
+      <label>Kategória az importhoz</label>
+      <div class="color-picker" id="ocrColors"></div>
+      <div class="ocr-rows" id="ocrRows"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn" id="btnOcrAdd"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
+        <button class="btn secondary" id="btnOcrCancel">Mégse</button>
+      </div>
+    </div>
+    <div id="ocrError" hidden>
+      <p class="ocr-err-txt" id="ocrErrTxt"></p>
+      <button class="btn secondary" id="btnOcrClose">Bezárás</button>
+    </div>
   </div>
 </div>
 
@@ -1006,6 +1042,110 @@ function submitManual() {
 document.getElementById("btnAddManual").addEventListener("click", submitManual);
 document.getElementById("mName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); try { document.getElementById("mAmount").focus({ preventScroll: true }); } catch { document.getElementById("mAmount").focus(); } } });
 document.getElementById("mAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitManual(); } });
+
+/* ---------- Screenshot beolvasás (OCR) ---------- */
+let ocrCandidates = [];
+function loadTesseract() {
+  return new Promise((resolve, reject) => {
+    if (window.Tesseract) return resolve(window.Tesseract);
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    s.onload = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error("A felismerő nem töltődött be."));
+    s.onerror = () => reject(new Error("Nem sikerült betölteni a felismerőt (internet szükséges)."));
+    document.head.appendChild(s);
+  });
+}
+function parseOcrCandidates(text) {
+  const out = [];
+  const lines = (text || "").split(/\r?\n/);
+  const amountRe = /(-?\d{1,3}(?:[ . ]\d{3})+|-?\d{3,})(?:[.,]\d{1,2})?/g;
+  lines.forEach(line => {
+    const raw = line.trim();
+    if (!raw) return;
+    let m, best = null;
+    amountRe.lastIndex = 0;
+    while ((m = amountRe.exec(raw)) !== null) {
+      const num = Math.abs(parseInt(m[1].replace(/[ . ]/g, ""), 10));
+      if (!isNaN(num) && num >= 100) { if (!best || num >= best.num) best = { num, str: m[0], idx: m.index }; }
+    }
+    if (!best) return;
+    let name = raw.replace(best.str, " ").replace(/\bFt\b|\bHUF\b/gi, " ").replace(/\s{2,}/g, " ").replace(/[|•·:;+\-–—]+$/g, "").replace(/^[|•·:;+\-–—]+/g, "").trim();
+    if (name.length < 2) name = "Tétel";
+    if (name.length > 40) name = name.slice(0, 40);
+    out.push({ name, amount: best.num, use: true });
+  });
+  return out;
+}
+async function runOcr(file) {
+  const modal = document.getElementById("ocrModal");
+  modal.classList.add("show");
+  document.getElementById("ocrResult").hidden = true;
+  document.getElementById("ocrError").hidden = true;
+  document.getElementById("ocrStatus").hidden = false;
+  const stTxt = document.getElementById("ocrStatusTxt");
+  stTxt.textContent = "Felismerő betöltése…";
+  try {
+    const T = await loadTesseract();
+    stTxt.textContent = "Szöveg felismerése… (első alkalommal a nyelvi csomag letöltése eltarthat)";
+    const worker = await T.createWorker("hun+eng", 1, {
+      logger: msg => { if (msg.status === "recognizing text") stTxt.textContent = "Felismerés… " + Math.round((msg.progress || 0) * 100) + "%"; }
+    });
+    const { data } = await worker.recognize(file);
+    await worker.terminate();
+    ocrCandidates = parseOcrCandidates(data.text || "");
+    if (!ocrCandidates.length) throw new Error("Nem találtam felismerhető tételt a képen. Próbálj élesebb screenshotot, ahol jól látszanak az összegek.");
+    document.getElementById("ocrStatus").hidden = true;
+    buildColorPicker("ocrColors", (Object.keys(allCategories())[0] || "green"), () => {});
+    renderOcrRows();
+    document.getElementById("ocrResult").hidden = false;
+  } catch (err) {
+    document.getElementById("ocrStatus").hidden = true;
+    document.getElementById("ocrErrTxt").textContent = "⚠️ " + err.message;
+    document.getElementById("ocrError").hidden = false;
+  }
+}
+function renderOcrRows() {
+  const box = document.getElementById("ocrRows");
+  box.innerHTML = "";
+  ocrCandidates.forEach((c, i) => {
+    const row = document.createElement("div");
+    row.className = "ocr-row";
+    row.innerHTML = `<input type="checkbox" ${c.use ? "checked" : ""} data-ocr-use="${i}" aria-label="Hozzáadás">
+      <input type="text" class="ocr-name" value="${escapeHtml(c.name)}" data-ocr-name="${i}">
+      <input type="number" class="ocr-amt" value="${c.amount}" data-ocr-amt="${i}" inputmode="numeric">`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("[data-ocr-use]").forEach(el => el.addEventListener("change", e => ocrCandidates[+e.target.dataset.ocrUse].use = e.target.checked));
+  box.querySelectorAll("[data-ocr-name]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrName].name = e.target.value));
+  box.querySelectorAll("[data-ocr-amt]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrAmt].amount = Number(e.target.value)));
+}
+function closeOcr() { document.getElementById("ocrModal").classList.remove("show"); ocrCandidates = []; }
+document.getElementById("btnOcr").addEventListener("click", () => document.getElementById("ocrFile").click());
+document.getElementById("ocrFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) runOcr(f); e.target.value = ""; });
+document.getElementById("btnOcrCancel").addEventListener("click", closeOcr);
+document.getElementById("btnOcrClose").addEventListener("click", closeOcr);
+document.getElementById("ocrModal").addEventListener("click", e => { if (e.target.id === "ocrModal") closeOcr(); });
+document.getElementById("btnOcrAdd").addEventListener("click", () => {
+  const color = getPickerValue("ocrColors");
+  if (!color) { alert("Válassz kategóriát az importhoz."); return; }
+  const month = document.getElementById("mMonth").value || currentMonth();
+  let added = 0, skipped = 0;
+  ocrCandidates.filter(c => c.use).forEach(c => {
+    if (!c.name || !c.amount || c.amount <= 0) { skipped++; return; }
+    const res = addEntry(c.name, c.amount, color, month, "expense", "", undefined, true);
+    if (res.ok) added++; else skipped++;
+  });
+  closeOcr();
+  renderList();
+  toast(`✅ ${added} tétel hozzáadva${skipped ? ` · ${skipped} kihagyva` : ""}`);
+});
+document.addEventListener("paste", e => {
+  if (!document.getElementById("panel-manual").classList.contains("active")) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.type && it.type.indexOf("image") === 0) { const f = it.getAsFile(); if (f) { runOcr(f); e.preventDefault(); break; } }
+  }
+});
 
 /* ---------- Másolás előző hónapból ---------- */
 function openCopyModal() {
