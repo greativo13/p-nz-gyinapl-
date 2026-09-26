@@ -206,6 +206,9 @@
   .ocr-row input[type="text"], .ocr-row input[type="number"], .ocr-row .ocr-cat { padding: 9px 10px; font-size: 14px; }
   .ocr-row .ocr-cat { width: 100%; }
   .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
+  .ai-prov { margin: 0 0 10px 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
+  .ai-prov a { color: var(--green-accent); font-weight: 600; }
+  .ai-prov code { background: var(--chip); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
   .ocr-ai-tip { font-size: 12.5px; color: var(--soft-text); background: var(--soft); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }  /* Coach */
   .coach-verdict { font-weight: 700; font-size: 14px; margin: 6px 0 12px; }
   .coach-verdict.good { color: var(--income); }
@@ -565,9 +568,14 @@
       <hr class="divider">
       <h2><i class="ph-fill ph-sparkle"></i> AI beolvasás (ingyenes)</h2>
       <div class="card">
-        <p class="hint" style="margin:0 0 10px;">Pontos screenshot-felismeréshez add meg a saját <b>ingyenes Google Gemini</b> kulcsodat. A kulcs csak a te böngésződben tárolódik, sehova nem kerül fel. Kulcs igénylése (kártya nélkül): <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--green-accent);font-weight:600;">aistudio.google.com/apikey</a></p>
-        <label for="geminiKey">Gemini API kulcs</label>
-        <input type="password" id="geminiKey" placeholder="AIza..." autocomplete="off">
+        <p class="hint" style="margin:0 0 8px;">Pontos screenshot-felismeréshez add meg egy <b>ingyenes</b> AI-kulcsot (bankkártya nélkül). Bármelyik jó – az app a kulcs formájából felismeri:</p>
+        <ul class="ai-prov">
+          <li><b>OpenRouter</b> <span class="lbl-hint">(nem kell hozzá Google Cloud)</span> – <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> · kulcs: <code>sk-or-…</code></li>
+          <li><b>Google Gemini</b> – <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> · kulcs: <code>AIza…</code></li>
+        </ul>
+        <p class="hint" style="margin:0 0 10px;">A kulcs csak a te böngésződben tárolódik. <b>Fontos:</b> az ingyenes AI-szolgáltatók a beküldött képet felhasználhatják a modelljeik fejlesztésére – ne olvass be számlaszámot vagy más érzékeny adatot tartalmazó képet.</p>
+        <label for="geminiKey">AI API kulcs</label>
+        <input type="password" id="geminiKey" placeholder="sk-or-… vagy AIza…" autocomplete="off">
         <div class="btn-row" style="margin-top:10px">
           <button class="btn secondary" id="btnSaveKey"><i class="ph-fill ph-check"></i> Kulcs mentése</button>
           <button class="btn secondary" id="btnClearKey">Törlés</button>
@@ -1209,6 +1217,43 @@ async function geminiRequest(body) {
   }
   throw lastErr || new Error("Nem érhető el Gemini modell.");
 }
+/* ---- OpenRouter (ingyenes modellek, Google Cloud nélkül) ---- */
+const isOpenRouterKey = (k) => /^sk-or-/i.test(k || "");
+let orModelsCache = null;
+async function openRouterFreeVisionModels() {
+  if (orModelsCache) return orModelsCache;
+  const r = await fetch("https://openrouter.ai/api/v1/models");
+  const j = await r.json().catch(() => ({}));
+  const score = (id) => /qwen/i.test(id) ? 0 : /gemma/i.test(id) ? 1 : /llama/i.test(id) ? 2 : /mistral|pixtral/i.test(id) ? 3 : 5;
+  orModelsCache = (j.data || [])
+    .filter(m => /:free$/.test(m.id) && ((m.architecture || {}).input_modalities || []).includes("image") && !/safety|guard/i.test(m.id))
+    .map(m => m.id)
+    .sort((a, b) => score(a) - score(b));
+  return orModelsCache;
+}
+async function openRouterRequest(prompt, b64, mime) {
+  const models = await openRouterFreeVisionModels();
+  if (!models.length) throw new Error("Jelenleg nincs elérhető ingyenes képfelismerő modell az OpenRouteren.");
+  let lastErr = null;
+  for (const model of models.slice(0, 4)) {
+    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + geminiKey, "HTTP-Referer": location.origin, "X-Title": "Penzugyi Naplo" },
+      body: JSON.stringify({ model, temperature: 0, messages: [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } }] }] })
+    });
+    const j = await r.json().catch(() => ({}));
+    const msg = (j.error && j.error.message) || (r.ok ? "" : "HTTP " + r.status);
+    if (r.status === 401) throw new Error("Érvénytelen API key (OpenRouter): " + msg);
+    if (r.ok && j.choices && j.choices[0]) {
+      const c = j.choices[0].message && j.choices[0].message.content;
+      const text = Array.isArray(c) ? c.map(p => p.text || "").join("") : (c || "");
+      if (text.trim()) return text;
+      lastErr = new Error("Üres válasz a modelltől."); continue;
+    }
+    lastErr = new Error(msg || "Ismeretlen hiba"); // foglalt / limit / nincs végpont → következő modell
+  }
+  throw lastErr;
+}
 function fileToBase64(file) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
 }
@@ -1218,21 +1263,28 @@ async function runOcrAI(file) {
   document.getElementById("ocrError").hidden = true;
   document.getElementById("ocrStatus").hidden = false;
   const stTxt = document.getElementById("ocrStatusTxt");
-  stTxt.textContent = "AI elemzés… (Gemini)";
+  const viaOR = isOpenRouterKey(geminiKey);
+  stTxt.textContent = viaOR ? "AI elemzés… (OpenRouter, ingyenes modell)" : "AI elemzés… (Gemini)";
   try {
     const b64 = await fileToBase64(file);
+    const mime = file.type || "image/png";
     const catNames = Object.values(allCategories()).map(c => c.name);
     const prompt = `Ez egy bankszámla vagy költés-app képernyőképe. Nyerd ki belőle a TÉNYLEGES tranzakciókat (vásárlások, kiadások). Hagyd ki: napi/időszaki összegzők, egyenleg, időpontok, és az apró kerekítés/megtakarítás (spare change) összegek. Minden tételhez: name = a bolt/kereskedő neve; amount = pozitív egész forintösszeg; category = pontosan egy ezek közül: ${catNames.join(", ")}. Válaszolj KIZÁRÓLAG egy JSON tömbbel, például: [{"name":"Tesco","amount":11499,"category":"Étkezés"}]`;
-    const body = {
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type || "image/png", data: b64 } }] }],
-      generationConfig: { temperature: 0, response_mime_type: "application/json" }
-    };
-    const j = await geminiRequest(body);
     let txt = "";
-    try { txt = j.candidates[0].content.parts[0].text; } catch { txt = ""; }
+    if (viaOR) {
+      txt = await openRouterRequest(prompt, b64, mime);
+    } else {
+      const j = await geminiRequest({
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: b64 } }] }],
+        generationConfig: { temperature: 0, response_mime_type: "application/json" }
+      });
+      try { txt = j.candidates[0].content.parts[0].text; } catch { txt = ""; }
+    }
+    txt = String(txt || "").replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/```(?:json)?/gi, "").trim();
     let arr;
-    try { arr = JSON.parse(txt); } catch { const m = txt.match(/\[[\s\S]*\]/); arr = m ? JSON.parse(m[0]) : []; }
-    if (!Array.isArray(arr)) throw new Error("Az AI válasza nem értelmezhető.");
+    try { arr = JSON.parse(txt); } catch { const m = txt.match(/\[[\s\S]*\]/); try { arr = m ? JSON.parse(m[0]) : []; } catch { arr = null; } }
+    if (arr && !Array.isArray(arr) && typeof arr === "object") arr = Object.values(arr).find(Array.isArray) || []; // {"items":[...]} forma
+    if (!Array.isArray(arr)) throw new Error("Az AI válasza nem értelmezhető. Próbáld újra.");
     const cats = allCategories();
     const byName = {}; Object.keys(cats).forEach(k => byName[deburr(cats[k].name)] = k);
     const fallback = Object.keys(cats)[0] || "green";
@@ -1252,8 +1304,9 @@ async function runOcrAI(file) {
     document.getElementById("ocrStatus").hidden = true;
     const km = String(err.message || "").toLowerCase();
     let extra = "";
-    if (km.includes("api key") || km.includes("api_key")) extra = " – ellenőrizd a Gemini kulcsot (Kategóriák → AI beolvasás).";
-    else if (km.includes("quota") || km.includes("rate")) extra = " – kis idő múlva próbáld újra (ingyenes napi/perc limit).";
+    if (km.includes("api key") || km.includes("api_key") || km.includes("user not found")) extra = " – ellenőrizd a kulcsot (Kategóriák → AI beolvasás).";
+    else if (km.includes("data policy") || km.includes("no endpoints")) extra = " – az OpenRouter oldalán (Settings → Privacy) engedélyezd az ingyenes (free) modellek használatát.";
+    else if (km.includes("quota") || km.includes("rate") || km.includes("429")) extra = " – kis idő múlva próbáld újra (ingyenes napi/perc limit).";
     document.getElementById("ocrErrTxt").textContent = "⚠️ " + err.message + extra;
     document.getElementById("ocrError").hidden = false;
   }
@@ -1275,7 +1328,7 @@ function flagOcrDuplicates() {
 }
 function updateKeyStatus() {
   const el = document.getElementById("keyStatus"); if (!el) return;
-  el.innerHTML = geminiKey ? '<i class="ph-fill ph-check-circle" style="color:var(--income)"></i> AI beolvasás bekapcsolva (Gemini).' : 'Nincs kulcs – a beolvasás a beépített (kevésbé pontos) felismerőt használja.';
+  el.innerHTML = geminiKey ? `<i class="ph-fill ph-check-circle" style="color:var(--income)"></i> AI beolvasás bekapcsolva (${isOpenRouterKey(geminiKey) ? "OpenRouter" : "Gemini"}).` : 'Nincs kulcs – a beolvasás a beépített (kevésbé pontos) felismerőt használja.';
 }
 function refreshOcrButton() {
   const b = document.getElementById("btnOcr"); if (!b) return;
@@ -2121,7 +2174,7 @@ function init() {
     geminiKey = v;
     try { if (v) localStorage.setItem("geminiKey", v); else localStorage.removeItem("geminiKey"); } catch {}
     updateKeyStatus(); refreshOcrButton();
-    showMsg("catMsg", v ? "✅ AI kulcs mentve – a beolvasás mostantól Geminit használ." : "Kulcs törölve.", "success");
+    showMsg("catMsg", v ? `✅ AI kulcs mentve – a beolvasás mostantól ${isOpenRouterKey(v) ? "OpenRoutert" : "Geminit"} használ.` : "Kulcs törölve.", "success");
   });
   document.getElementById("btnClearKey").addEventListener("click", () => {
     geminiKey = ""; document.getElementById("geminiKey").value = "";
