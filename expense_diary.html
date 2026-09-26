@@ -1060,19 +1060,34 @@ function parseOcrCandidates(text) {
   const lines = (text || "").split(/\r?\n/);
   const amountRe = /(-?\d{1,3}(?:[ . ]\d{3})+|-?\d{3,})(?:[.,]\d{1,2})?/g;
   const skipRe = /\b(egyenleg|összesen|osszesen|balance|záró|zaro|nyitó|nyito|időszak|idoszak|dátum|datum|tranzakci|kimutat|számlaszám|szamlaszam|total|elérhető|elerheto)\b/i;
+  const timeRe = /^\s*\d{1,2}[:.]\d{2}\b/;                 // részletsor: "15:17 · -120 Ft"
+  const dayRe = /^\s*(ma|tegnap|today|yesterday|hétfő|hetfo|kedd|szerda|csütörtök|csutortok|péntek|pentek|szombat|vasárnap|vasarnap)\b/i;
+  const cleanName = (s) => s.replace(/\bFt\b|\bHUF\b/gi, " ").replace(/[~_*"'`]{1,}/g, " ").replace(/\s{2,}/g, " ").replace(/[|•·:;+\-–—.,]+$/g, "").replace(/^[|•·:;+\-–—.,]+/g, "").trim();
+  let pendingName = "";
   lines.forEach(line => {
     const raw = line.trim();
     if (!raw) return;
-    if (skipRe.test(raw)) return; // fejléc / egyenleg sorok kihagyása
+    if (timeRe.test(raw)) return;             // idő-előtagú részletsor kihagyása
+    if (skipRe.test(raw) || dayRe.test(raw)) { // fejléc / napi összegző: ne is legyen név-jelölt
+      // de ha van benne összeg és marad értelmes név, akkor sem tekintjük tételnek
+      return;
+    }
     let m, best = null;
     amountRe.lastIndex = 0;
     while ((m = amountRe.exec(raw)) !== null) {
       const num = Math.abs(parseInt(m[1].replace(/[ . ]/g, ""), 10));
       if (!isNaN(num) && num >= 100) { if (!best || num >= best.num) best = { num, str: m[0], idx: m.index }; }
     }
-    if (!best) return;
-    let name = raw.replace(best.str, " ").replace(/\bFt\b|\bHUF\b/gi, " ").replace(/[~_*"'`]{1,}/g, " ").replace(/\s{2,}/g, " ").replace(/[|•·:;+\-–—.,]+$/g, "").replace(/^[|•·:;+\-–—.,]+/g, "").trim();
-    if (name.length < 2) name = "Tétel";
+    if (!best) {
+      // összeg nélküli sor → lehet a következő összeg neve (oszlopos elrendezés)
+      const t = cleanName(raw);
+      if (t.length >= 3) pendingName = t;
+      return;
+    }
+    let name = cleanName(raw.replace(best.str, " "));
+    if (name.length < 3 && pendingName) name = pendingName; // oszlopos: előző sor a név
+    pendingName = "";
+    if (name.length < 3) return;              // értelmetlen név (pl. napi összeg maradéka) → kihagy
     if (name.length > 40) name = name.slice(0, 40);
     out.push({ name, amount: best.num, use: true });
   });
