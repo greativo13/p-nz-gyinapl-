@@ -562,6 +562,19 @@
       </div>
 
       <hr class="divider">
+      <h2><i class="ph-fill ph-sparkle"></i> AI beolvasás (ingyenes)</h2>
+      <div class="card">
+        <p class="hint" style="margin:0 0 10px;">Pontos screenshot-felismeréshez add meg a saját <b>ingyenes Google Gemini</b> kulcsodat. A kulcs csak a te böngésződben tárolódik, sehova nem kerül fel. Kulcs igénylése (kártya nélkül): <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--green-accent);font-weight:600;">aistudio.google.com/apikey</a></p>
+        <label for="geminiKey">Gemini API kulcs</label>
+        <input type="password" id="geminiKey" placeholder="AIza..." autocomplete="off">
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn secondary" id="btnSaveKey"><i class="ph-fill ph-check"></i> Kulcs mentése</button>
+          <button class="btn secondary" id="btnClearKey">Törlés</button>
+        </div>
+        <p class="hint" id="keyStatus" style="margin:8px 0 0;"></p>
+      </div>
+
+      <hr class="divider">
       <h2><i class="ph-fill ph-floppy-disk"></i> Adatok</h2>
       <div class="card data-actions">
         <label class="view-toggle"><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
@@ -783,6 +796,7 @@ let show5030 = true;
 let showCoach = true;
 let rule5030 = { need: 50, want: 30, save: 20 };
 let balanceInc = { biz: true, save: true }; // beleszámítson-e az egyenlegbe
+let geminiKey = "";
 
 /* ---------- LocalStorage ---------- */
 function loadData() {
@@ -791,6 +805,7 @@ function loadData() {
   try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
   try { const s = localStorage.getItem("showCoach"); showCoach = s === null ? true : s === "true"; } catch { showCoach = true; }
+  try { geminiKey = localStorage.getItem("geminiKey") || ""; } catch { geminiKey = ""; }
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
     if (r && [r.need, r.want, r.save].every(n => Number.isFinite(n))) rule5030 = { need: r.need, want: r.want, save: r.save };
@@ -1157,6 +1172,69 @@ async function runOcr(file) {
     document.getElementById("ocrError").hidden = false;
   }
 }
+/* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
+const GEMINI_MODEL = "gemini-2.0-flash";
+function fileToBase64(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
+}
+async function runOcrAI(file) {
+  document.getElementById("ocrModal").classList.add("show");
+  document.getElementById("ocrResult").hidden = true;
+  document.getElementById("ocrError").hidden = true;
+  document.getElementById("ocrStatus").hidden = false;
+  const stTxt = document.getElementById("ocrStatusTxt");
+  stTxt.textContent = "AI elemzés… (Gemini)";
+  try {
+    const b64 = await fileToBase64(file);
+    const catNames = Object.values(allCategories()).map(c => c.name);
+    const prompt = `Ez egy bankszámla vagy költés-app képernyőképe. Nyerd ki belőle a TÉNYLEGES tranzakciókat (vásárlások, kiadások). Hagyd ki: napi/időszaki összegzők, egyenleg, időpontok, és az apró kerekítés/megtakarítás (spare change) összegek. Minden tételhez: name = a bolt/kereskedő neve; amount = pozitív egész forintösszeg; category = pontosan egy ezek közül: ${catNames.join(", ")}. Válaszolj KIZÁRÓLAG egy JSON tömbbel, például: [{"name":"Tesco","amount":11499,"category":"Étkezés"}]`;
+    const body = {
+      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type || "image/png", data: b64 } }] }],
+      generationConfig: { temperature: 0, response_mime_type: "application/json" }
+    };
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(geminiKey)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+    let txt = "";
+    try { txt = j.candidates[0].content.parts[0].text; } catch { txt = ""; }
+    let arr;
+    try { arr = JSON.parse(txt); } catch { const m = txt.match(/\[[\s\S]*\]/); arr = m ? JSON.parse(m[0]) : []; }
+    if (!Array.isArray(arr)) throw new Error("Az AI válasza nem értelmezhető.");
+    const cats = allCategories();
+    const byName = {}; Object.keys(cats).forEach(k => byName[deburr(cats[k].name)] = k);
+    const fallback = Object.keys(cats)[0] || "green";
+    ocrCandidates = arr.filter(o => o && o.name && Number(o.amount) > 0).map(o => {
+      let color = byName[deburr(o.category || "")];
+      if (!color) { const g = guessCategory(o.name); color = g ? g.color : fallback; }
+      const g2 = guessCategory(o.name);
+      const sub = (g2 && g2.color === color) ? g2.sub : "";
+      return { name: String(o.name).slice(0, 40), amount: Math.round(Number(o.amount)), use: true, color, sub };
+    });
+    if (!ocrCandidates.length) throw new Error("Az AI nem talált tételt a képen. Próbálj tisztább képet.");
+    document.getElementById("ocrStatus").hidden = true;
+    renderOcrRows();
+    document.getElementById("ocrResult").hidden = false;
+  } catch (err) {
+    document.getElementById("ocrStatus").hidden = true;
+    const km = String(err.message || "").toLowerCase();
+    let extra = "";
+    if (km.includes("api key") || km.includes("api_key")) extra = " – ellenőrizd a Gemini kulcsot (Kategóriák → AI beolvasás).";
+    else if (km.includes("quota") || km.includes("rate")) extra = " – kis idő múlva próbáld újra (ingyenes napi/perc limit).";
+    document.getElementById("ocrErrTxt").textContent = "⚠️ " + err.message + extra;
+    document.getElementById("ocrError").hidden = false;
+  }
+}
+function startOcr(file) { if (geminiKey) runOcrAI(file); else runOcr(file); }
+function updateKeyStatus() {
+  const el = document.getElementById("keyStatus"); if (!el) return;
+  el.innerHTML = geminiKey ? '<i class="ph-fill ph-check-circle" style="color:var(--income)"></i> AI beolvasás bekapcsolva (Gemini).' : 'Nincs kulcs – a beolvasás a beépített (kevésbé pontos) felismerőt használja.';
+}
+function refreshOcrButton() {
+  const b = document.getElementById("btnOcr"); if (!b) return;
+  b.innerHTML = geminiKey ? '<i class="ph-fill ph-sparkle"></i> Screenshot beolvasása (AI)' : '<i class="ph-fill ph-camera"></i> Screenshot / kép beolvasása';
+}
 function renderOcrRows() {
   const box = document.getElementById("ocrRows");
   const cats = allCategories();
@@ -1185,7 +1263,7 @@ function renderOcrRows() {
 }
 function closeOcr() { document.getElementById("ocrModal").classList.remove("show"); ocrCandidates = []; }
 document.getElementById("btnOcr").addEventListener("click", () => document.getElementById("ocrFile").click());
-document.getElementById("ocrFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) runOcr(f); e.target.value = ""; });
+document.getElementById("ocrFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) startOcr(f); e.target.value = ""; });
 document.getElementById("btnOcrCancel").addEventListener("click", closeOcr);
 document.getElementById("btnOcrClose").addEventListener("click", closeOcr);
 document.getElementById("ocrModal").addEventListener("click", e => { if (e.target.id === "ocrModal") closeOcr(); });
@@ -1206,7 +1284,7 @@ document.addEventListener("paste", e => {
   if (!document.getElementById("panel-manual").classList.contains("active")) return;
   const items = (e.clipboardData && e.clipboardData.items) || [];
   for (const it of items) {
-    if (it.type && it.type.indexOf("image") === 0) { const f = it.getAsFile(); if (f) { runOcr(f); e.preventDefault(); break; } }
+    if (it.type && it.type.indexOf("image") === 0) { const f = it.getAsFile(); if (f) { startOcr(f); e.preventDefault(); break; } }
   }
 });
 
@@ -1741,6 +1819,8 @@ function renderCategories() {
   if (t5030) t5030.checked = show5030;
   const tCoach = document.getElementById("toggleCoach");
   if (tCoach) tCoach.checked = showCoach;
+  const kf = document.getElementById("geminiKey");
+  if (kf) { kf.value = geminiKey; updateKeyStatus(); }
   // egyenleg-beállítások: csak akkor mutatjuk, ha van ilyen bucket-ű kategória
   const allCats = allCategories();
   const hasBiz = Object.values(allCats).some(c => c.bucket === "business");
@@ -1985,6 +2065,19 @@ function init() {
   document.getElementById("toggleCoach").addEventListener("change", (e) => { showCoach = e.target.checked; saveCoach(); renderList(); });
   document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
+  document.getElementById("btnSaveKey").addEventListener("click", () => {
+    const v = document.getElementById("geminiKey").value.trim();
+    geminiKey = v;
+    try { if (v) localStorage.setItem("geminiKey", v); else localStorage.removeItem("geminiKey"); } catch {}
+    updateKeyStatus(); refreshOcrButton();
+    showMsg("catMsg", v ? "✅ AI kulcs mentve – a beolvasás mostantól Geminit használ." : "Kulcs törölve.", "success");
+  });
+  document.getElementById("btnClearKey").addEventListener("click", () => {
+    geminiKey = ""; document.getElementById("geminiKey").value = "";
+    try { localStorage.removeItem("geminiKey"); } catch {}
+    updateKeyStatus(); refreshOcrButton();
+  });
+  refreshOcrButton();
   document.getElementById("catEditSubAdd").addEventListener("click", addCatEditSub);
   document.getElementById("catEditSubInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addCatEditSub(); } });
   wirePlainToggle("obBiz");
