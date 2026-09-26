@@ -1089,32 +1089,6 @@ function loadTesseract() {
     document.head.appendChild(s);
   });
 }
-/* Kép előfeldolgozás: szürkeárnyalat + sötét téma invertálása + felnagyítás → jobb OCR */
-async function preprocessImage(file) {
-  try {
-    const url = URL.createObjectURL(file);
-    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
-    const scale = Math.min(2.5, Math.max(1, 1500 / img.width));
-    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
-    const ctx = cv.getContext("2d");
-    ctx.drawImage(img, 0, 0, w, h);
-    URL.revokeObjectURL(url);
-    const id = ctx.getImageData(0, 0, w, h), d = id.data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4) { const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; d[i] = d[i + 1] = d[i + 2] = g; sum += g; }
-    const avg = sum / (d.length / 4);
-    const invert = avg < 128; // sötét háttér → invertálás
-    for (let i = 0; i < d.length; i += 4) {
-      let v = invert ? 255 - d[i] : d[i];
-      // enyhe kontrasztnyújtás
-      v = v < 90 ? 0 : (v > 170 ? 255 : Math.round((v - 90) / 80 * 255));
-      d[i] = d[i + 1] = d[i + 2] = v;
-    }
-    ctx.putImageData(id, 0, 0);
-    return await new Promise(r => cv.toBlob(r, "image/png"));
-  } catch { return file; } // ha bármi hiba, az eredetivel próbálkozunk
-}
 function parseOcrCandidates(text) {
   const out = [];
   const lines = (text || "").split(/\r?\n/);
@@ -1164,13 +1138,11 @@ async function runOcr(file) {
   stTxt.textContent = "Felismerő betöltése…";
   try {
     const T = await loadTesseract();
-    stTxt.textContent = "Kép előkészítése…";
-    const prepped = await preprocessImage(file);
     stTxt.textContent = "Szöveg felismerése… (első alkalommal a nyelvi csomag letöltése eltarthat)";
     const worker = await T.createWorker("hun+eng", 1, {
       logger: msg => { if (msg.status === "recognizing text") stTxt.textContent = "Felismerés… " + Math.round((msg.progress || 0) * 100) + "%"; }
     });
-    const { data } = await worker.recognize(prepped);
+    const { data } = await worker.recognize(file);
     await worker.terminate();
     ocrCandidates = parseOcrCandidates(data.text || "");
     if (!ocrCandidates.length) throw new Error("Nem találtam felismerhető tételt a képen. Próbálj élesebb screenshotot, ahol jól látszanak az összegek.");
