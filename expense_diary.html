@@ -790,7 +790,7 @@ const DEFAULT_CATEGORIES = {
 };
 const COLOR_HEX = { green: "#1f9d5b", blue: "#3b82f6", yellow: "#eab308", pink: "#ec4899", gray: "#94a3a0" };
 const ICON_CHOICES = ["receipt","fork-knife","shopping-bag","shopping-cart","house","car","gas-pump","pill","first-aid-kit","gift","airplane","train-simple","game-controller","device-mobile","phone","t-shirt","coffee","lightbulb","barbell","graduation-cap","dog","film-slate","music-notes","coins","piggy-bank","wallet","credit-card","briefcase","bank","currency-circle-dollar","heart","package"];
-function iconHtml(icon) { return /^[a-z][a-z0-9-]+$/.test(icon || "") ? `<i class="ph-fill ph-${icon}"></i>` : (icon || ""); }
+function iconHtml(icon) { return /^[a-z][a-z0-9-]+$/.test(icon || "") ? `<i class="ph-fill ph-${icon}"></i>` : escapeHtml(icon || ""); }
 function a11yClick(el) { el.tabIndex = 0; el.setAttribute("role", "button"); el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } }); }
 const EMOJI_TO_PH = { "🧾":"receipt","🍽️":"fork-knife","💼":"briefcase","🛍️":"shopping-bag","📦":"package","🏠":"house","🚗":"car","⛽":"gas-pump","💊":"pill","🎁":"gift","✈️":"airplane","🎮":"game-controller","📱":"device-mobile","👕":"t-shirt","☕":"coffee","💡":"lightbulb","🏋️":"barbell","🎓":"graduation-cap","🐶":"dog","🎬":"film-slate","💰":"piggy-bank","🛒":"shopping-cart","💶":"currency-circle-dollar","🎵":"music-notes","💸":"coins" };
 
@@ -818,10 +818,56 @@ let balanceInc = { biz: true, save: true }; // beleszámítson-e az egyenlegbe
 let geminiKey = "";
 
 /* ---------- LocalStorage ---------- */
+/* ---------- Adat-ellenőrzés (import + betöltés) ----------
+   Egy megosztott/hibás mentésfájl se tudjon kódot csempészni az appba, és ne rontsa el az adatokat. */
+const KEY_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const BUCKETS = ["need", "want", "saving", "business"];
+function sanitizeCategories(obj) {
+  const out = {};
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return out;
+  Object.keys(obj).forEach(k => {
+    const c = obj[k];
+    if (!KEY_RE.test(k) || !c || typeof c !== "object") return;
+    const color = typeof c.color === "string" && (/^#[0-9a-fA-F]{3,8}$/.test(c.color) || COLOR_HEX[c.color]) ? c.color : "gray";
+    const icon = typeof c.icon === "string" && (/^[a-z][a-z0-9-]+$/.test(c.icon) || (c.icon.length <= 8 && !/[<>"'&]/.test(c.icon))) ? c.icon : "coins";
+    const cat = {
+      name: String(c.name == null ? k : c.name).trim().slice(0, 40) || k,
+      color, icon,
+      bucket: BUCKETS.includes(c.bucket) ? c.bucket : "want",
+      subs: Array.isArray(c.subs) ? c.subs.filter(s => typeof s === "string" && s.trim()).map(s => s.trim().slice(0, 30)).slice(0, 50) : []
+    };
+    const lim = Number(c.limit);
+    if (Number.isFinite(lim) && lim > 0) cat.limit = Math.round(lim);
+    out[k] = cat;
+  });
+  return out;
+}
+function sanitizeHidden(arr) { return Array.isArray(arr) ? arr.filter(k => typeof k === "string" && KEY_RE.test(k)) : []; }
+function sanitizeItems(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  arr.forEach(it => {
+    if (!it || typeof it !== "object") return;
+    const amount = Number(it.amount);
+    const name = String(it.name == null ? "" : it.name).trim().slice(0, 80);
+    if (!name || !Number.isFinite(amount) || amount <= 0) return;
+    const type = it.type === "income" ? "income" : "expense";
+    const item = {
+      name, amount, type,
+      color: type === "income" ? null : (typeof it.color === "string" && KEY_RE.test(it.color) ? it.color : "gray"),
+      month: typeof it.month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(it.month) ? it.month : "", // hiányzó hónapot nem helyezünk át csendben
+      sub: type === "income" ? "" : String(it.sub == null ? "" : it.sub).trim().slice(0, 30)
+    };
+    if (type !== "income" && BUCKETS.includes(it.bucket)) item.bucket = it.bucket;
+    out.push(item);
+  });
+  return out;
+}
+
 function loadData() {
-  try { const e = localStorage.getItem("expenseItems"); expenseItems = e ? JSON.parse(e) : []; } catch { expenseItems = []; }
-  try { const c = localStorage.getItem("customCategories"); customCategories = c ? JSON.parse(c) : {}; } catch { customCategories = {}; }
-  try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = h ? JSON.parse(h) : []; } catch { hiddenDefaults = []; }
+  try { const e = localStorage.getItem("expenseItems"); expenseItems = sanitizeItems(e ? JSON.parse(e) : []); } catch { expenseItems = []; }
+  try { const c = localStorage.getItem("customCategories"); customCategories = sanitizeCategories(c ? JSON.parse(c) : {}); } catch { customCategories = {}; }
+  try { const h = localStorage.getItem("hiddenDefaults"); hiddenDefaults = sanitizeHidden(h ? JSON.parse(h) : []); } catch { hiddenDefaults = []; }
   try { const s = localStorage.getItem("show5030"); show5030 = s === null ? true : s === "true"; } catch { show5030 = true; }
   try { const s = localStorage.getItem("showCoach"); showCoach = s === null ? true : s === "true"; } catch { showCoach = true; }
   try { geminiKey = String(localStorage.getItem("geminiKey") || "").replace(/[\s​-‍⁠﻿"'`„”«»]/g, ""); } catch { geminiKey = ""; }
@@ -862,7 +908,7 @@ function catLimit(key) { const c = allCategories(); return (c[key] && Number(c[k
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
-  if (typeof col === "string" && col[0] === "#") return col;
+  if (typeof col === "string" && /^#[0-9a-fA-F]{3,8}$/.test(col)) return col; // csak valódi hex – attribútumba kerül
   return COLOR_HEX[col] || "#94a3a0";
 }
 function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
@@ -1203,7 +1249,7 @@ async function runOcr(file) {
   }
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v54"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v55"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2107,8 +2153,8 @@ function exportJSON() {
 }
 function csvCell(v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function exportCSV() {
-  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Hónap"]];
-  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", it.month || ""]));
+  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Besorolás", "Hónap"]];
+  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", (it.type || "expense") === "income" ? "" : bucketMeta(itemBucket(it)).t, it.month || ""]));
   const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
   downloadFile("penzugyi-naplo.csv", "﻿" + csv, "text/csv;charset=utf-8");
   showMsg("catMsg", "✅ CSV (Excel) letöltve.", "success");
@@ -2124,10 +2170,15 @@ document.getElementById("importFile").addEventListener("change", (e) => {
     try {
       const data = JSON.parse(ev.target.result);
       if (!data || !Array.isArray(data.expenseItems)) throw new Error("Érvénytelen fájl.");
-      if (!confirm(`Visszaállítás: ${data.expenseItems.length} tétel és ${Object.keys(data.customCategories || {}).length} egyedi kategória.\n\nEz FELÜLÍRJA a jelenlegi adatokat. Folytatod?`)) return;
-      expenseItems = data.expenseItems;
-      customCategories = data.customCategories || {};
-      hiddenDefaults = Array.isArray(data.hiddenDefaults) ? data.hiddenDefaults : [];
+      const items = sanitizeItems(data.expenseItems);
+      const cats = sanitizeCategories(data.customCategories);
+      const skippedItems = data.expenseItems.length - items.length;
+      const skippedCats = Object.keys(data.customCategories || {}).length - Object.keys(cats).length;
+      const skippedTxt = (skippedItems || skippedCats) ? `\n\n⚠️ Kihagyva hibás adat miatt: ${skippedItems} tétel, ${skippedCats} kategória.` : "";
+      if (!confirm(`Visszaállítás: ${items.length} tétel és ${Object.keys(cats).length} egyedi kategória.${skippedTxt}\n\nEz FELÜLÍRJA a jelenlegi adatokat. Folytatod?`)) return;
+      expenseItems = items;
+      customCategories = cats;
+      hiddenDefaults = sanitizeHidden(data.hiddenDefaults);
       saveItems(); saveCategories();
       // beállítások visszaállítása (ha a mentés tartalmazza – régebbi fájlnál kimarad)
       const st = data.settings || {};

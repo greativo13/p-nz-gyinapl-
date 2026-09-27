@@ -1,5 +1,5 @@
 /* Pénzügyi Napló – Service Worker (offline támogatás) */
-const CACHE = "penzugyi-naplo-v54";
+const CACHE = "penzugyi-naplo-v55";
 const CORE = [
   "./",
   "./index.html",
@@ -26,10 +26,16 @@ self.addEventListener("activate", (e) => {
 });
 
 /* HTML/oldal: HÁLÓZAT ELŐSZÖR (mindig friss, ha van net), offline a cache.
-   Egyéb fájl: cache előszőr, háttérben frissít. */
+   Egyéb fájl: cache először, háttérben frissít.
+   Csak a saját fájlokat és a statikus CDN-eket (betűk, ikonok, felismerő) tároljuk –
+   API-hívásokat (OpenRouter, Gemini) SOHA: azok kulccsal hitelesítettek, és mindig frissnek kell lenniük. */
+const CACHEABLE_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com", "cdn.jsdelivr.net"];
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin && !CACHEABLE_HOSTS.includes(url.hostname)) return; // közvetlenül a hálózatra
 
   const isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
 
@@ -37,8 +43,10 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          if (res && res.ok) { // hibaoldalt ne tároljunk el a működő app helyett
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match(req).then((m) => m || caches.match("./index.html")))
