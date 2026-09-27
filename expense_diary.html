@@ -352,6 +352,7 @@
   .coach-tip.bad i { color: var(--danger); }
   .coach-tip.info i { color: var(--green-accent); }
   .exp-note { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 2px; overflow-wrap: anywhere; }
+  .exp-shift { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--soft); color: var(--soft-text); font-size: 11px; font-weight: 600; }
   .exp-fixed { color: var(--green-accent); font-size: 12px; vertical-align: -1px; }
   .exp-bucket { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; margin-left: 2px; }
 
@@ -627,6 +628,7 @@
         <div id="manualIncWrap" style="display:none">
           <label>Bevétel típusa</label>
           <div class="sub-picker" id="manualIncs"></div>
+          <label class="view-toggle"><input type="checkbox" id="mShift"> <i class="ph-fill ph-calendar-plus"></i> <span id="mShiftLbl">Következő havi keretbe számít</span></label>
         </div>
 
         <div id="manualCatWrap">
@@ -798,6 +800,7 @@
     <div id="editIncWrap" style="display:none">
       <label>Bevétel típusa</label>
       <div class="sub-picker" id="editIncs"></div>
+      <label class="view-toggle"><input type="checkbox" id="editShift"> <i class="ph-fill ph-calendar-plus"></i> <span id="editShiftLbl">Következő havi keretbe számít</span></label>
     </div>
     <div id="editCatWrap">
       <label>Kategória</label>
@@ -1067,9 +1070,14 @@ function sanitizeIncomeCats(arr) {
   return out.length ? out : DEFAULT_INCOME_CATS.slice();
 }
 function sanitizeRecurring(arr) {
-  // ugyanaz a szabály, mint a tételeknél, csak hónap/nap nélkül
-  return sanitizeItems((Array.isArray(arr) ? arr : []).map(t => Object.assign({}, t, { month: "2000-01" })))
-    .map(t => { delete t.month; return t; }).slice(0, 60);
+  // ugyanaz a szabály, mint a tételeknél, csak hónap nélkül; a "következő havi keretbe" jelölés megmarad
+  return (Array.isArray(arr) ? arr : []).map(t => {
+    const s = sanitizeItems([Object.assign({}, t, { month: "2000-01", forMonth: undefined })])[0];
+    if (!s) return null;
+    delete s.month;
+    if (t && t.shiftNext === true && s.type === "income") s.shiftNext = true;
+    return s;
+  }).filter(Boolean).slice(0, 60);
 }
 function sanitizeGoals(arr) {
   if (!Array.isArray(arr)) return [];
@@ -1096,6 +1104,7 @@ function sanitizeItems(arr) {
     if (Number.isInteger(day) && day >= 1 && day <= 31) item.day = day;
     const note = String(it.note == null ? "" : it.note).trim().slice(0, 120);
     if (note) item.note = note;
+    if (type === "income" && typeof it.forMonth === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(it.forMonth) && it.forMonth !== item.month) item.forMonth = it.forMonth;
     out.push(item);
   });
   return out;
@@ -1334,6 +1343,9 @@ function isDuplicate(name, amount, color, month, type, sub, ignoreIndex, day) {
   });
 }
 /* nap / megjegyzés segédek */
+/* melyik havi keretbe számít a tétel: hó végi fizetésnél a következő hónap, egyébként a saját hónapja */
+function effMonth(it) { return (it && (it.forMonth || it.month)) || ""; }
+function monthNameLong(m) { const [y, mo] = String(m).split("-").map(Number); return new Intl.DateTimeFormat("hu-HU", { month: "long" }).format(new Date(y, mo - 1, 1)); }
 function validDay(v) { const d = Number(v); return Number.isInteger(d) && d >= 1 && d <= 31 ? d : undefined; }
 function daysInMonth(m) { const [y, mo] = String(m || "").split("-").map(Number); return y && mo ? new Date(y, mo, 0).getDate() : 31; }
 function clampDay(day, month) { return day ? Math.min(day, daysInMonth(month)) : undefined; }
@@ -1342,6 +1354,19 @@ function itemDateLabel(it) {
   if (!it.day) return monthLabelShort(it.month);
   const [y, m] = it.month.split("-").map(Number);
   return new Intl.DateTimeFormat("hu-HU", { month: "short", day: "numeric" }).format(new Date(y, m - 1, clampDay(it.day, it.month)));
+}
+/* "következő havi keretbe" pipa: hó végi (20. utáni) fizetésnél magától bejelöli, amíg a felhasználó nem nyúl hozzá */
+let shiftTouched = false;
+function updateShiftLabel(monthId, lblId) {
+  const m = document.getElementById(monthId).value || currentMonth();
+  document.getElementById(lblId).textContent = `Következő havi keretbe számít (${monthNameLong(nextMonthOf(m))})`;
+}
+function autoShift() {
+  updateShiftLabel("mMonth", "mShiftLbl");
+  if (shiftTouched) return;
+  const sel = document.querySelector("#manualIncs .sub-chip.selected");
+  const day = validDay(document.getElementById("mDay").value);
+  document.getElementById("mShift").checked = !!(sel && deburr(sel.dataset.sub) === "fizetes" && day && day >= 20);
 }
 /* fix havi tételek (sablonok) */
 function recurringKey(t) { return deburr(t.name).trim() + "|" + (t.type || "expense") + "|" + (t.color || ""); }
@@ -1354,6 +1379,7 @@ function setRecurring(it, on) {
     if (it.bucket) t.bucket = it.bucket;
     if (it.note) t.note = it.note;
     if (it.day) t.day = it.day;
+    if (it.forMonth && (it.type || "expense") === "income") t.shiftNext = true;
     recurring.push(t);
   }
   saveRecurring();
@@ -1398,6 +1424,7 @@ function addEntry(name, amount, color, month, type, sub, bucket, force, extra) {
   if (day) item.day = clampDay(day, month);
   const note = String(extra.note || "").trim().slice(0, 120);
   if (note) item.note = note;
+  if (type === "income" && extra.forMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(extra.forMonth) && extra.forMonth !== month) item.forMonth = extra.forMonth;
   expenseItems.push(item);
   saveItems();
   return { ok: true };
@@ -1413,6 +1440,7 @@ function submitManual() {
   const bucketSel = type === "income" ? null : getBucket("manualBucket");
   const noteEl = document.getElementById("mNote");
   const extra = { day: validDay(document.getElementById("mDay").value), note: noteEl.value };
+  if (type === "income" && document.getElementById("mShift").checked) extra.forMonth = nextMonthOf(month);
   let res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel, false, extra);
   if (!res.ok && res.dup) {
     if (confirm(`Úgy tűnik, ez a tétel már szerepel ebben a hónapban:\n\n„${nameEl.value.trim()}" – ${formatFt(amountEl.value)}\n\nMégis hozzáadod?`)) {
@@ -1426,8 +1454,8 @@ function submitManual() {
     const added = expenseItems[expenseItems.length - 1];
     const fixedEl = document.getElementById("mFixed");
     if (fixedEl.checked) setRecurring(added, true);
-    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
-    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false;
+    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
+    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift();
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
     if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
@@ -1551,7 +1579,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v59"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v60"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -1842,7 +1870,8 @@ function doRecurAdd() {
     const amount = Math.round(Number(amtEl && amtEl.value));
     if (!amount || amount <= 0) return;
     if (amount !== Number(t.amount)) { t.amount = amount; changed = true; } // pl. áremelés → marad a következő hónapokra is
-    const res = addEntry(t.name, amount, t.color, month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note });
+    const shift = t.shiftNext && t.type === "income"; // hó végi fizetés: az előző hónap végén érkezik, erre a hónapra számít
+    const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
     if (res.ok) added++;
   });
   if (changed) saveRecurring();
@@ -2051,7 +2080,7 @@ function renderTrend() {
   if (trendMode !== "all" && !cats[trendMode]) trendMode = "all";
   const exp = {}, inc = {}, cat = {}, usedCats = new Set();
   expenseItems.forEach(it => {
-    const m = it.month || "";
+    const m = effMonth(it);
     if (!m) return;
     if ((it.type || "expense") === "income") { inc[m] = (inc[m] || 0) + Number(it.amount); return; }
     if (it.color) usedCats.add(it.color);
@@ -2096,7 +2125,7 @@ function renderTrend() {
 
 /* ---------- Áttekintő kártyák: fix tételek, mentés, célok, bevételek, heti költés ---------- */
 function pendingRecurring(month) {
-  const have = new Set(expenseItems.filter(it => (it.month || "") === month).map(recurringKey));
+  const have = new Set(expenseItems.filter(it => effMonth(it) === month).map(recurringKey));
   return recurring.filter(t => !have.has(recurringKey(t)));
 }
 function renderRecurringCard(month) {
@@ -2197,7 +2226,7 @@ function renderList() {
     return;
   }
 
-  const itemMonths = [...new Set(expenseItems.map(it => it.month).filter(Boolean))];
+  const itemMonths = [...new Set(expenseItems.map(effMonth).filter(Boolean))];
   const months = [...new Set([currentMonth(), ...itemMonths])].sort().reverse();
   if (selectedMonth === null) selectedMonth = currentMonth();
   if (selectedMonth !== "all" && !months.includes(selectedMonth)) selectedMonth = currentMonth();
@@ -2208,7 +2237,7 @@ function renderList() {
   filterSel.innerHTML = opts;
   filterSel.value = selectedMonth;
 
-  const monthView = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => (it.month || "") === selectedMonth);
+  const monthView = selectedMonth === "all" ? expenseItems : expenseItems.filter(it => effMonth(it) === selectedMonth);
 
   if (monthView.length === 0) {
     controls.style.display = "none";
@@ -2350,7 +2379,7 @@ function renderList() {
   /* tétel-lista: hónap + keresés + rendezés */
   controls.style.display = "flex";
   let rows = expenseItems.map((it, i) => ({ it, i }))
-    .filter(x => selectedMonth === "all" || (x.it.month || "") === selectedMonth)
+    .filter(x => selectedMonth === "all" || effMonth(x.it) === selectedMonth)
     .filter(x => { // keresés névben, megjegyzésben, alkategóriában (ékezetfüggetlenül)
       if (!searchQuery) return true;
       const q = deburr(searchQuery);
@@ -2381,7 +2410,7 @@ function renderList() {
           <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? '<i class="ph-fill ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</div>
           <div class="exp-info">
             <div class="exp-name">${escapeHtml(it.name)}</div>
-            <div class="exp-cat">${isIncome ? "Bevétel" + (it.sub ? " › " + escapeHtml(it.sub) : "") : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${itemDateLabel(it)}${isRecurring(it) ? ' <i class="ph-fill ph-arrows-clockwise exp-fixed" title="Fix havi tétel"></i>' : ""}${(!isIncome && it.bucket) ? ` <span class="exp-bucket"><i class="ph-fill ph-${bucketMeta(it.bucket).i}"></i> ${bucketMeta(it.bucket).t}</span>` : ""}</div>
+            <div class="exp-cat">${isIncome ? "Bevétel" + (it.sub ? " › " + escapeHtml(it.sub) : "") : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${itemDateLabel(it)}${it.forMonth ? ` <span class="exp-shift"><i class="ph-fill ph-arrow-bend-down-right"></i> ${monthNameLong(it.forMonth)}i keret</span>` : ""}${isRecurring(it) ? ' <i class="ph-fill ph-arrows-clockwise exp-fixed" title="Fix havi tétel"></i>' : ""}${(!isIncome && it.bucket) ? ` <span class="exp-bucket"><i class="ph-fill ph-${bucketMeta(it.bucket).i}"></i> ${bucketMeta(it.bucket).t}</span>` : ""}</div>
             ${it.note ? `<div class="exp-note">${escapeHtml(it.note)}</div>` : ""}
             <div class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</div>
           </div>
@@ -2420,7 +2449,8 @@ function copyItemToNextMonth(i) {
   const it = expenseItems[i];
   if (!it) return;
   const target = nextMonthOf(it.month || currentMonth());
-  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket, false, { day: it.day, note: it.note });
+  const targetFor = it.forMonth ? nextMonthOf(it.forMonth) : undefined;
+  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket, false, { day: it.day, note: it.note, forMonth: targetFor });
   if (res.ok) {
     toast(`📋 „${it.name}" átmásolva: ${monthLabelShort(target)}`);
     renderList();
@@ -2451,6 +2481,8 @@ function openEdit(i) {
   document.getElementById("editCatWrap").style.display = (it.type === "income") ? "none" : "";
   document.getElementById("editIncWrap").style.display = (it.type === "income") ? "" : "none";
   renderIncPicker("editIncWrap", "editIncs", it.type === "income" ? (it.sub || "") : "");
+  document.getElementById("editShift").checked = !!it.forMonth;
+  updateShiftLabel("editMonth", "editShiftLbl");
   buildColorPicker("editColors", it.color, key => {
     renderSubPicker("editSubsWrap", "editSubs", key, "");
     setBucket("editBucket", catBucket(key));
@@ -2483,6 +2515,7 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (type !== "income" && bucketSel && bucketSel !== catBucket(color)) item.bucket = bucketSel;
   if (day) item.day = clampDay(day, month);
   if (note) item.note = note;
+  if (type === "income" && document.getElementById("editShift").checked) item.forMonth = nextMonthOf(month);
   const old = expenseItems[editIndex];
   const wasFixed = isRecurring(old), wantFixed = document.getElementById("editFixed").checked;
   if (wasFixed) setRecurring(old, false);          // régi sablon le (név/kategória változhatott)
@@ -2712,7 +2745,7 @@ function mentorStats() {
   const per = months.map(m => {
     const r = { m, n: 0, income: 0, need: 0, want: 0, saving: 0, orders: 0, snack: 0, small: 0, subs: 0, food: 0 };
     expenseItems.forEach(it => {
-      if ((it.month || "") !== m) return;
+      if (effMonth(it) !== m) return;
       r.n++;
       const a = Number(it.amount);
       if ((it.type || "expense") === "income") { r.income += a; return; }
@@ -2803,12 +2836,12 @@ function challengeStreak() { let n = 0; for (let i = mentor.hist.length - 1; i >
 function reflectionDue() {
   const pm = prevMonthOf(currentMonth());
   if (new Date().getDate() > 15 || mentor.refl[pm]) return null;
-  return expenseItems.some(it => (it.month || "") === pm) ? pm : null;
+  return expenseItems.some(it => effMonth(it) === pm) ? pm : null;
 }
 function monthSummary(m) {
   let inc = 0, spend = 0, sav = 0; const byCat = {};
   expenseItems.forEach(it => {
-    if ((it.month || "") !== m) return;
+    if (effMonth(it) !== m) return;
     const a = Number(it.amount);
     if ((it.type || "expense") === "income") { inc += a; return; }
     const b = itemBucket(it);
@@ -3020,7 +3053,7 @@ function mentorContext() {
   const cur = currentMonth(), months = [prevMonthOf(prevMonthOf(cur)), prevMonthOf(cur), cur];
   const cats = allCategories();
   const lines = months.map(m => {
-    const its = expenseItems.filter(it => (it.month || "") === m);
+    const its = expenseItems.filter(it => effMonth(it) === m);
     if (!its.length) return null;
     let inc = 0; const byCat = {}, bucket = { need: 0, want: 0, saving: 0, business: 0 };
     its.forEach(it => {
@@ -3041,7 +3074,7 @@ function mentorContext() {
     const clean = (s) => String(s || "").replace(/[\r\n|]+/g, " ").trim();
     const pm = prevMonthOf(cur);
     const rows = expenseItems.map((it, i) => ({ it, i }))
-      .filter(x => x.it.month === cur || x.it.month === pm)
+      .filter(x => effMonth(x.it) === cur || effMonth(x.it) === pm)
       .sort((a, b) => (b.it.month || "").localeCompare(a.it.month || "") || (b.it.day || 0) - (a.it.day || 0) || b.i - a.i)
       .slice(0, 150)
       .map(({ it }) => {
@@ -3049,7 +3082,7 @@ function mentorContext() {
         const cat = (it.type || "expense") === "income"
           ? "Bevétel" + (it.sub ? " / " + clean(it.sub) : "")
           : clean((cats[it.color] && cats[it.color].name) || "Egyéb") + (it.sub ? " / " + clean(it.sub) : "") + " (" + bucketMeta(itemBucket(it)).t + ")";
-        return `${date} | ${clean(it.name).slice(0, 60)} | ${Math.round(Number(it.amount))} Ft | ${cat}${it.note ? " | megj.: " + clean(it.note).slice(0, 60) : ""}`;
+        return `${date}${it.forMonth ? " (" + it.forMonth + " keretbe)" : ""} | ${clean(it.name).slice(0, 60)} | ${Math.round(Number(it.amount))} Ft | ${cat}${it.note ? " | megj.: " + clean(it.note).slice(0, 60) : ""}`;
       });
     itemsTxt = `\nTételek (aktuális és előző hónap, legújabb elöl${rows.length === 150 ? ", az első 150" : ""}; dátum | név | összeg | kategória):\n` + (rows.join("\n") || "nincs");
   }
@@ -3248,8 +3281,8 @@ async function exportJSON() {
 }
 function csvCell(v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function exportCSV() {
-  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Besorolás", "Hónap", "Nap", "Megjegyzés"]];
-  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", (it.type || "expense") === "income" ? "" : bucketMeta(itemBucket(it)).t, it.month || "", it.day || "", it.note || ""]));
+  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Besorolás", "Hónap", "Nap", "Megjegyzés", "Keret-hónap"]];
+  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", (it.type || "expense") === "income" ? "" : bucketMeta(itemBucket(it)).t, it.month || "", it.day || "", it.note || "", it.forMonth || ""]));
   const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
   downloadFile("penzugyi-naplo.csv", "﻿" + csv, "text/csv;charset=utf-8");
   showMsg("catMsg", "✅ CSV (Excel) letöltve.", "success");
@@ -3374,8 +3407,15 @@ function init() {
     entryType = t;
     document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : "";
     document.getElementById("manualIncWrap").style.display = t === "income" ? "" : "none";
+    autoShift();
   });
   renderIncPicker("manualIncWrap", "manualIncs", "");
+  document.getElementById("mShift").addEventListener("change", () => { shiftTouched = true; });
+  document.getElementById("manualIncs").addEventListener("click", autoShift);
+  document.getElementById("mDay").addEventListener("input", autoShift);
+  document.getElementById("mMonth").addEventListener("change", autoShift);
+  document.getElementById("editMonth").addEventListener("change", () => updateShiftLabel("editMonth", "editShiftLbl"));
+  autoShift();
   wirePlainToggle("newCatBucket");
   wirePlainToggle("catEditBucket");
   wirePlainToggle("manualBucket");
