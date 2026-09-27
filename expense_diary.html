@@ -176,11 +176,14 @@
   /* A hónap-mező kompakt, keskeny, balra igazítva (nem tölti ki a sort) */
   input[type="month"] { width: 210px; max-width: 100%; display: block; }
   /* hónap + nap egy sorban */
-  .date-row { display: flex; gap: 10px; align-items: flex-end; }
-  .date-row > div:first-child { flex: 0 1 210px; min-width: 0; }
-  .date-row input[type="month"] { width: 100%; }
-  .date-row input[type="number"] { width: 84px; text-align: center; }
-  .date-row input { height: 51px; }
+  /* hónap + nap egy sorban: rács, hogy iPhone-on se lógjon egymásba */
+  .date-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; align-items: end; }
+  .date-row > div { min-width: 0; }
+  .date-row input { width: 100%; min-width: 0; height: 48px; }
+  .date-row input[type="number"] { text-align: center; }
+  /* iOS saját dátummező-stílusa nem tartja a méretet → kikapcsoljuk, a szöveg balra, mint a többi mezőben */
+  input[type="month"], input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 48px; line-height: 1.2; }
+  input[type="month"]::-webkit-date-and-time-value, input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
   /* ---------- Bevétel/Kiadás kapcsoló ---------- */
   .type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -324,7 +327,7 @@
   .ocr-row .ocr-cat { width: 100%; }
   .ocr-row-bottom { display: flex; gap: 8px; }
   .ocr-row-bottom .ocr-cat { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
-  .ocr-row .ocr-date { width: 150px; flex-shrink: 0; margin-bottom: 0; padding: 9px 8px; font-size: 14px; }
+  .ocr-row .ocr-date { width: 150px; flex-shrink: 0; margin-bottom: 0; padding: 9px 8px; font-size: 14px; min-height: 0; }
   .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
   .ai-prov { margin: 0 0 10px 18px; font-size: 13px; line-height: 1.7; color: var(--text); }
   #updBanner { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 9999; display: flex; align-items: center; gap: 12px; background: var(--brand); color: #fff; padding: 9px 10px 9px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: calc(100% - 32px); }
@@ -1548,7 +1551,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v58"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v59"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
