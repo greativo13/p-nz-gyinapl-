@@ -294,6 +294,8 @@
   .chat-modal { display: flex; flex-direction: column; height: min(640px, 88vh); overflow: hidden; padding-bottom: 14px; }
   .chat-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
   .chat-note { font-size: 11.5px; color: var(--muted); margin: 0 0 10px; }
+  .chat-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin: 6px 0 4px; cursor: pointer; color: var(--text); }
+  .chat-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--green-accent); flex-shrink: 0; }
   .chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
   .chat-msg { max-width: 88%; padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
   .chat-msg.bot { background: var(--chip); align-self: flex-start; border-bottom-left-radius: 4px; }
@@ -922,7 +924,8 @@
 <div class="modal-overlay" id="chatModal">
   <div class="modal chat-modal">
     <div class="chat-head"><h3 style="margin:0"><i class="ph-fill ph-chats-circle"></i> Mentor</h3><button type="button" class="bud-hide" id="btnChatClose" aria-label="Bezárás"><i class="ph ph-x"></i></button></div>
-    <p class="chat-note">Csak havi, kategóriánkénti összesítéseket lát – a tételek neveit nem. Nem ad befektetési tanácsot.</p>
+    <label class="chat-toggle"><input type="checkbox" id="chatItems"> Lássa a tételeimet is <span class="lbl-hint">(aktuális + előző hónap)</span></label>
+    <p class="chat-note" id="chatNote"></p>
     <div class="chat-log" id="chatLog"></div>
     <div class="chat-suggest" id="chatSuggest"></div>
     <div class="chat-input">
@@ -1106,6 +1109,7 @@ function loadData() {
   try { goals = sanitizeGoals(JSON.parse(localStorage.getItem("goals") || "[]")); } catch { goals = []; }
   try { const s = localStorage.getItem("showMentor"); showMentor = s === null ? true : s === "true"; } catch { showMentor = true; }
   try { mentor = sanitizeMentor(JSON.parse(localStorage.getItem("mentor") || "null")); } catch {}
+  try { mentorItems = localStorage.getItem("mentorItems") === "true"; } catch { mentorItems = false; }
   try { geminiKey = String(localStorage.getItem("geminiKey") || "").replace(/[\s​-‍⁠﻿"'`„”«»]/g, ""); } catch { geminiKey = ""; }
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
@@ -1544,7 +1548,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v57"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v58"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3000,6 +3004,15 @@ document.getElementById("mentorModal").addEventListener("click", e => { if (e.ta
 const MENTOR_SYSTEM = `Te egy barátságos, gyakorlatias pénzügyi tudatosság mentor vagy egy magyar nyelvű költségnapló appban. Magyarul, tegezve, röviden válaszolj (legfeljebb kb. 150 szó; ha segít, pontokba szedve). Az alábbiakban megkapod a felhasználó saját, havi összesített adatait – ha releváns, hivatkozz rájuk konkrét számokkal. Költségvetésben, költési szokásokban, megtakarítási szokásokban, vészalapban és adósságkezelésben segíts. NE ajánlj konkrét befektetési terméket, részvényt, alapot, kriptovalutát vagy pénzügyi szolgáltatót; befektetési, adó- vagy jogi döntésnél javasold, hogy forduljon független, engedéllyel rendelkező szakemberhez. Ne ítélkezz, bátoríts, és ha kell, kérdezz vissza. Ha az adatokból valami nem derül ki, mondd meg őszintén.`;
 const CHAT_SUGGEST = ["Miért fogy el a pénzem hó végére?", "Hol tudnék a legkönnyebben spórolni?", "Hogyan kezdjek vészalapot?", "Reálisak a megtakarítási céljaim?"];
 let chatHistory = [], chatBusy = false;
+let mentorItems = false; // tételes adatok küldése az AI-mentornak – a felhasználó dönti el
+function saveMentorItems() { try { localStorage.setItem("mentorItems", mentorItems); } catch {} }
+function updateChatNote() {
+  const cb = document.getElementById("chatItems"); if (cb) cb.checked = mentorItems;
+  const n = document.getElementById("chatNote");
+  if (n) n.textContent = mentorItems
+    ? "A havi összesítések mellett az aktuális és az előző hónap tételeit is látja (név, összeg, kategória, dátum, megjegyzés). Nem ad befektetési tanácsot."
+    : "Csak havi, kategóriánkénti összesítéseket lát – a tételek neveit nem. Nem ad befektetési tanácsot.";
+}
 function mentorContext() {
   const cur = currentMonth(), months = [prevMonthOf(prevMonthOf(cur)), prevMonthOf(cur), cur];
   const cats = allCategories();
@@ -3020,7 +3033,24 @@ function mentorContext() {
   const g = goals.map(x => `${x.name}: ${goalProgress(x)} / ${x.target} Ft`).join("; ");
   const fix = recurring.filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
   const ch = mentor.ch ? `${CHALLENGES[mentor.ch.id].title} (cél: ${mentor.ch.target})` : "nincs";
-  return `Mai dátum: ${isoDate(new Date())}. Költségvetési szabály: ${rule5030.need}-${rule5030.want}-${rule5030.save} (szükséglet-vágy-megtakarítás %).\nHavi összesítések:\n${lines.join("\n") || "nincs adat"}\nMegtakarítási célok: ${g || "nincs"}\nFix havi kiadások összesen: ${fix} Ft\nAktuális heti kihívás: ${ch}`;
+  let itemsTxt = "";
+  if (mentorItems) {
+    const clean = (s) => String(s || "").replace(/[\r\n|]+/g, " ").trim();
+    const pm = prevMonthOf(cur);
+    const rows = expenseItems.map((it, i) => ({ it, i }))
+      .filter(x => x.it.month === cur || x.it.month === pm)
+      .sort((a, b) => (b.it.month || "").localeCompare(a.it.month || "") || (b.it.day || 0) - (a.it.day || 0) || b.i - a.i)
+      .slice(0, 150)
+      .map(({ it }) => {
+        const date = it.month + (it.day ? "-" + String(it.day).padStart(2, "0") : "");
+        const cat = (it.type || "expense") === "income"
+          ? "Bevétel" + (it.sub ? " / " + clean(it.sub) : "")
+          : clean((cats[it.color] && cats[it.color].name) || "Egyéb") + (it.sub ? " / " + clean(it.sub) : "") + " (" + bucketMeta(itemBucket(it)).t + ")";
+        return `${date} | ${clean(it.name).slice(0, 60)} | ${Math.round(Number(it.amount))} Ft | ${cat}${it.note ? " | megj.: " + clean(it.note).slice(0, 60) : ""}`;
+      });
+    itemsTxt = `\nTételek (aktuális és előző hónap, legújabb elöl${rows.length === 150 ? ", az első 150" : ""}; dátum | név | összeg | kategória):\n` + (rows.join("\n") || "nincs");
+  }
+  return `Mai dátum: ${isoDate(new Date())}. Költségvetési szabály: ${rule5030.need}-${rule5030.want}-${rule5030.save} (szükséglet-vágy-megtakarítás %).\nHavi összesítések:\n${lines.join("\n") || "nincs adat"}\nMegtakarítási célok: ${g || "nincs"}\nFix havi kiadások összesen: ${fix} Ft\nAktuális heti kihívás: ${ch}` + itemsTxt;
 }
 let orChatModelsCache = null;
 async function openRouterFreeChatModels() {
@@ -3091,6 +3121,7 @@ function openChat() {
     return;
   }
   document.getElementById("chatModal").classList.add("show");
+  updateChatNote();
   renderChat();
 }
 async function sendChat(text) {
@@ -3112,6 +3143,7 @@ document.querySelectorAll("#chatSuggest .chat-chip").forEach(b => b.addEventList
 document.getElementById("btnChatSend").addEventListener("click", () => sendChat(document.getElementById("chatInput").value));
 document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(e.target.value); } });
 document.getElementById("btnChatClose").addEventListener("click", () => document.getElementById("chatModal").classList.remove("show"));
+document.getElementById("chatItems").addEventListener("change", e => { mentorItems = e.target.checked; saveMentorItems(); updateChatNote(); });
 document.getElementById("chatModal").addEventListener("click", e => { if (e.target.id === "chatModal") document.getElementById("chatModal").classList.remove("show"); });
 
 /* ---------- Kategória szerkesztés ---------- */
@@ -3191,7 +3223,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, showMentor, mentor } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -3251,6 +3283,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
       if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
       if (st.mentor) { mentor = sanitizeMentor(st.mentor); saveMentor(); }
+      if (typeof st.mentorItems === "boolean") { mentorItems = st.mentorItems; saveMentorItems(); }
       renderIncPicker("manualIncWrap", "manualIncs", "");
       selectedMonth = currentMonth();
       buildManualPicker("green");
