@@ -167,7 +167,7 @@
 
   /* ---------- Inputs ---------- */
   label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--chip-text); }
-  input[type="text"], input[type="number"], input[type="month"], input[type="date"], input[type="search"], select {
+  input[type="text"], input[type="number"], input[type="month"], input[type="date"], input[type="search"], select, textarea {
     width: 100%; padding: 14px 15px; border: 1.5px solid var(--border); border-radius: 14px;
     font-size: 16px; margin-bottom: 14px; transition: border 0.15s;
     background: var(--input-bg); color: var(--text); font-family: inherit;
@@ -247,6 +247,64 @@
   .trend-head .trend-sel { width: auto; max-width: 55%; margin: 0; padding: 7px 10px; font-size: 13px; border-radius: 10px; }
   .tr-single { width: 60%; max-width: 28px; }
   .tr-val { font-size: 10.5px; color: var(--muted); height: 13px; font-variant-numeric: tabular-nums; }
+  textarea { resize: vertical; line-height: 1.45; }
+  /* Mentor */
+  .mentor-card .mt-block { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; font-size: 14px; }
+  .mentor-card .mt-block b { display: flex; align-items: center; gap: 6px; }
+  .mt-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+  .mt-desc { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+  .mt-due { background: var(--soft); border: 1px solid var(--green-accent); border-radius: 12px; padding: 12px !important; }
+  .mt-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .mt-btns .mt-btn { width: auto; flex: 1 1 auto; margin: 0; min-height: 40px; padding: 9px 14px; font-size: 14px; }
+  .mt-bar { height: 10px; background: var(--chip); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  .mt-bar > div { height: 100%; background: var(--green-accent); border-radius: 6px; min-width: 3px; transition: width 0.3s; }
+  .mt-bar > div.ok { background: var(--income); }
+  .mt-bar > div.bad { background: var(--danger); }
+  .mt-prog { font-size: 13px; margin-top: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mt-prog.ok { color: var(--income); }
+  .mt-prog.bad { color: var(--danger); }
+  .mt-hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .mt-last { font-size: 12.5px; margin-bottom: 8px; padding: 7px 10px; border-radius: 10px; background: var(--chip); }
+  .mt-ask { margin: 14px 0 0; }
+  .mm-body { font-size: 14px; line-height: 1.6; }
+  .mm-body p { margin-bottom: 10px; }
+  .mm-body ul { margin: 0 0 10px 18px; }
+  .mm-body li { margin-bottom: 5px; }
+  .mm-body .hint { font-size: 12.5px; }
+  .mm-body textarea { margin-bottom: 12px; }
+  .lib-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .lib-row { display: flex; align-items: flex-start; gap: 10px; text-align: left; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg); color: var(--text); font-family: inherit; cursor: pointer; }
+  .lib-row i { font-size: 20px; color: var(--muted); flex-shrink: 0; margin-top: 1px; }
+  .lib-row i.done { color: var(--income); }
+  .lib-row span { display: flex; flex-direction: column; gap: 2px; }
+  .lib-row b { font-size: 14px; }
+  .lib-row small { font-size: 12px; color: var(--muted); }
+  .lib-h { font-size: 13px; font-weight: 700; margin: 14px 0 8px; color: var(--chip-text); }
+  .lib-journal { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+  .lib-journal summary { cursor: pointer; font-weight: 600; }
+  .lib-journal p { margin: 8px 0 0; font-size: 13px; }
+  .refl-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .refl-sum > div { background: var(--chip); border-radius: 12px; padding: 9px 11px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .refl-sum span { font-size: 11.5px; color: var(--muted); }
+  .refl-sum b { font-size: 15px; overflow-wrap: anywhere; }
+  .refl-sum small { font-size: 11.5px; color: var(--muted); }
+  .refl-sum small.up { color: var(--danger); }
+  .refl-sum small.down { color: var(--income); }
+  /* AI-csevegés */
+  .chat-modal { display: flex; flex-direction: column; height: min(640px, 88vh); overflow: hidden; padding-bottom: 14px; }
+  .chat-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .chat-note { font-size: 11.5px; color: var(--muted); margin: 0 0 10px; }
+  .chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+  .chat-msg { max-width: 88%; padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  .chat-msg.bot { background: var(--chip); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .chat-msg.me { background: var(--green-btn); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-msg.err { background: var(--err-bg); color: var(--err-text); }
+  .chat-msg.typing { color: var(--muted); font-style: italic; }
+  .chat-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+  .chat-chip { border: 1.5px solid var(--border); background: var(--input-bg); color: var(--text); border-radius: 16px; padding: 7px 11px; font-size: 12.5px; font-family: inherit; cursor: pointer; }
+  .chat-input { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
+  .chat-input textarea { margin: 0; min-height: 46px; max-height: 120px; resize: none; }
+  .chat-input .chat-send { width: 48px; min-height: 46px; margin: 0; padding: 0; flex-shrink: 0; font-size: 18px; }
   .lbl-hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
   /* OCR / screenshot beolvasás */
   .ocr-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
@@ -698,6 +756,7 @@
       <h2><i class="ph-fill ph-floppy-disk"></i> Adatok</h2>
       <div class="card data-actions">
         <label class="view-toggle"><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
+        <label class="view-toggle"><input type="checkbox" id="toggleMentor"> <i class="ph-fill ph-graduation-cap"></i> Mentor az Áttekintésen</label>
         <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> 50-30-20 kimutatás a Listán</label>
         <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
         <label class="view-toggle" id="toggleSaveBalWrap"><input type="checkbox" id="toggleSaveBal"> <i class="ph-fill ph-piggy-bank"></i> Megtakarítás csökkentse az egyenleget</label>
@@ -846,6 +905,29 @@
     <div class="btn-row" style="margin-top:12px">
       <button class="btn" id="btnRecurDo"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
       <button class="btn secondary" id="btnRecurCancel">Mégse</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MENTOR: lecke / tudástár / visszatekintés ============ -->
+<div class="modal-overlay" id="mentorModal">
+  <div class="modal">
+    <h3 id="mmTitle"></h3>
+    <div id="mmBody" class="mm-body"></div>
+    <div class="btn-row" id="mmBtns" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ============ MENTOR: AI-csevegés ============ -->
+<div class="modal-overlay" id="chatModal">
+  <div class="modal chat-modal">
+    <div class="chat-head"><h3 style="margin:0"><i class="ph-fill ph-chats-circle"></i> Mentor</h3><button type="button" class="bud-hide" id="btnChatClose" aria-label="Bezárás"><i class="ph ph-x"></i></button></div>
+    <p class="chat-note">Csak havi, kategóriánkénti összesítéseket lát – a tételek neveit nem. Nem ad befektetési tanácsot.</p>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-suggest" id="chatSuggest"></div>
+    <div class="chat-input">
+      <textarea id="chatInput" rows="1" maxlength="1000" placeholder="Kérdezz a pénzügyeidről…"></textarea>
+      <button type="button" class="btn chat-send" id="btnChatSend" aria-label="Küldés"><i class="ph-fill ph-paper-plane-right"></i></button>
     </div>
   </div>
 </div>
@@ -1022,6 +1104,8 @@ function loadData() {
   try { incomeCats = sanitizeIncomeCats(JSON.parse(localStorage.getItem("incomeCats") || "null")); } catch { incomeCats = DEFAULT_INCOME_CATS.slice(); }
   try { recurring = sanitizeRecurring(JSON.parse(localStorage.getItem("recurring") || "[]")); } catch { recurring = []; }
   try { goals = sanitizeGoals(JSON.parse(localStorage.getItem("goals") || "[]")); } catch { goals = []; }
+  try { const s = localStorage.getItem("showMentor"); showMentor = s === null ? true : s === "true"; } catch { showMentor = true; }
+  try { mentor = sanitizeMentor(JSON.parse(localStorage.getItem("mentor") || "null")); } catch {}
   try { geminiKey = String(localStorage.getItem("geminiKey") || "").replace(/[\s​-‍⁠﻿"'`„”«»]/g, ""); } catch { geminiKey = ""; }
   try {
     const r = JSON.parse(localStorage.getItem("rule5030") || "null");
@@ -1460,7 +1544,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v56"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v57"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2085,6 +2169,7 @@ function wireSummaryActions(area) {
   }));
   const ts = area.querySelector("[data-trend-mode]");
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
+  wireMentorActions(area);
 }
 
 /* ---------- Lista / összesítés ---------- */
@@ -2120,7 +2205,7 @@ function renderList() {
 
   if (monthView.length === 0) {
     controls.style.display = "none";
-    summaryArea.innerHTML = renderRecurringCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderRecurringCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -2227,7 +2312,7 @@ function renderList() {
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-    </div>` + renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderGoalsCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
+    </div>` + renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderGoalsCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
   wireSummaryActions(summaryArea);
 
   // 50-30-20 elrejtése
@@ -2435,6 +2520,8 @@ function renderCategories() {
   if (t5030) t5030.checked = show5030;
   const tCoach = document.getElementById("toggleCoach");
   if (tCoach) tCoach.checked = showCoach;
+  const tMentor = document.getElementById("toggleMentor");
+  if (tMentor) tMentor.checked = showMentor;
   renderGoalsManager(); renderRecurringManager(); renderIncomeCatsManager();
   const kf = document.getElementById("geminiKey");
   if (kf) { kf.value = geminiKey; updateKeyStatus(); }
@@ -2580,6 +2667,453 @@ document.getElementById("btnAddGoal").addEventListener("click", addGoal);
 document.getElementById("btnAddIncCat").addEventListener("click", addIncomeCat);
 document.getElementById("incCatInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addIncomeCat(); } });
 
+/* =====================================================================
+   PÉNZÜGYI TUDATOSSÁG MENTOR
+   A) beépített: heti kihívás, egyperces leckék, havi visszatekintés
+   B) AI-mentor csevegés a felhasználó saját kulcsával (csak havi összesítéseket kap)
+   Nem ad befektetési tanácsot – költési és megtakarítási szokásokban segít.
+   ===================================================================== */
+let showMentor = true;
+let mentor = { ch: null, offer: 0, offerWeek: "", hist: [], read: [], refl: {} };
+function saveMentor() { try { localStorage.setItem("mentor", JSON.stringify(mentor)); } catch {} }
+function saveMentorView() { try { localStorage.setItem("showMentor", showMentor); } catch {} }
+
+/* --- dátum-segédek (hét = hétfőtől vasárnapig) --- */
+function parseISO(s) { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, m - 1, d); }
+function weekStartOf(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function weekKey(d) { return isoDate(weekStartOf(d)); }
+function prevWeekKey(wk) { const d = parseISO(wk); d.setDate(d.getDate() - 7); return isoDate(d); }
+function itemDate(it) { if (!it.day || !it.month) return null; const [y, m] = it.month.split("-").map(Number); return new Date(y, m - 1, clampDay(it.day, it.month)); }
+function itemsInWeek(wk) {
+  const s = parseISO(wk), e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6, 23, 59, 59);
+  return expenseItems.filter(it => { if ((it.type || "expense") === "income") return false; const d = itemDate(it); return d && d >= s && d <= e; });
+}
+const sumAmt = (a) => a.reduce((s, it) => s + Number(it.amount), 0);
+const r1000 = (v) => Math.max(1000, Math.round(v / 1000) * 1000);
+
+/* --- tétel-felismerők (név + alkategória alapján, ékezetfüggetlenül) --- */
+const kwHit = (it, words) => { const t = deburr(it.name + " " + (it.sub || "")); return words.some(w => t.includes(w)); };
+function isOrderItem(it) { return kwHit(it, ["rendel", "wolt", "foodpanda", "bolt food", "netpincer"]); }
+function isSnackItem(it) { return kwHit(it, ["nasi", "snack", "edesseg", "cukrasz", "fornetti", "csoki"]); }
+function isSmallTreat(it) { return isOrderItem(it) || isSnackItem(it) || kwHit(it, ["kave", "coffee", "starbucks"]); }
+function isSubscription(it) { return kwHit(it, ["streaming", "elofizet", "netflix", "spotify", "disney", "hbo", "youtube", "icloud", "prime video"]); }
+function isFood(it) { return kwHit(it, ["bevasarlas", "etterem", "tesco", "lidl", "aldi", "spar", "penny", "auchan", "interfood"]); }
+
+/* --- statisztika a személyre szabáshoz (az utolsó 3 hónap, a lezárt hónapokat előnyben részesítve) --- */
+function mentorStats() {
+  const cur = currentMonth(), months = [cur, prevMonthOf(cur), prevMonthOf(prevMonthOf(cur))];
+  const per = months.map(m => {
+    const r = { m, n: 0, income: 0, need: 0, want: 0, saving: 0, orders: 0, snack: 0, small: 0, subs: 0, food: 0 };
+    expenseItems.forEach(it => {
+      if ((it.month || "") !== m) return;
+      r.n++;
+      const a = Number(it.amount);
+      if ((it.type || "expense") === "income") { r.income += a; return; }
+      const b = itemBucket(it);
+      if (b === "need") r.need += a; else if (b === "want") r.want += a; else if (b === "saving") r.saving += a;
+      if (isOrderItem(it)) r.orders++;
+      if (isSnackItem(it)) r.snack += a;
+      if (isSmallTreat(it)) r.small += a;
+      if (isSubscription(it)) r.subs += a;
+      if (isFood(it)) r.food += a;
+    });
+    return r;
+  });
+  const withData = per.filter(p => p.n > 0);
+  const full = withData.filter(p => p.m !== cur);
+  const base = full.length ? full : withData;
+  const avg = (k) => base.length ? base.reduce((s, p) => s + p[k], 0) / base.length : 0;
+  return {
+    avgSpend: avg("need") + avg("want"), avgWant: avg("want"), avgIncome: avg("income"), avgSaving: avg("saving"),
+    avgSnack: avg("snack"), avgSmall: avg("small"), avgFood: avg("food"),
+    subsMonthly: Math.max(per[0].subs, per[1].subs), ordersRecent: per[0].orders + per[1].orders
+  };
+}
+
+/* --- heti kihívások --- */
+const CHALLENGES = {
+  noOrder: { title: "Rendelés-mentes hét", icon: "moped", kind: "maxCount",
+    desc: () => "Ezen a héten ne rendelj ételt (Wolt, Foodpanda stb.) – főzz, vagy vigyél magaddal.",
+    target: () => 0, measure: its => its.filter(isOrderItem).length },
+  snackCap: { title: "Nasi-limit", icon: "cookie", kind: "max",
+    desc: t => `Nasira, édességre legfeljebb ${formatFt(t)} menjen el a héten.`,
+    target: s => r1000(Math.max(2000, s.avgSnack / 4.33 * 0.6)), measure: its => sumAmt(its.filter(isSnackItem)) },
+  wantCap: { title: "Tudatos vágyak hete", icon: "shopping-bag", kind: "max",
+    desc: t => `A vágy-típusú költéseid maradjanak ${formatFt(t)} alatt a héten.`,
+    target: s => r1000(Math.max(5000, s.avgWant / 4.33 * 0.75)), measure: its => sumAmt(its.filter(it => itemBucket(it) === "want")) },
+  saveFirst: { title: "Fizesd ki először magad", icon: "piggy-bank", kind: "min",
+    desc: t => `Tegyél félre legalább ${formatFt(t)}-ot a héten (pl. a vészalapba).`,
+    target: s => r1000(Math.max(5000, s.avgIncome * 0.05)), measure: its => sumAmt(its.filter(it => itemBucket(it) === "saving")) },
+  noSpendDays: { title: "3 költésmentes nap", icon: "calendar-x", kind: "minDays",
+    desc: () => "Legyen a héten legalább 3 nap, amikor semmire nem költesz (ha minden költésedet felviszed).",
+    target: () => 3, measure: (its, wk) => noSpendDayCount(its, wk) }
+};
+const CH_ORDER = ["noOrder", "snackCap", "wantCap", "saveFirst", "noSpendDays"];
+function noSpendDayCount(its, wk) {
+  const s = parseISO(wk), today = new Date();
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(s.getFullYear(), s.getMonth(), s.getDate() + i);
+    if (d > today) break;
+    const spent = its.some(it => { const b = itemBucket(it); if (b !== "need" && b !== "want") return false; const id = itemDate(it); return id && id.getTime() === d.getTime(); });
+    if (!spent) count++;
+  }
+  return count;
+}
+/* melyik kihívást ajánljuk elsőként: ahol a legtöbb a nyerhető */
+function recommendedChallenges(s) {
+  const pref = [];
+  if (s.ordersRecent >= 2) pref.push("noOrder");
+  if (s.avgSnack > 4000) pref.push("snackCap");
+  if (s.avgIncome > 0 && s.avgWant / s.avgIncome * 100 > rule5030.want) pref.push("wantCap");
+  if (s.avgIncome > 0 && s.avgSaving / s.avgIncome * 100 < rule5030.save) pref.push("saveFirst");
+  CH_ORDER.forEach(id => { if (!pref.includes(id)) pref.push(id); });
+  return pref;
+}
+function challengeResult(ch) {
+  const def = CHALLENGES[ch.id];
+  const v = def.measure(itemsInWeek(ch.week), ch.week);
+  if (def.kind === "maxCount") return { ok: v <= ch.target, pct: v <= ch.target ? 100 : 0, txt: v === 0 ? "Eddig egyetlen rendelés sem – így tovább!" : `${v} rendelés a héten` };
+  if (def.kind === "max") return { ok: v <= ch.target, pct: Math.min(100, Math.round(v / Math.max(1, ch.target) * 100)), txt: `${formatFt(v)} / ${formatFt(ch.target)}` };
+  if (def.kind === "min") return { ok: v >= ch.target, pct: Math.min(100, Math.round(v / Math.max(1, ch.target) * 100)), txt: `${formatFt(v)} / ${formatFt(ch.target)}` };
+  return { ok: v >= ch.target, pct: Math.min(100, Math.round(v / ch.target * 100)), txt: `${v} / ${ch.target} költésmentes nap` };
+}
+/* hetente: a lejárt kihívás kiértékelése, az ajánlat nullázása */
+function mentorTick() {
+  const wk = weekKey(new Date());
+  let changed = false;
+  if (mentor.ch && mentor.ch.week !== wk) {
+    mentor.hist.push({ id: mentor.ch.id, week: mentor.ch.week, ok: challengeResult(mentor.ch).ok });
+    mentor.hist = mentor.hist.slice(-104);
+    mentor.ch = null; changed = true;
+  }
+  if (mentor.offerWeek !== wk) { mentor.offerWeek = wk; mentor.offer = 0; changed = true; }
+  if (changed) saveMentor();
+}
+function challengeStreak() { let n = 0; for (let i = mentor.hist.length - 1; i >= 0 && mentor.hist[i].ok; i--) n++; return n; }
+
+/* --- havi visszatekintés: az előző hónap lezárása után, a hónap első felében ajánljuk fel --- */
+function reflectionDue() {
+  const pm = prevMonthOf(currentMonth());
+  if (new Date().getDate() > 15 || mentor.refl[pm]) return null;
+  return expenseItems.some(it => (it.month || "") === pm) ? pm : null;
+}
+function monthSummary(m) {
+  let inc = 0, spend = 0, sav = 0; const byCat = {};
+  expenseItems.forEach(it => {
+    if ((it.month || "") !== m) return;
+    const a = Number(it.amount);
+    if ((it.type || "expense") === "income") { inc += a; return; }
+    const b = itemBucket(it);
+    if (b === "saving") { sav += a; return; }
+    if (b === "business") return;
+    spend += a; byCat[it.color] = (byCat[it.color] || 0) + a;
+  });
+  const top = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+  return { inc, spend, sav, rate: inc > 0 ? Math.round(sav / inc * 100) : 0, top: top ? { name: catName(top[0]), sum: top[1] } : null };
+}
+function sanitizeMentor(m) {
+  const out = { ch: null, offer: 0, offerWeek: "", hist: [], read: [], refl: {} };
+  if (!m || typeof m !== "object") return out;
+  const wkRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (m.ch && CHALLENGES[m.ch.id] && wkRe.test(m.ch.week)) out.ch = { id: m.ch.id, week: m.ch.week, target: Math.max(0, Math.round(Number(m.ch.target) || 0)) };
+  out.offer = Number.isInteger(m.offer) ? Math.abs(m.offer) % 50 : 0;
+  out.offerWeek = typeof m.offerWeek === "string" && wkRe.test(m.offerWeek) ? m.offerWeek : "";
+  if (Array.isArray(m.hist)) out.hist = m.hist.filter(x => x && CHALLENGES[x.id] && wkRe.test(x.week)).map(x => ({ id: x.id, week: x.week, ok: !!x.ok })).slice(-104);
+  if (Array.isArray(m.read)) out.read = [...new Set(m.read.filter(id => LESSONS.some(l => l.id === id)))];
+  if (m.refl && typeof m.refl === "object") Object.keys(m.refl).forEach(k => {
+    const r = m.refl[k];
+    if (/^\d{4}-\d{2}$/.test(k) && r && typeof r === "object") out.refl[k] = { a1: String(r.a1 || "").slice(0, 600), a2: String(r.a2 || "").slice(0, 600), a3: String(r.a3 || "").slice(0, 600), at: Number(r.at) || 0 };
+  });
+  return out;
+}
+
+/* --- egyperces leckék (általános pénzügyi tudatosság; ahol lehet, a saját számaiddal) --- */
+const LESSONS = [
+  { id: "vesz", title: "Vészalap: a nyugalom alapja", teaser: "Mennyi pénzt érdemes félretenni váratlan helyzetekre?",
+    body: s => `<p>A <b>vészalap</b> az a pénz, amihez csak igazi baj esetén nyúlsz: elromlik a telefon, beteg leszel, vagy váratlanul munka nélkül maradsz. Enélkül egy ilyen helyzet könnyen tartozáshoz vagy hitelhez vezet.</p>
+      <p>Általános ökölszabály: <b>3–6 havi alapkiadás</b>.${s.avgSpend > 0 ? ` A te átlagos havi személyes kiadásod kb. <b>${formatFt(s.avgSpend)}</b>, így a cél nagyjából <b>${formatFt(r1000(s.avgSpend * 3))} – ${formatFt(r1000(s.avgSpend * 6))}</b>.` : ""}</p>
+      <ul><li>Első lépésnek egy havi kiadásnyi összeg is nagy biztonság.</li><li>Tartsd <b>külön számlán</b>, hogy ne költsd el véletlenül.</li><li>Vedd fel célnak: Kategóriák → Megtakarítási célok → „Vészalap".</li></ul>` },
+  { id: "h24", title: "A 24 órás szabály", teaser: "Egyszerű trükk az impulzusvásárlások ellen.",
+    body: s => `<p>A legtöbb megbánt vásárlás hirtelen döntés: meglátod, és „most kell". A <b>24 órás szabály</b>: amit nem terveztél megvenni, azzal <b>várj egy napot</b> (nagyobb összegnél akár egy hetet).</p>
+      <p>Sokszor másnapra elmúlik a vágy – vagy kiderül, hogy tényleg kell, és akkor nyugodt szívvel veszed meg.</p>
+      ${s.avgWant > 0 ? `<p>Nálad a vágy-típusú költés átlagosan <b>${formatFt(s.avgWant)}</b> havonta. Ha ennek csak a negyedét megspórolja a szabály, az évente <b>${formatFt(s.avgWant * 0.25 * 12)}</b>.</p>` : ""}
+      <p><b>Tipp:</b> tedd a kosárba, de ne fizess. Vagy írd fel egy kívánságlistára, és egy hét múlva nézd meg újra.</p>` },
+  { id: "subs", title: "Előfizetés-átvilágítás", teaser: "A kis havi díjak évente meglepően sokat tesznek ki.",
+    body: s => `<p>Az előfizetések alattomosak: havonta kicsinek tűnnek, és maguktól mennek, ezért könnyű elfelejteni őket.</p>
+      ${s.subsMonthly > 0 ? `<p>Az adataid alapján havonta kb. <b>${formatFt(s.subsMonthly)}</b> megy el előfizetésekre – ez évente <b>${formatFt(s.subsMonthly * 12)}</b>.</p>` : ""}
+      <p><b>10 perc alatt megvan:</b></p>
+      <ul><li>Írd össze az összes előfizetésed (streaming, zene, felhő, appok, edzőterem).</li><li>Mindegyiknél kérdezd meg: <i>használtam az elmúlt hónapban?</i></li><li>Amit nem, mondd le – később bármikor visszaveheted.</li><li>Streamingből elég lehet egyszerre egy, és havonta váltogatni.</li></ul>` },
+  { id: "payfirst", title: "Fizesd ki először magad", teaser: "Miért ne a hónap végén maradt pénzt tedd félre?",
+    body: s => `<p>A legtöbben azt teszik félre, ami a hónap végén <i>megmarad</i> – és általában semmi sem marad. A megoldás: <b>a fizetés napján</b> utald át a megtakarítást, mintha az is egy számla lenne.</p>
+      ${s.avgIncome > 0 && rule5030.save > 0 ? `<p>A ${rule5030.save}%-os célod alapján ez nálad havonta kb. <b>${formatFt(s.avgIncome * rule5030.save / 100)}</b>.</p>` : ""}
+      <ul><li>Állíts be a bankodban <b>rendszeres átutalást</b> egy külön megtakarítási számlára, a fizetésnap utánra.</li><li>Kezdd kicsiben (akár 5%-kal), és emeld fokozatosan.</li><li>Az appban vidd fel fix havi tételként, Megtakarítás kategóriában.</li></ul>` },
+  { id: "small", title: "A kis tételek hatalma", teaser: "Kávé, nasi, rendelés – évente mennyi ez?",
+    body: s => `<p>Egy-egy kávé vagy rendelés nem tűnik soknak, de a gyakori kis kiadások összeadódnak.</p>
+      ${s.avgSmall > 0 ? `<p>Nálad a kávé, nasi és ételrendelés együtt havonta kb. <b>${formatFt(s.avgSmall)}</b> – ez évente <b>${formatFt(s.avgSmall * 12)}</b>. A fele évi <b>${formatFt(s.avgSmall * 6)}</b> megtakarítás lenne.</p>` : ""}
+      <p>Nem kell mindenről lemondani – a cél a <b>tudatosság</b>: tartsd meg, ami tényleg örömet okoz, és hagyd el, ami csak megszokás.</p>
+      <ul><li>Vigyél otthonról kávét, nasit.</li><li>Heti 1–2 rendelés „keret" a mindennapos helyett.</li><li>Próbáld ki a Rendelés-mentes hét kihívást.</li></ul>` },
+  { id: "rule", title: "Az 50-30-20 szabály", teaser: "Egyszerű keret a bevételed felosztására.",
+    body: s => `<p>A szabály a nettó bevételt három részre osztja:</p>
+      <ul><li><b>${rule5030.need}% szükséglet</b> – lakhatás, rezsi, élelmiszer, közlekedés.</li><li><b>${rule5030.want}% vágy</b> – szórakozás, étterem, ruha, hobbi.</li><li><b>${rule5030.save}% megtakarítás</b> – vészalap, célok.</li></ul>
+      ${s.avgIncome > 0 ? `<p>Az átlagos bevételeddel (<b>${formatFt(s.avgIncome)}</b>) ez: ${formatFt(s.avgIncome * rule5030.need / 100)} / ${formatFt(s.avgIncome * rule5030.want / 100)} / ${formatFt(s.avgIncome * rule5030.save / 100)}.</p>` : ""}
+      <p>Nem kőbe vésett: ha drága a lakhatás, a szükséglet lehet több – ilyenkor a vágyakból érdemes lefaragni, ne a megtakarításból. Az arányt az Áttekintésen, a ceruzával állíthatod át.</p>` },
+  { id: "credit", title: "Hitelek okosan: a THM", teaser: "Mire figyelj, mielőtt részletre vagy hitelre veszel valamit?",
+    body: () => `<p>Hitelnél nem a havi részlet a legfontosabb szám, hanem a <b>THM</b> (teljes hiteldíj mutató): azt mutatja, mennyibe kerül valójában a kölcsön egy évre vetítve, minden díjjal együtt. Ajánlatokat mindig a THM alapján hasonlíts össze.</p>
+      <ul><li><b>Hitelkártya:</b> ha csak a minimumot fizeted vissza, a kamat miatt sokáig és sokkal többet fizetsz. Ha teheted, a teljes tartozást rendezd a türelmi időn belül.</li><li><b>„0% THM" áruhitel:</b> olvasd el a feltételeket – késedelem vagy kötelező biztosítás miatt drágulhat.</li><li>Fogyasztásra (ruha, utazás, kütyü) lehetőleg ne vegyél fel hitelt – előbb gyűjts rá.</li><li>Több tartozásnál általában a <b>legmagasabb kamatút</b> érdemes elsőként visszafizetni.</li></ul>
+      <p class="hint">Konkrét hitelről vagy adósságrendezésről független, engedéllyel rendelkező szakembertől kérj tanácsot.</p>` },
+  { id: "meal", title: "Étkezés tervezéssel", teaser: "Az élelmiszer a legkönnyebben alakítható nagy kiadás.",
+    body: s => `<p>Az étkezés az egyik legnagyobb, de egyben legrugalmasabb kiadás.${s.avgFood > 0 ? ` Nálad a bevásárlás és az étterem havonta kb. <b>${formatFt(s.avgFood)}</b>.` : ""}</p>
+      <ul><li><b>Heti menüterv:</b> vasárnap 10 perc tervezés, és kevesebb étel megy a kukába.</li><li><b>Bevásárlólista</b> – és tartsd is magad hozzá; éhesen ne menj boltba.</li><li><b>Főzz többet</b>, és vidd másnap ebédre.</li><li>Nézd a <b>kilós/literes árat</b>, ne a csomag árát.</li><li>Heti egy nagy bevásárlás több kicsi helyett: kevesebb „ha már itt vagyok" vásárlás.</li></ul>` },
+  { id: "review", title: "Havi pénzügyi randi", teaser: "20 perc havonta, ami rendben tartja a pénzügyeidet.",
+    body: () => `<p>Egy <b>rövid havi átnézés</b> többet ér bármilyen bonyolult rendszernél. Hónap elején szánj rá 20 percet:</p>
+      <ul><li>Nézd meg az Áttekintést: hová ment a pénz, és ez megfelel-e annak, ami fontos neked?</li><li>Töltsd ki a <b>havi visszatekintést</b> – a Mentor hónap elején felajánlja.</li><li>Frissítsd a fix tételeket, nézd át a célokat.</li><li>Válassz <b>egy</b> dolgot, amin a következő hónapban változtatsz.</li></ul>
+      <p>Nem a tökéletesség a lényeg, hanem a rendszeresség: ami mérve van, az javul.</p>` },
+  { id: "inflation", title: "Infláció: miért fogy a pénz értéke?", teaser: "Mit jelent ez a félretett pénzedre nézve?",
+    body: () => `<p>Az <b>infláció</b> az árak általános emelkedése. Ha az árak egy év alatt 5%-kal nőnek, a félretett 100 000 Ft egy év múlva nagyjából csak 95 000 Ft-nyi vásárlóerőt jelent.</p>
+      <ul><li>A <b>vészalapnál</b> a biztonság és az azonnali elérhetőség a fontos, nem a hozam.</li><li>A vészalapon felüli, hosszabb távra félretett pénznél érdemes utánajárni, milyen <b>alacsony kockázatú</b> megtakarítási formák érhetők el.</li><li>Ne dönts sietve, és kerüld, ami „túl szép, hogy igaz legyen".</li></ul>
+      <p class="hint">Ez általános tájékoztatás, nem befektetési tanács. Személyre szabott döntéshez független, engedéllyel rendelkező pénzügyi tanácsadót keress.</p>` }
+];
+function lessonOrder(s) {
+  const pref = [];
+  if (s.avgIncome > 0 && s.avgWant / s.avgIncome * 100 > rule5030.want) pref.push("h24");
+  if (s.subsMonthly > 0) pref.push("subs");
+  if (s.avgIncome > 0 && s.avgSaving / s.avgIncome * 100 < rule5030.save) pref.push("payfirst");
+  if (!goals.some(g => /vesz|tartalek/.test(deburr(g.name)))) pref.push("vesz");
+  if (s.avgSmall > 10000) pref.push("small");
+  LESSONS.forEach(l => { if (!pref.includes(l.id)) pref.push(l.id); });
+  return pref;
+}
+function lessonOfWeek(s) { const id = lessonOrder(s).find(x => !mentor.read.includes(x)); return id ? LESSONS.find(l => l.id === id) : null; }
+
+/* --- Mentor kártya az Áttekintésen (csak az aktuális hónap nézetében) --- */
+function renderMentorCard() {
+  if (!showMentor || selectedMonth !== currentMonth()) return "";
+  mentorTick();
+  const s = mentorStats(), wk = weekKey(new Date());
+  let html = `<div class="card mentor-card"><div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-graduation-cap"></i> Mentor</h2><button class="bud-hide" data-hidementor title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div>`;
+
+  const due = reflectionDue();
+  if (due) html += `<div class="mt-block mt-due"><div class="mt-label"><i class="ph-fill ph-notebook"></i> Havi visszatekintés</div><b>${escapeHtml(monthLabel(due))} lezárult</b><div class="mt-desc">Nézd meg, hogy ment, és válaszolj 3 rövid kérdésre (kb. 2 perc).</div><div class="mt-btns"><button class="btn mt-btn" data-mt-reflect="${due}">Kitöltöm</button></div></div>`;
+
+  // heti kihívás
+  const streak = challengeStreak();
+  const last = mentor.hist[mentor.hist.length - 1];
+  const lastTxt = last && last.week === prevWeekKey(wk) ? `<div class="mt-last ${last.ok ? "ok" : "bad"}">${last.ok ? "✅" : "❌"} Múlt hét – ${CHALLENGES[last.id].title}: ${last.ok ? "sikerült!" : "most nem jött össze, de ez is tanulság."}</div>` : "";
+  html += `<div class="mt-block"><div class="mt-label"><i class="ph-fill ph-trophy"></i> Heti kihívás${streak >= 2 ? ` · 🔥 ${streak} hete sikeres` : ""}</div>${lastTxt}`;
+  if (mentor.ch) {
+    const def = CHALLENGES[mentor.ch.id], r = challengeResult(mentor.ch);
+    const capKind = def.kind === "max" || def.kind === "maxCount";
+    const cls = capKind ? (r.ok ? "ok" : "bad") : (r.ok ? "ok" : "");
+    html += `<b><i class="ph-fill ph-${def.icon}"></i> ${def.title}</b><div class="mt-desc">${def.desc(mentor.ch.target)}</div>
+      <div class="mt-bar"><div class="${cls}" style="width:${capKind && def.kind === "maxCount" ? 100 : r.pct}%"></div></div>
+      <div class="mt-prog ${cls}">${r.txt}${capKind && !r.ok ? " – túlléptél, de a hét még nem ért véget 💪" : ""}${!capKind && r.ok ? " – megvan! 🎉" : ""}</div>
+      <div class="mt-hint">Csak a nappal felvitt tételek számítanak. A hét végén (vasárnap éjfél) kiértékelem.</div>`;
+  } else {
+    const order = recommendedChallenges(s), id = order[mentor.offer % order.length], def = CHALLENGES[id], t = def.target(s);
+    html += `<b><i class="ph-fill ph-${def.icon}"></i> ${def.title}</b><div class="mt-desc">${def.desc(t)}</div>
+      <div class="mt-btns"><button class="btn mt-btn" data-mt-accept="${id}" data-mt-target="${t}">Elfogadom</button><button class="btn secondary mt-btn" data-mt-other>Másikat</button></div>`;
+  }
+  html += `</div>`;
+
+  // a hét leckéje
+  const L = lessonOfWeek(s), readN = mentor.read.length;
+  html += `<div class="mt-block"><div class="mt-label"><i class="ph-fill ph-book-open-text"></i> ${L ? "A hét leckéje" : "Minden leckét elolvastál 🎓"}</div>${L ? `<b>${L.title}</b><div class="mt-desc">${L.teaser}</div>` : ""}
+    <div class="mt-btns">${L ? `<button class="btn mt-btn" data-mt-lesson="${L.id}">Elolvasom (1 perc)</button>` : ""}<button class="btn secondary mt-btn" data-mt-library>Tudástár (${readN}/${LESSONS.length})</button></div></div>`;
+
+  html += `<button class="btn mt-ask" data-mt-chat><i class="ph-fill ph-chats-circle"></i> Kérdezd a mentort (AI)</button></div>`;
+  return html;
+}
+function wireMentorActions(area) {
+  const on = (sel, fn) => area.querySelectorAll(sel).forEach(b => b.addEventListener("click", () => fn(b)));
+  on("[data-hidementor]", () => { showMentor = false; saveMentorView(); renderList(); toast("🎓 Mentor elrejtve · Kategóriák → Adatok alatt visszakapcsolható"); });
+  on("[data-mt-accept]", b => {
+    mentor.ch = { id: b.dataset.mtAccept, week: weekKey(new Date()), target: Number(b.dataset.mtTarget) || 0 };
+    saveMentor(); renderList(); toast("🏁 Kihívás elfogadva – hajrá!");
+  });
+  on("[data-mt-other]", () => { mentor.offer++; saveMentor(); renderList(); });
+  on("[data-mt-lesson]", b => openLesson(b.dataset.mtLesson));
+  on("[data-mt-library]", () => openLibrary());
+  on("[data-mt-reflect]", b => openReflection(b.dataset.mtReflect));
+  on("[data-mt-chat]", () => openChat());
+}
+
+/* --- általános mentor-ablak --- */
+function openMentorModal(titleHtml, bodyHtml, buttons) {
+  document.getElementById("mmTitle").innerHTML = titleHtml;
+  const body = document.getElementById("mmBody");
+  body.innerHTML = bodyHtml;
+  const bx = document.getElementById("mmBtns");
+  bx.innerHTML = "";
+  buttons.forEach(b => { const el = document.createElement("button"); el.type = "button"; el.className = "btn " + (b.cls || ""); el.innerHTML = b.label; el.addEventListener("click", b.onClick); bx.appendChild(el); });
+  document.getElementById("mentorModal").classList.add("show");
+  document.querySelector("#mentorModal .modal").scrollTop = 0;
+}
+function closeMentorModal() { document.getElementById("mentorModal").classList.remove("show"); }
+function openLesson(id) {
+  const L = LESSONS.find(l => l.id === id);
+  if (!L) return;
+  const read = mentor.read.includes(id);
+  openMentorModal(`<i class="ph-fill ph-book-open-text"></i> ${L.title}`, `<div class="lesson">${L.body(mentorStats())}</div>`, read
+    ? [{ label: "Tudástár", onClick: openLibrary }, { label: "Bezárás", cls: "secondary", onClick: closeMentorModal }]
+    : [{ label: '<i class="ph-fill ph-check"></i> Elolvastam', onClick: () => { mentor.read.push(id); saveMentor(); closeMentorModal(); renderList(); toast(`🎓 Lecke kész (${mentor.read.length}/${LESSONS.length})`); } },
+       { label: "Tudástár", cls: "secondary", onClick: openLibrary }]);
+}
+function openLibrary() {
+  const rows = LESSONS.map(l => `<button type="button" class="lib-row" data-lib-id="${l.id}"><i class="ph-fill ph-${mentor.read.includes(l.id) ? "check-circle done" : "book-open"}"></i><span><b>${l.title}</b><small>${l.teaser}</small></span></button>`).join("");
+  const months = Object.keys(mentor.refl).sort().reverse();
+  const journal = months.length ? months.map(m => {
+    const r = mentor.refl[m];
+    const parts = [["Megbántam", r.a1], ["Büszke vagyok", r.a2], ["Másképp csinálom", r.a3]].filter(x => x[1]).map(x => `<p><b>${x[0]}:</b> ${escapeHtml(x[1])}</p>`).join("");
+    return `<details class="lib-journal"><summary>${escapeHtml(monthLabel(m))}</summary>${parts || '<p class="hint">Nincs kitöltve.</p>'}</details>`;
+  }).join("") : `<p class="hint">Még nincs havi visszatekintésed.</p>`;
+  const ok = mentor.hist.filter(h => h.ok).length;
+  openMentorModal('<i class="ph-fill ph-books"></i> Tudástár',
+    `<div class="lib-list">${rows}</div><h4 class="lib-h">Havi visszatekintéseid</h4>${journal}${mentor.hist.length ? `<h4 class="lib-h">Kihívások</h4><p class="hint">${ok} sikeres a ${mentor.hist.length}-ből${challengeStreak() >= 2 ? ` · most ${challengeStreak()} hete sorozatban` : ""}.</p>` : ""}`,
+    [{ label: "Bezárás", cls: "secondary", onClick: closeMentorModal }]);
+  document.querySelectorAll("#mmBody [data-lib-id]").forEach(b => b.addEventListener("click", () => openLesson(b.dataset.libId)));
+}
+function openReflection(month) {
+  const s = monthSummary(month), p = monthSummary(prevMonthOf(month));
+  const chs = mentor.hist.filter(h => h.week.slice(0, 7) === month);
+  const r = mentor.refl[month] || {};
+  const diff = p.spend > 0 ? Math.round((s.spend - p.spend) / p.spend * 100) : null;
+  const body = `<div class="refl-sum">
+      <div><span>Bevétel</span><b>${formatFt(s.inc)}</b></div>
+      <div><span>Személyes kiadás</span><b>${formatFt(s.spend)}</b>${diff !== null ? `<small class="${diff > 0 ? "up" : "down"}">${diff > 0 ? "▲" : "▼"} ${Math.abs(diff)}% az előző hónaphoz</small>` : ""}</div>
+      <div><span>Megtakarítás</span><b>${formatFt(s.sav)}</b><small>a bevétel ${s.rate}%-a</small></div>
+      ${s.top ? `<div><span>Legnagyobb kategória</span><b>${escapeHtml(s.top.name)}</b><small>${formatFt(s.top.sum)}</small></div>` : ""}
+      ${chs.length ? `<div><span>Heti kihívások</span><b>${chs.filter(h => h.ok).length} / ${chs.length}</b><small>sikerült</small></div>` : ""}
+    </div>
+    <label for="rq1">Mire költöttél, amit utólag megbántál?</label><textarea id="rq1" rows="2" maxlength="600">${escapeHtml(r.a1 || "")}</textarea>
+    <label for="rq2">Mire vagy büszke ebben a hónapban?</label><textarea id="rq2" rows="2" maxlength="600">${escapeHtml(r.a2 || "")}</textarea>
+    <label for="rq3">Mit csinálsz másképp a következő hónapban?</label><textarea id="rq3" rows="2" maxlength="600">${escapeHtml(r.a3 || "")}</textarea>`;
+  const val = (id) => document.getElementById(id).value.trim().slice(0, 600);
+  openMentorModal(`<i class="ph-fill ph-notebook"></i> ${escapeHtml(monthLabel(month))}`, body, [
+    { label: '<i class="ph-fill ph-check"></i> Mentés', onClick: () => { mentor.refl[month] = { a1: val("rq1"), a2: val("rq2"), a3: val("rq3"), at: Date.now() }; saveMentor(); closeMentorModal(); renderList(); toast("📓 Elmentve – a Tudástárban visszanézheted."); } },
+    { label: "Később", cls: "secondary", onClick: closeMentorModal }
+  ]);
+}
+document.getElementById("mentorModal").addEventListener("click", e => { if (e.target.id === "mentorModal") closeMentorModal(); });
+
+/* --- B) AI-mentor csevegés --- */
+const MENTOR_SYSTEM = `Te egy barátságos, gyakorlatias pénzügyi tudatosság mentor vagy egy magyar nyelvű költségnapló appban. Magyarul, tegezve, röviden válaszolj (legfeljebb kb. 150 szó; ha segít, pontokba szedve). Az alábbiakban megkapod a felhasználó saját, havi összesített adatait – ha releváns, hivatkozz rájuk konkrét számokkal. Költségvetésben, költési szokásokban, megtakarítási szokásokban, vészalapban és adósságkezelésben segíts. NE ajánlj konkrét befektetési terméket, részvényt, alapot, kriptovalutát vagy pénzügyi szolgáltatót; befektetési, adó- vagy jogi döntésnél javasold, hogy forduljon független, engedéllyel rendelkező szakemberhez. Ne ítélkezz, bátoríts, és ha kell, kérdezz vissza. Ha az adatokból valami nem derül ki, mondd meg őszintén.`;
+const CHAT_SUGGEST = ["Miért fogy el a pénzem hó végére?", "Hol tudnék a legkönnyebben spórolni?", "Hogyan kezdjek vészalapot?", "Reálisak a megtakarítási céljaim?"];
+let chatHistory = [], chatBusy = false;
+function mentorContext() {
+  const cur = currentMonth(), months = [prevMonthOf(prevMonthOf(cur)), prevMonthOf(cur), cur];
+  const cats = allCategories();
+  const lines = months.map(m => {
+    const its = expenseItems.filter(it => (it.month || "") === m);
+    if (!its.length) return null;
+    let inc = 0; const byCat = {}, bucket = { need: 0, want: 0, saving: 0, business: 0 };
+    its.forEach(it => {
+      const a = Number(it.amount);
+      if ((it.type || "expense") === "income") { inc += a; return; }
+      bucket[itemBucket(it)] += a;
+      const key = ((cats[it.color] && cats[it.color].name) || "Egyéb") + (it.sub ? " / " + it.sub : "");
+      byCat[key] = (byCat[key] || 0) + a;
+    });
+    const top = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => `${k}: ${Math.round(v)} Ft`).join("; ");
+    return `${m}${m === cur ? " (folyamatban lévő hónap)" : ""}: bevétel ${Math.round(inc)} Ft; szükséglet ${Math.round(bucket.need)} Ft, vágy ${Math.round(bucket.want)} Ft, megtakarítás ${Math.round(bucket.saving)} Ft, vállalkozás ${Math.round(bucket.business)} Ft. Kategóriánként: ${top || "–"}`;
+  }).filter(Boolean);
+  const g = goals.map(x => `${x.name}: ${goalProgress(x)} / ${x.target} Ft`).join("; ");
+  const fix = recurring.filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
+  const ch = mentor.ch ? `${CHALLENGES[mentor.ch.id].title} (cél: ${mentor.ch.target})` : "nincs";
+  return `Mai dátum: ${isoDate(new Date())}. Költségvetési szabály: ${rule5030.need}-${rule5030.want}-${rule5030.save} (szükséglet-vágy-megtakarítás %).\nHavi összesítések:\n${lines.join("\n") || "nincs adat"}\nMegtakarítási célok: ${g || "nincs"}\nFix havi kiadások összesen: ${fix} Ft\nAktuális heti kihívás: ${ch}`;
+}
+let orChatModelsCache = null;
+async function openRouterFreeChatModels() {
+  if (orChatModelsCache) return orChatModelsCache;
+  const r = await fetch("https://openrouter.ai/api/v1/models");
+  const j = await r.json().catch(() => ({}));
+  const score = (id) => /qwen/i.test(id) ? 0 : /deepseek/i.test(id) ? 1 : /gemma/i.test(id) ? 2 : /llama/i.test(id) ? 3 : /mistral/i.test(id) ? 4 : 6;
+  orChatModelsCache = (j.data || [])
+    .filter(m => /:free$/.test(m.id) && !/safety|guard|embed/i.test(m.id) && ((m.architecture || {}).output_modalities || ["text"]).includes("text"))
+    .map(m => m.id).sort((a, b) => score(a) - score(b));
+  return orChatModelsCache;
+}
+const stripThink = (t) => String(t || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+async function aiChat(system, history) {
+  const msgs = history.filter(m => !m.err).map(m => ({ role: m.role, content: m.content }));
+  if (isOpenRouterKey(geminiKey)) {
+    // a rendszer-utasítást az első üzenetbe tesszük: nem minden ingyenes modell támogatja a "system" szerepet
+    const withSys = msgs.map((m, i) => i === 0 ? { role: "user", content: system + "\n\n---\n\n" + m.content } : m);
+    const models = await openRouterFreeChatModels();
+    if (!models.length) throw new Error("Jelenleg nincs elérhető ingyenes modell az OpenRouteren.");
+    let lastErr = null;
+    for (const model of models.slice(0, 4)) {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + geminiKey, "HTTP-Referer": location.origin, "X-Title": "Penzugyi Naplo" },
+        body: JSON.stringify({ model, temperature: 0.5, messages: withSys })
+      });
+      const j = await r.json().catch(() => ({}));
+      const msg = (j.error && j.error.message) || (r.ok ? "" : "HTTP " + r.status);
+      if (r.status === 401) throw new Error("Érvénytelen API key (OpenRouter): " + msg);
+      if (r.ok && j.choices && j.choices[0]) {
+        const c = j.choices[0].message && j.choices[0].message.content;
+        const t = stripThink(Array.isArray(c) ? c.map(p => p.text || "").join("") : c);
+        if (t) { lastAiModel = model; return t; }
+        lastErr = new Error("Üres válasz a modelltől."); continue;
+      }
+      lastErr = new Error(msg || "Ismeretlen hiba");
+    }
+    throw lastErr;
+  }
+  const j = await geminiRequest({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: msgs.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    generationConfig: { temperature: 0.5 }
+  });
+  let t = "";
+  try { t = j.candidates[0].content.parts.map(p => p.text || "").join(""); } catch {}
+  return stripThink(t);
+}
+/* egyszerű, biztonságos formázás: előbb escape, utána **félkövér**, felsorolás, sortörés */
+function fmtChat(t) { return escapeHtml(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-*•]\s+/gm, "• ").replace(/\n/g, "<br>"); }
+function renderChat() {
+  const log = document.getElementById("chatLog");
+  log.innerHTML = (chatHistory.length ? "" : `<div class="chat-msg bot">Szia! Én vagyok a pénzügyi mentorod. Kérdezz bátran a költéseidről, a megtakarításról vagy a céljaidról – a havi összesítéseid alapján válaszolok.</div>`)
+    + chatHistory.map(m => `<div class="chat-msg ${m.role === "user" ? "me" : "bot"}${m.err ? " err" : ""}">${fmtChat(m.content)}</div>`).join("")
+    + (chatBusy ? `<div class="chat-msg bot typing"><i class="ph-fill ph-dots-three"></i> gondolkodom…</div>` : "");
+  log.scrollTop = log.scrollHeight;
+  const sug = document.getElementById("chatSuggest");
+  sug.hidden = chatHistory.length > 0 || chatBusy;
+  document.getElementById("btnChatSend").disabled = chatBusy;
+}
+function openChat() {
+  if (!geminiKey) {
+    openMentorModal('<i class="ph-fill ph-chats-circle"></i> AI-mentor', `<p>Az AI-mentorhoz egy ingyenes AI-kulcs kell – ugyanaz, amit a képbeolvasáshoz is használsz.</p><p class="hint">Kategóriák → AI beolvasás → kulcs beillesztése → Kulcs mentése.</p>`, [
+      { label: "Beállítom", onClick: () => { closeMentorModal(); document.querySelector('.tab[data-panel="categories"]').click(); setTimeout(() => { const k = document.getElementById("geminiKey"); if (k) k.scrollIntoView({ block: "center" }); }, 60); } },
+      { label: "Mégse", cls: "secondary", onClick: closeMentorModal }
+    ]);
+    return;
+  }
+  document.getElementById("chatModal").classList.add("show");
+  renderChat();
+}
+async function sendChat(text) {
+  text = String(text || "").trim();
+  if (!text || chatBusy) return;
+  chatHistory.push({ role: "user", content: text.slice(0, 1000) });
+  document.getElementById("chatInput").value = "";
+  chatBusy = true; renderChat();
+  try {
+    const reply = await aiChat(MENTOR_SYSTEM + "\n\nA FELHASZNÁLÓ ADATAI:\n" + mentorContext(), chatHistory.slice(-12));
+    chatHistory.push({ role: "assistant", content: reply || "Most nem tudtam válaszolni, próbáld újra." });
+  } catch (e) {
+    chatHistory.push({ role: "assistant", content: "⚠️ " + e.message + ocrErrorHint(e.message), err: true });
+  }
+  chatBusy = false; renderChat();
+}
+document.getElementById("chatSuggest").innerHTML = CHAT_SUGGEST.map(q => `<button type="button" class="chat-chip">${escapeHtml(q)}</button>`).join("");
+document.querySelectorAll("#chatSuggest .chat-chip").forEach(b => b.addEventListener("click", () => sendChat(b.textContent)));
+document.getElementById("btnChatSend").addEventListener("click", () => sendChat(document.getElementById("chatInput").value));
+document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(e.target.value); } });
+document.getElementById("btnChatClose").addEventListener("click", () => document.getElementById("chatModal").classList.remove("show"));
+document.getElementById("chatModal").addEventListener("click", e => { if (e.target.id === "chatModal") document.getElementById("chatModal").classList.remove("show"); });
+
 /* ---------- Kategória szerkesztés ---------- */
 function openCatEdit(key) {
   const cats = allCategories();
@@ -2657,7 +3191,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, showMentor, mentor } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -2715,6 +3249,8 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.incomeCats)) { incomeCats = sanitizeIncomeCats(st.incomeCats); saveIncomeCats(); }
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
+      if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
+      if (st.mentor) { mentor = sanitizeMentor(st.mentor); saveMentor(); }
       renderIncPicker("manualIncWrap", "manualIncs", "");
       selectedMonth = currentMonth();
       buildManualPicker("green");
@@ -2810,6 +3346,7 @@ function init() {
   wirePlainToggle("editBucket");
   document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); renderList(); });
   document.getElementById("toggleCoach").addEventListener("change", (e) => { showCoach = e.target.checked; saveCoach(); renderList(); });
+  document.getElementById("toggleMentor").addEventListener("change", (e) => { showMentor = e.target.checked; saveMentorView(); renderList(); });
   document.getElementById("toggleBizBal").addEventListener("change", (e) => { balanceInc.biz = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("toggleSaveBal").addEventListener("change", (e) => { balanceInc.save = e.target.checked; saveBalanceInc(); renderList(); });
   document.getElementById("btnSaveKey").addEventListener("click", async () => {
