@@ -408,6 +408,7 @@
   .exp-note { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 2px; overflow-wrap: anywhere; }
   .exp-shift { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--soft); color: var(--soft-text); font-size: 11px; font-weight: 600; }
   .exp-fixed { color: var(--green-accent); font-size: 12px; vertical-align: -1px; }
+  .exp-pay { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; margin-left: 2px; }
   .exp-bucket { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; margin-left: 2px; }
 
   /* 50-30-20 kártya */
@@ -701,6 +702,13 @@
           </div>
         </div>
 
+        <label id="mPayLbl">Miből fizetted?</label>
+        <div class="type-toggle three" id="manualPay">
+          <button type="button" class="type-btn active" data-v="acct"><i class="ph-fill ph-bank"></i> Számla</button>
+          <button type="button" class="type-btn" data-v="szep"><i class="ph-fill ph-credit-card"></i> SZÉP-kártya</button>
+          <button type="button" class="type-btn" data-v="cash"><i class="ph-fill ph-money"></i> Készpénz</button>
+        </div>
+
         <label for="mNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
         <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
@@ -870,6 +878,12 @@
         <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
         <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
       </div>
+    </div>
+    <label id="editPayLbl">Miből fizetted?</label>
+    <div class="type-toggle three" id="editPay">
+      <button type="button" class="type-btn" data-v="acct"><i class="ph-fill ph-bank"></i> Számla</button>
+      <button type="button" class="type-btn" data-v="szep"><i class="ph-fill ph-credit-card"></i> SZÉP-kártya</button>
+      <button type="button" class="type-btn" data-v="cash"><i class="ph-fill ph-money"></i> Készpénz</button>
     </div>
     <label for="editNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
     <input type="text" id="editNote" autocomplete="off" maxlength="120">
@@ -1173,6 +1187,7 @@ function sanitizeItems(arr) {
     if (Number.isInteger(day) && day >= 1 && day <= 31) item.day = day;
     const note = String(it.note == null ? "" : it.note).trim().slice(0, 120);
     if (note) item.note = note;
+    if (validPay(it.pay)) item.pay = it.pay;
     if (type === "income" && typeof it.forMonth === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(it.forMonth) && it.forMonth !== item.month) item.forMonth = it.forMonth;
     out.push(item);
   });
@@ -1337,6 +1352,12 @@ function wirePlainToggle(containerId) {
     });
   });
 }
+/* fizetési forrás: a számla az alapértelmezett (nem tároljuk), külön csak a SZÉP-kártya és a készpénz */
+function validPay(v) { return v === "szep" || v === "cash" ? v : ""; }
+function payMeta(v) { return v === "szep" ? { t: "SZÉP-kártya", i: "credit-card" } : { t: "Készpénz", i: "money" }; }
+function getPay(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); return validPay(b && b.dataset.v); }
+function setPay(containerId, pay) { const v = validPay(pay) || "acct"; document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.v === v)); }
+function setPayLabel(labelId, type) { document.getElementById(labelId).textContent = type === "income" ? "Hová érkezett?" : "Miből fizetted?"; }
 function getBucket(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); const v = b && b.dataset.bucket; return (v === "need" || v === "saving" || v === "business") ? v : "want"; }
 function setBucket(containerId, bucket) { document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.bucket === bucket)); }
 
@@ -1453,6 +1474,7 @@ function setRecurring(it, on) {
     if (it.bucket) t.bucket = it.bucket;
     if (it.note) t.note = it.note;
     if (it.day) t.day = it.day;
+    if (it.pay) t.pay = it.pay;
     if (it.forMonth && (it.type || "expense") === "income") t.shiftNext = true;
     recurring.push(t);
   }
@@ -1498,6 +1520,7 @@ function addEntry(name, amount, color, month, type, sub, bucket, force, extra) {
   if (day) item.day = clampDay(day, month);
   const note = String(extra.note || "").trim().slice(0, 120);
   if (note) item.note = note;
+  if (validPay(extra.pay)) item.pay = extra.pay;
   if (type === "income" && extra.forMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(extra.forMonth) && extra.forMonth !== month) item.forMonth = extra.forMonth;
   expenseItems.push(item);
   saveItems();
@@ -1513,7 +1536,7 @@ function submitManual() {
   const sub = type === "income" ? getSubValue("manualIncs") : getSubValue("manualSubs");
   const bucketSel = type === "income" ? null : getBucket("manualBucket");
   const noteEl = document.getElementById("mNote");
-  const extra = { day: validDay(document.getElementById("mDay").value), note: noteEl.value };
+  const extra = { day: validDay(document.getElementById("mDay").value), note: noteEl.value, pay: getPay("manualPay") };
   if (type === "income" && document.getElementById("mShift").checked) extra.forMonth = nextMonthOf(month);
   let res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel, false, extra);
   if (!res.ok && res.dup) {
@@ -1528,8 +1551,9 @@ function submitManual() {
     const added = expenseItems[expenseItems.length - 1];
     const fixedEl = document.getElementById("mFixed");
     if (fixedEl.checked) setRecurring(added, true);
-    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
+    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${added.pay ? " · " + payMeta(added.pay).t : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
     nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift();
+    setPay("manualPay", ""); // a forrás visszaáll számlára, nehogy véletlenül rossz helyre kerüljön a következő tétel
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
     if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
@@ -1653,7 +1677,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v62"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v63"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -1945,7 +1969,7 @@ function doRecurAdd() {
     if (!amount || amount <= 0) return;
     if (amount !== Number(t.amount)) { t.amount = amount; changed = true; } // pl. áremelés → marad a következő hónapokra is
     const shift = t.shiftNext && t.type === "income"; // hó végi fizetés: az előző hónap végén érkezik, erre a hónapra számít
-    const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
+    const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, pay: t.pay, forMonth: shift ? month : undefined });
     if (res.ok) added++;
   });
   if (changed) saveRecurring();
@@ -2384,6 +2408,17 @@ function renderList() {
     weekHtml = `<div class="hero-week"><i class="ph-fill ph-calendar-check"></i><span>Ezen a héten: <b>${formatFt(w.sum)}</b> kiadás</span></div>`;
   }
 
+  /* SZÉP-kártya / készpénz: ha volt rá bevétel, a teljes (hónapokon átívelő) maradék; különben az időszakban onnan költött összeg */
+  let walletHtml = "";
+  ["szep", "cash"].forEach(p => {
+    let inAll = 0, outAll = 0, outView = 0;
+    expenseItems.forEach(it => { if (it.pay !== p) return; if ((it.type || "expense") === "income") inAll += Number(it.amount); else outAll += Number(it.amount); });
+    monthView.forEach(it => { if (it.pay === p && (it.type || "expense") !== "income") outView += Number(it.amount); });
+    if (!inAll && !outView) return;
+    const m = payMeta(p);
+    walletHtml += `<div class="hero-week"><i class="ph-fill ph-${m.i}"></i><span>${m.t}: ${inAll ? `<b>${formatFt(inAll - outAll)}</b> maradt` : `<b>${formatFt(outView)}</b> költve`}</span></div>`;
+  });
+
   let bd = "";
   entries.forEach(e => {
     const subs = subTotals[e.key] || {};
@@ -2425,7 +2460,7 @@ function renderList() {
             ${savings > 0 ? `<span class="flow-save"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás ${formatFt(savings)}</span>` : ""}
             ${business > 0 ? `<span class="flow-biz"><i class="ph-fill ph-briefcase"></i> Vállalkozás ${formatFt(business)}</span>` : ""}
           </div>
-          ${cmpHtml}${weekHtml}
+          ${cmpHtml}${weekHtml}${walletHtml}
         </div>
         ${donutHtml}
       </div>
@@ -2493,7 +2528,7 @@ function renderList() {
           <div class="exp-icon" style="background:${isIncome ? "var(--income)" : catHex(it.color)}">${isIncome ? '<i class="ph-fill ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</div>
           <div class="exp-info">
             <div class="exp-name">${escapeHtml(it.name)}</div>
-            <div class="exp-cat">${isIncome ? "Bevétel" + (it.sub ? " › " + escapeHtml(it.sub) : "") : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${itemDateLabel(it)}${it.forMonth ? ` <span class="exp-shift"><i class="ph-fill ph-arrow-bend-down-right"></i> ${monthNameLong(it.forMonth)}i keret</span>` : ""}${isRecurring(it) ? ' <i class="ph-fill ph-arrows-clockwise exp-fixed" title="Fix havi tétel"></i>' : ""}${(!isIncome && it.bucket) ? ` <span class="exp-bucket"><i class="ph-fill ph-${bucketMeta(it.bucket).i}"></i> ${bucketMeta(it.bucket).t}</span>` : ""}</div>
+            <div class="exp-cat">${isIncome ? "Bevétel" + (it.sub ? " › " + escapeHtml(it.sub) : "") : escapeHtml(catName(it.color)) + (it.sub ? " › " + escapeHtml(it.sub) : "")} · ${itemDateLabel(it)}${it.forMonth ? ` <span class="exp-shift"><i class="ph-fill ph-arrow-bend-down-right"></i> ${monthNameLong(it.forMonth)}i keret</span>` : ""}${isRecurring(it) ? ' <i class="ph-fill ph-arrows-clockwise exp-fixed" title="Fix havi tétel"></i>' : ""}${(!isIncome && it.bucket) ? ` <span class="exp-bucket"><i class="ph-fill ph-${bucketMeta(it.bucket).i}"></i> ${bucketMeta(it.bucket).t}</span>` : ""}${it.pay ? ` <span class="exp-pay"><i class="ph-fill ph-${payMeta(it.pay).i}"></i> ${payMeta(it.pay).t}</span>` : ""}</div>
             ${it.note ? `<div class="exp-note">${escapeHtml(it.note)}</div>` : ""}
             <div class="exp-amount ${isIncome ? "amt-in" : ""}">${sign}${formatFt(it.amount)}</div>
           </div>
@@ -2533,7 +2568,7 @@ function copyItemToNextMonth(i) {
   if (!it) return;
   const target = nextMonthOf(it.month || currentMonth());
   const targetFor = it.forMonth ? nextMonthOf(it.forMonth) : undefined;
-  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket, false, { day: it.day, note: it.note, forMonth: targetFor });
+  const res = addEntry(it.name, it.amount, it.color, target, it.type || "expense", it.sub || "", it.bucket, false, { day: it.day, note: it.note, pay: it.pay, forMonth: targetFor });
   if (res.ok) {
     toast(`📋 „${it.name}" átmásolva: ${monthLabelShort(target)}`);
     renderList();
@@ -2560,6 +2595,8 @@ function openEdit(i) {
   document.getElementById("editDay").value = it.day || "";
   document.getElementById("editNote").value = it.note || "";
   document.getElementById("editFixed").checked = isRecurring(it);
+  setPay("editPay", it.pay);
+  setPayLabel("editPayLbl", it.type || "expense");
   setTypeToggle("editTypeToggle", it.type || "expense");
   document.getElementById("editCatWrap").style.display = (it.type === "income") ? "none" : "";
   document.getElementById("editIncWrap").style.display = (it.type === "income") ? "" : "none";
@@ -2598,6 +2635,7 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (type !== "income" && bucketSel && bucketSel !== catBucket(color)) item.bucket = bucketSel;
   if (day) item.day = clampDay(day, month);
   if (note) item.note = note;
+  if (getPay("editPay")) item.pay = getPay("editPay");
   if (type === "income" && document.getElementById("editShift").checked) item.forMonth = nextMonthOf(month);
   const old = expenseItems[editIndex];
   const wasFixed = isRecurring(old), wantFixed = document.getElementById("editFixed").checked;
@@ -2611,6 +2649,7 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
 wireTypeToggle("editTypeToggle", (t) => {
   document.getElementById("editCatWrap").style.display = t === "income" ? "none" : "";
   document.getElementById("editIncWrap").style.display = t === "income" ? "" : "none";
+  setPayLabel("editPayLbl", t);
 });
 
 /* ---------- Kategóriák ---------- */
@@ -3166,7 +3205,7 @@ function mentorContext() {
         const cat = (it.type || "expense") === "income"
           ? "Bevétel" + (it.sub ? " / " + clean(it.sub) : "")
           : clean((cats[it.color] && cats[it.color].name) || "Egyéb") + (it.sub ? " / " + clean(it.sub) : "") + " (" + bucketMeta(itemBucket(it)).t + ")";
-        return `${date}${it.forMonth ? " (" + it.forMonth + " keretbe)" : ""} | ${clean(it.name).slice(0, 60)} | ${Math.round(Number(it.amount))} Ft | ${cat}${it.note ? " | megj.: " + clean(it.note).slice(0, 60) : ""}`;
+        return `${date}${it.forMonth ? " (" + it.forMonth + " keretbe)" : ""} | ${clean(it.name).slice(0, 60)} | ${Math.round(Number(it.amount))} Ft | ${cat}${it.pay ? " | " + payMeta(it.pay).t : ""}${it.note ? " | megj.: " + clean(it.note).slice(0, 60) : ""}`;
       });
     itemsTxt = `\nTételek (aktuális és előző hónap, legújabb elöl${rows.length === 150 ? ", az első 150" : ""}; dátum | név | összeg | kategória):\n` + (rows.join("\n") || "nincs");
   }
@@ -3716,8 +3755,8 @@ async function exportJSON() {
 }
 function csvCell(v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function exportCSV() {
-  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Besorolás", "Hónap", "Nap", "Megjegyzés", "Keret-hónap"]];
-  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", (it.type || "expense") === "income" ? "" : bucketMeta(itemBucket(it)).t, it.month || "", it.day || "", it.note || "", it.forMonth || ""]));
+  const rows = [["Típus", "Név", "Összeg (Ft)", "Kategória", "Alkategória", "Besorolás", "Hónap", "Nap", "Megjegyzés", "Keret-hónap", "Forrás"]];
+  expenseItems.forEach(it => rows.push([(it.type || "expense") === "income" ? "Bevétel" : "Kiadás", it.name, Number(it.amount), (it.type || "expense") === "income" ? "" : catName(it.color), it.sub || "", (it.type || "expense") === "income" ? "" : bucketMeta(itemBucket(it)).t, it.month || "", it.day || "", it.note || "", it.forMonth || "", it.pay ? payMeta(it.pay).t : "Számla"]));
   const csv = rows.map(r => r.map(csvCell).join(";")).join("\r\n");
   downloadFile("penzugyi-naplo.csv", "﻿" + csv, "text/csv;charset=utf-8");
   showMsg("catMsg", "✅ CSV (Excel) letöltve.", "success");
@@ -3842,6 +3881,7 @@ function init() {
     entryType = t;
     document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : "";
     document.getElementById("manualIncWrap").style.display = t === "income" ? "" : "none";
+    setPayLabel("mPayLbl", t);
     autoShift();
   });
   renderIncPicker("manualIncWrap", "manualIncs", "");
@@ -3855,6 +3895,8 @@ function init() {
   wirePlainToggle("catEditBucket");
   wirePlainToggle("manualBucket");
   wirePlainToggle("editBucket");
+  wirePlainToggle("manualPay");
+  wirePlainToggle("editPay");
   document.getElementById("toggle5030").addEventListener("change", (e) => { show5030 = e.target.checked; saveView(); renderList(); });
   document.getElementById("toggleCoach").addEventListener("change", (e) => { showCoach = e.target.checked; saveCoach(); renderList(); });
   document.getElementById("toggleMentor").addEventListener("change", (e) => { showMentor = e.target.checked; saveMentorView(); renderList(); });
