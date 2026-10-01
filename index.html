@@ -1677,7 +1677,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v63"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v64"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2272,9 +2272,10 @@ function renderGoalsCard() {
 }
 function renderIncomeCard(monthView) {
   const inc = monthView.filter(it => (it.type || "expense") === "income");
-  if (inc.length < 2 && !inc.some(it => it.sub)) return "";
+  if (inc.length < 2 && !inc.some(it => it.sub || it.pay)) return "";
   const groups = {};
-  inc.forEach(it => { const k = it.sub || "Nincs megadva"; groups[k] = groups[k] || { sum: 0, count: 0 }; groups[k].sum += Number(it.amount); groups[k].count++; });
+  // a SZÉP-kártyára / készpénzben érkezett bevétel külön sor (pl. „Fizetés · SZÉP-kártya")
+  inc.forEach(it => { const k = (it.sub || "Nincs megadva") + (it.pay ? " · " + payMeta(it.pay).t : ""); groups[k] = groups[k] || { sum: 0, count: 0 }; groups[k].sum += Number(it.amount); groups[k].count++; });
   const total = inc.reduce((s, it) => s + Number(it.amount), 0);
   const rows = Object.keys(groups).sort((a, b) => groups[b].sum - groups[a].sum).map(k =>
     `<div class="bd-row"><span class="bd-dot" style="background:var(--income)"></span><span class="bd-name">${escapeHtml(k)}</span><span class="bd-count">${Math.round(groups[k].sum / total * 100)}%</span><span class="bd-amount">${formatFt(groups[k].sum)}</span></div>`).join("");
