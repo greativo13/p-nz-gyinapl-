@@ -1355,6 +1355,20 @@ function wirePlainToggle(containerId) {
 /* fizetési forrás: a számla az alapértelmezett (nem tároljuk), külön csak a SZÉP-kártya és a készpénz */
 function validPay(v) { return v === "szep" || v === "cash" ? v : ""; }
 function payMeta(v) { return v === "szep" ? { t: "SZÉP-kártya", i: "credit-card" } : { t: "Készpénz", i: "money" }; }
+/* a SZÉP-kártya külön pénztárca: sem a rá érkező bevétel, sem a róla fizetett kiadás nem mozgatja az egyenleget.
+   Visszaadja, mennyivel kell az (összes tételből számolt) egyenleget korrigálni. */
+function szepBalanceFix(items) {
+  let fix = 0;
+  items.forEach(it => {
+    if (it.pay !== "szep") return;
+    const amt = Number(it.amount);
+    if ((it.type || "expense") === "income") { fix -= amt; return; }
+    const b = itemBucket(it);
+    if ((b === "saving" && !balanceInc.save) || (b === "business" && !balanceInc.biz)) return; // ezt eleve nem vontuk le
+    fix += amt;
+  });
+  return fix;
+}
 function getPay(containerId) { const b = document.querySelector("#" + containerId + " .type-btn.active"); return validPay(b && b.dataset.v); }
 function setPay(containerId, pay) { const v = validPay(pay) || "acct"; document.querySelectorAll("#" + containerId + " .type-btn").forEach(b => b.classList.toggle("active", b.dataset.v === v)); }
 function setPayLabel(labelId, type) { document.getElementById(labelId).textContent = type === "income" ? "Hová érkezett?" : "Miből fizetted?"; }
@@ -1677,7 +1691,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v64"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v65"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2371,7 +2385,7 @@ function renderList() {
     subTotals[it.color][sname] = (subTotals[it.color][sname] || 0) + amt;
   });
   const spend = needs + wants;                          // személyes költés
-  const balance = income - spend - (balanceInc.save ? savings : 0) - (balanceInc.biz ? business : 0);  // szabad keret
+  const balance = income - spend - (balanceInc.save ? savings : 0) - (balanceInc.biz ? business : 0) + szepBalanceFix(monthView);  // szabad keret (SZÉP-kártya nélkül)
 
   /* körgyűrű (csak kiadás) */
   const entries = Object.keys(totals).map(k => ({ key: k, sum: totals[k].sum, count: totals[k].count })).sort((a, b) => b.sum - a.sum);
@@ -2417,7 +2431,7 @@ function renderList() {
     monthView.forEach(it => { if (it.pay === p && (it.type || "expense") !== "income") outView += Number(it.amount); });
     if (!inAll && !outView) return;
     const m = payMeta(p);
-    walletHtml += `<div class="hero-week"><i class="ph-fill ph-${m.i}"></i><span>${m.t}: ${inAll ? `<b>${formatFt(inAll - outAll)}</b> maradt` : `<b>${formatFt(outView)}</b> költve`}</span></div>`;
+    walletHtml += `<div class="hero-week"><i class="ph-fill ph-${m.i}"></i><span>${m.t}: ${inAll ? `<b>${formatFt(inAll - outAll)}</b> maradt` : `<b>${formatFt(outView)}</b> költve`}${p === "szep" ? " · az egyenlegen kívül" : ""}</span></div>`;
   });
 
   let bd = "";
@@ -3340,7 +3354,7 @@ function buildReport(month) {
   const groups = Object.values(grp).sort((a, b) => b.sum - a.sum);
   const personal = exp.filter(it => { const b = itemBucket(it); return b === "need" || b === "want"; });
   const spend = bucket.need + bucket.want;
-  const balance = income - spend - (balanceInc.save ? bucket.saving : 0) - (balanceInc.biz ? bucket.business : 0);
+  const balance = income - spend - (balanceInc.save ? bucket.saving : 0) - (balanceInc.biz ? bucket.business : 0) + szepBalanceFix(its);
 
   // előző hónap (összehasonlításhoz)
   const pm = prevMonthOf(month), prevCats = {};
