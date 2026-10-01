@@ -310,6 +310,59 @@
   .chat-input { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
   .chat-input textarea { margin: 0; min-height: 46px; max-height: 120px; resize: none; }
   .chat-input .chat-send { width: 48px; min-height: 46px; margin: 0; padding: 0; flex-shrink: 0; font-size: 18px; }
+  /* Részletes havi jelentés */
+  .report-btn { margin: 14px 0 0; }
+  .rp-body { font-size: 14px; line-height: 1.5; margin-top: 12px; }
+  .rp-h { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin: 20px 0 10px; display: flex; align-items: center; gap: 7px; }
+  .rp-score { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 14px; background: var(--chip); margin-bottom: 12px; border-left: 5px solid var(--muted); }
+  .rp-score.ok { border-left-color: var(--income); }
+  .rp-score.warn { border-left-color: #eab308; }
+  .rp-score.bad { border-left-color: var(--danger); }
+  .rp-score-num { font-size: 38px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .rp-score-num small { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .rp-score-txt { min-width: 0; font-size: 13px; }
+  .rp-score-txt b { font-size: 16px; display: block; margin-bottom: 3px; }
+  .rp-score-txt ul { margin: 0 0 0 16px; color: var(--muted); }
+  .rp-score-txt span { color: var(--muted); }
+  .refl-sum b.neg { color: var(--danger); }
+  .rp-gain { display: flex; gap: 9px; align-items: flex-start; background: var(--soft); color: var(--soft-text); border-radius: 12px; padding: 11px 12px; margin-bottom: 10px; font-size: 13.5px; }
+  .rp-gain i { font-size: 19px; flex-shrink: 0; }
+  .rp-adv { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border-radius: 12px; background: var(--chip); margin-bottom: 8px; border-left: 4px solid var(--muted); }
+  .rp-adv > i { font-size: 19px; flex-shrink: 0; margin-top: 1px; color: var(--muted); }
+  .rp-adv.high { border-left-color: var(--danger); } .rp-adv.high > i { color: var(--danger); }
+  .rp-adv.mid { border-left-color: #eab308; } .rp-adv.mid > i { color: #eab308; }
+  .rp-adv.low { border-left-color: var(--green-accent); } .rp-adv.low > i { color: var(--green-accent); }
+  .rp-adv.good { border-left-color: var(--income); } .rp-adv.good > i { color: var(--income); }
+  .rp-adv b { display: block; font-size: 14px; }
+  .rp-adv p { margin: 3px 0 0; font-size: 13px; color: var(--chip-text); overflow-wrap: anywhere; }
+  .rp-adv p b { display: inline; font-size: 13px; color: var(--text); }
+  .rp-adv .rp-todo { color: var(--text); font-weight: 600; display: flex; gap: 5px; align-items: flex-start; }
+  .rp-adv .rp-todo i { color: var(--green-accent); flex-shrink: 0; margin-top: 3px; font-size: 12px; }
+  .rp-bar { margin-bottom: 12px; }
+  .rp-bar-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+  .rp-bar-head small { color: var(--muted); }
+  .rp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+  .rp-table th { text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  .rp-table td { padding: 7px 6px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; vertical-align: top; }
+  .rp-table td:first-child { overflow-wrap: anywhere; }
+  .rp-table .rp-save td { color: #0f9488; }
+  .rp-body small.down { color: var(--income); } .rp-body small.up { color: var(--danger); }
+  .rp-cat { margin-bottom: 11px; }
+  .rp-cat-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; align-items: baseline; }
+  .rp-cat-head small { color: var(--muted); }
+  .rp-cat-bar { height: 7px; background: var(--chip); border-radius: 4px; overflow: hidden; margin: 5px 0 3px; }
+  .rp-cat-bar > div { height: 100%; border-radius: 4px; min-width: 3px; }
+  .rp-cat-subs { font-size: 12px; color: var(--muted); }
+  .rp-list > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .rp-list > div:last-child { border-bottom: none; }
+  .rp-list span { min-width: 0; overflow-wrap: anywhere; }
+  .rp-list small { display: block; color: var(--muted); font-size: 12px; }
+  .rp-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rp-wd { display: flex; gap: 6px; align-items: flex-end; height: 90px; margin-top: 10px; }
+  .rp-wd > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; font-size: 11px; color: var(--muted); }
+  .rp-wd-bar { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .rp-wd-bar > div { width: 70%; max-width: 26px; background: var(--green-accent); border-radius: 5px 5px 0 0; }
+  .rp-ai { background: var(--chip); border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
   .lbl-hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
   /* OCR / screenshot beolvasás */
   .ocr-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
@@ -941,6 +994,18 @@
   </div>
 </div>
 
+<!-- ============ RÉSZLETES HAVI JELENTÉS ============ -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal report-modal">
+    <div class="chat-head"><h3 style="margin:0" id="rpTitle"></h3><button type="button" class="bud-hide" id="btnReportClose" aria-label="Bezárás"><i class="ph ph-x"></i></button></div>
+    <div id="rpBody" class="rp-body"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button type="button" class="btn" id="btnReportReflect"><i class="ph-fill ph-notebook"></i> Visszatekintés</button>
+      <button type="button" class="btn secondary" id="btnReportClose2">Bezárás</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MÁSOLÁS ELŐZŐ HÓNAPBÓL MODAL ============ -->
 <div class="modal-overlay" id="copyModal">
   <div class="modal">
@@ -1059,7 +1124,10 @@ function sanitizeCategories(obj) {
       subs: Array.isArray(c.subs) ? c.subs.filter(s => typeof s === "string" && s.trim()).map(s => s.trim().slice(0, 30)).slice(0, 50) : []
     };
     const lim = Number(c.limit);
-    if (Number.isFinite(lim) && lim > 0) cat.limit = Math.round(lim);
+    if (Number.isFinite(lim) && lim > 0) {
+      cat.limit = Math.round(lim);
+      if (typeof c.limitFrom === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(c.limitFrom)) cat.limitFrom = c.limitFrom;
+    }
     out[k] = cat;
   });
   return out;
@@ -1159,7 +1227,12 @@ function catBucket(key) { const c = allCategories(); const b = c[key] && c[key].
 function itemBucket(it) { const b = it && it.bucket; return (b === "need" || b === "want" || b === "saving" || b === "business") ? b : catBucket(it.color); }
 function bucketMeta(b) { return b === "need" ? { i: "house", t: "Szükséglet" } : b === "saving" ? { i: "piggy-bank", t: "Megtakarítás" } : b === "business" ? { i: "briefcase", t: "Vállalkozás" } : { i: "shopping-bag", t: "Vágy" }; }
 function catSubs(key) { const c = allCategories(); return (c[key] && Array.isArray(c[key].subs)) ? c[key].subs : []; }
-function catLimit(key) { const c = allCategories(); return (c[key] && Number(c[key].limit)) || 0; }
+function catLimit(key, month) {
+  const c = allCategories()[key];
+  if (!c || !Number(c.limit)) return 0;
+  if (month && c.limitFrom && month !== "all" && month < c.limitFrom) return 0; // a keret csak a beállított hónaptól él
+  return Number(c.limit);
+}
 function catHex(key) {
   const c = allCategories();
   const col = c[key] ? c[key].color : key;
@@ -1460,7 +1533,7 @@ function submitManual() {
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
     if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
     if (type !== "income") {
-      const lim = catLimit(color);
+      const lim = catLimit(color, month);
       if (lim > 0) {
         const spentThis = expenseItems.filter(it => it.color === color && (it.month || "") === month && (it.type || "expense") !== "income").reduce((s, it) => s + Number(it.amount), 0);
         if (spentThis > lim) toast(`⚠ ${catName(color)}: túllépted a havi keretet (${formatFt(spentThis)} / ${formatFt(lim)})`);
@@ -1579,7 +1652,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v60"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v61"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -1974,10 +2047,10 @@ function renderCoach(ctx) {
   }
   // 5) keret-túllépés
   if (entries) {
-    const over = entries.filter(e => { const l = catLimit(e.key); return l > 0 && e.sum > l; });
+    const over = entries.filter(e => { const l = catLimit(e.key, selectedMonth); return l > 0 && e.sum > l; });
     if (over.length) {
       const o = over[0];
-      tips.push({ ic: "warning-circle", cls: "bad", t: `<b>${escapeHtml(catName(o.key))}</b>: túllépted a havi keretet (${formatFt(o.sum)} / ${formatFt(catLimit(o.key))}).` });
+      tips.push({ ic: "warning-circle", cls: "bad", t: `<b>${escapeHtml(catName(o.key))}</b>: túllépted a havi keretet (${formatFt(o.sum)} / ${formatFt(catLimit(o.key, selectedMonth))}).` });
     }
   }
   // 6) előző hónaphoz képest
@@ -2206,6 +2279,7 @@ function wireSummaryActions(area) {
   const ts = area.querySelector("[data-trend-mode]");
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
   wireMentorActions(area);
+  area.querySelectorAll("[data-open-report]").forEach(b => b.addEventListener("click", () => openReport(b.dataset.openReport)));
 }
 
 /* ---------- Lista / összesítés ---------- */
@@ -2241,7 +2315,7 @@ function renderList() {
 
   if (monthView.length === 0) {
     controls.style.display = "none";
-    summaryArea.innerHTML = renderRecurringCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -2321,7 +2395,7 @@ function renderList() {
       });
       bd += `</div>`;
     }
-    const lim = catLimit(e.key);
+    const lim = catLimit(e.key, selectedMonth);
     if (lim > 0) {
       const lpct = Math.round(e.sum / lim * 100);
       const over = e.sum > lim;
@@ -2331,7 +2405,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderRecurringCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderBackupCard() + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -2348,6 +2422,7 @@ function renderList() {
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
+      ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
     </div>` + renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderGoalsCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
   wireSummaryActions(summaryArea);
 
@@ -3181,6 +3256,341 @@ document.getElementById("chatInput").addEventListener("keydown", e => { if (e.ke
 document.getElementById("btnChatClose").addEventListener("click", () => document.getElementById("chatModal").classList.remove("show"));
 document.getElementById("chatItems").addEventListener("change", e => { mentorItems = e.target.checked; saveMentorItems(); updateChatNote(); });
 document.getElementById("chatModal").addEventListener("click", e => { if (e.target.id === "chatModal") document.getElementById("chatModal").classList.remove("show"); });
+
+/* =====================================================================
+   RÉSZLETES HAVI JELENTÉS
+   – adatgyűjtés, pontszám, rangsorolt teendők számokkal, javasolt keretek
+   Költségvetési visszajelzés a saját adatokból; nem befektetési tanács.
+   ===================================================================== */
+const WEEKDAYS = ["H", "K", "Sze", "Cs", "P", "Szo", "V"];
+/* több, hasonló nevű tétel közös neve (pl. "Vinted 1 könyv" + "Vinted 2 db könyv" → "Vinted") */
+function commonLabel(names) {
+  if (names.every(n => n.toLowerCase() === names[0].toLowerCase())) return names[0];
+  return names[0].trim().split(/\s+/)[0];
+}
+function buildReport(month) {
+  const its = expenseItems.filter(it => effMonth(it) === month);
+  const exp = its.filter(it => (it.type || "expense") !== "income");
+  const income = sumAmt(its.filter(it => (it.type || "expense") === "income"));
+  const bucket = { need: 0, want: 0, saving: 0, business: 0 };
+  const cats = {}, grp = {};
+  exp.forEach(it => {
+    const a = Number(it.amount), b = itemBucket(it);
+    bucket[b] += a;
+    const c = cats[it.color] || (cats[it.color] = { key: it.color, sum: 0, count: 0, bucket: catBucket(it.color) });
+    c.sum += a; c.count++;
+    // csoport = kategória + alkategória, a tétel tényleges besorolása szerint
+    const gk = b + "|" + it.color + "|" + (it.sub || "");
+    const g = grp[gk] || (grp[gk] = { bucket: b, key: it.color, sub: it.sub || "", label: it.sub || catName(it.color), items: [], sum: 0, count: 0 });
+    g.items.push(it); g.sum += a; g.count++;
+  });
+  const groups = Object.values(grp).sort((a, b) => b.sum - a.sum);
+  const personal = exp.filter(it => { const b = itemBucket(it); return b === "need" || b === "want"; });
+  const spend = bucket.need + bucket.want;
+  const balance = income - spend - (balanceInc.save ? bucket.saving : 0) - (balanceInc.biz ? bucket.business : 0);
+
+  // előző hónap (összehasonlításhoz)
+  const pm = prevMonthOf(month), prevCats = {};
+  let prevSpend = 0;
+  expenseItems.forEach(it => {
+    if (effMonth(it) !== pm || (it.type || "expense") === "income") return;
+    prevCats[it.color] = (prevCats[it.color] || 0) + Number(it.amount);
+    const b = itemBucket(it);
+    if (b === "need" || b === "want") prevSpend += Number(it.amount);
+  });
+
+  // kereskedők / visszatérő tételek
+  const mg = {};
+  personal.forEach(it => {
+    const full = deburr(it.name).trim(), tok = full.split(/\s+/)[0];
+    const k = tok.length >= 3 ? tok : full;
+    const g = mg[k] || (mg[k] = { names: [], sum: 0, count: 0 });
+    g.names.push(it.name.trim()); g.sum += Number(it.amount); g.count++;
+  });
+  const merchants = Object.values(mg).filter(g => g.count >= 2).map(g => ({ name: commonLabel(g.names), sum: g.sum, count: g.count })).sort((a, b) => b.sum - a.sum).slice(0, 6);
+  const top = personal.slice().sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 5);
+
+  // napi mintázatok (csak a napos tételekből)
+  const dated = personal.filter(it => it.day && it.month === month);
+  const datedSum = sumAmt(dated);
+  const dim = daysInMonth(month), isCur = month === currentMonth();
+  const daysElapsed = isCur ? new Date().getDate() : dim;
+  const perDay = {};
+  dated.forEach(it => { perDay[it.day] = (perDay[it.day] || 0) + Number(it.amount); });
+  const [yy, mm] = month.split("-").map(Number);
+  const wd = [0, 0, 0, 0, 0, 0, 0];
+  dated.forEach(it => { wd[(new Date(yy, mm - 1, clampDay(it.day, month)).getDay() + 6) % 7] += Number(it.amount); });
+  const maxDay = Object.entries(perDay).sort((a, b) => b[1] - a[1])[0];
+  return {
+    month, income, bucket, cats, groups, spend, balance, prevCats, prevSpend, merchants, top, isCur,
+    count: exp.length, undated: personal.filter(it => !it.day).length,
+    dated: { sum: datedSum, share: spend > 0 ? datedSum / spend : 0, perDay, wd, maxDay: maxDay ? { day: Number(maxDay[0]), sum: maxDay[1] } : null,
+      noSpend: Math.max(0, daysElapsed - Object.keys(perDay).filter(d => Number(d) <= daysElapsed).length),
+      half1: sumAmt(dated.filter(it => it.day <= 15)), half2: sumAmt(dated.filter(it => it.day > 15)) },
+    dailyAvg: daysElapsed > 0 ? spend / daysElapsed : 0, daysElapsed, dim,
+    limitsOver: Object.values(cats).filter(c => catLimit(c.key, month) > 0 && c.sum > catLimit(c.key, month))
+  };
+}
+/* pontszám 0–100, átlátható levonásokkal */
+function reportScore(r) {
+  if (r.income <= 0) return null;
+  const sv = r.bucket.saving / r.income * 100, wt = r.bucket.want / r.income * 100, nd = r.bucket.need / r.income * 100;
+  const parts = []; let s = 100;
+  const cut = (p, why) => { if (p > 0) { s -= p; parts.push({ p, why }); } };
+  if (rule5030.save > 0 && sv < rule5030.save) cut(Math.round((rule5030.save - sv) / rule5030.save * 30), `megtakarítás a cél alatt (${Math.round(sv)}% a ${rule5030.save}% helyett)`);
+  if (wt > rule5030.want) cut(Math.min(25, Math.round((wt - rule5030.want) * 1.5)), `vágyak a keret felett (${Math.round(wt)}% a ${rule5030.want}% helyett)`);
+  if (nd > rule5030.need) cut(Math.min(15, Math.round(nd - rule5030.need)), `szükségletek a keret felett (${Math.round(nd)}% a ${rule5030.need}% helyett)`);
+  if (r.balance < 0) cut(20, "a kiadás meghaladta a bevételt");
+  if (r.limitsOver.length) cut(Math.min(10, r.limitsOver.length * 5), `${r.limitsOver.length} kategóriában túllépted a keretet`);
+  s = Math.max(0, s);
+  return { score: s, parts, label: s >= 85 ? "Kiváló" : s >= 70 ? "Jó" : s >= 50 ? "Közepes" : "Fejlesztendő", cls: s >= 70 ? "ok" : s >= 50 ? "warn" : "bad" };
+}
+/* rangsorolt teendők: mi a gond, mennyi, és mit csinálj */
+function reportAdvice(r) {
+  const A = [], inc = r.income, rule = rule5030;
+  const tgt = { need: inc * rule.need / 100, want: inc * rule.want / 100, save: inc * rule.save / 100 };
+  const pct = (v) => inc > 0 ? Math.round(v / inc * 100) : 0;
+  const add = (sev, impact, title, text, todo, gain) => A.push({ sev, impact, title, text, todo, gain: !!gain });
+  const names = (gs) => gs.map(g => `${escapeHtml(g.label)} ${formatFt(g.sum)}`).join(", ");
+  const wantG = r.groups.filter(g => g.bucket === "want"), needG = r.groups.filter(g => g.bucket === "need");
+
+  if (inc <= 0) add("mid", 0, "Hiányzik a bevétel", "Ehhez a hónaphoz nincs bevétel felvéve, ezért az arányokat nem tudom értékelni.", "Vidd fel a fizetésed (hó végi fizetésnél pipáld be, hogy a következő havi keretbe számít).");
+  if (r.balance < 0) add("high", -r.balance, "Többet költöttél, mint amennyi bejött", `A hónap <b>${formatFt(-r.balance)}</b> mínusszal zárt.`, "A következő hónapban a változó kiadásokból kell ennyit lefaragni – lásd lent a javasolt kereteket.");
+
+  // vágyak összesen
+  if (inc > 0 && rule.want > 0) {
+    const over = r.bucket.want - tgt.want;
+    if (over > 0) add("high", over, "Túl sok ment vágyakra",
+      `${formatFt(r.bucket.want)} – a bevételed ${pct(r.bucket.want)}%-a. A kereted ${rule.want}% = ${formatFt(tgt.want)}, vagyis <b>${formatFt(over)}</b>-tal lépted túl. A legtöbb erre ment: ${names(wantG.slice(0, 3))}.`,
+      `Következő hónapban tarts ${formatFt(r1000(tgt.want))} keretet a vágyakra – ez heti kb. ${formatFt(r1000(tgt.want / 4.3))}.`);
+  }
+  // a legnagyobb vágy-csoportok egyenként, a jellegükhöz illő tanáccsal
+  wantG.slice(0, 8).forEach(g => {
+    if (inc > 0 && g.sum < inc * 0.01) return; // 1% alatt nem érdemes vele foglalkozni
+    const big = g.items.slice().sort((a, b) => Number(b.amount) - Number(a.amount))[0];
+    const share = (fn) => sumAmt(g.items.filter(fn)) / g.sum;
+    const avg = g.sum / g.count;
+    if (share(isOrderItem) > 0.5) {
+      const keep = Math.min(g.count, 4), saved = g.count > 4 ? (g.count - keep) * avg : g.sum / 2;
+      add("mid", saved, `Ételrendelés / gyorsétterem: ${g.count} alkalom`, `${formatFt(g.sum)} ment el rá, alkalmanként átlag ${formatFt(avg)}.`,
+        g.count > 4 ? `Csökkentsd heti egyre (havi 4 alkalom): kb. <b>${formatFt(saved)}</b> marad a zsebedben.` : `Ha fele ennyiszer rendelsz, kb. <b>${formatFt(saved)}</b> marad.`, true);
+    } else if (share(isSnackItem) > 0.5) {
+      add("mid", g.sum / 2, `Nasi, édesség: ${formatFt(g.sum)}`, `${g.count} vásárlás, átlag ${formatFt(avg)}.`, `Szabj rá havi ${formatFt(r1000(g.sum / 2))} keretet – ez évente ${formatFt(g.sum / 2 * 12)} megtakarítás.`, true);
+    } else if (share(isSubscription) > 0.5) {
+      const uniq = [...new Set(g.items.map(it => it.name.trim()))];
+      const cheapest = Math.min(...g.items.map(it => Number(it.amount)));
+      add(uniq.length >= 2 ? "mid" : "low", uniq.length >= 2 ? g.sum - cheapest : 0, `Előfizetések: ${formatFt(g.sum)} / hó`, `${escapeHtml(uniq.join(", "))} – évente <b>${formatFt(g.sum * 12)}</b>.`,
+        uniq.length >= 2 ? `Tarts meg egyet, a többit mondd le vagy váltogasd havonta: kb. ${formatFt(g.sum - cheapest)} marad havonta.` : "Nézd meg, használod-e eleget ahhoz, hogy megérje.", uniq.length >= 2);
+    } else if (g.count <= 2 && Number(big.amount) >= Math.max(30000, tgt.want * 0.15) && Number(big.amount) >= g.sum * 0.6) {
+      const travel = /utaz|nyaral|szallas|repul/.test(deburr(g.label + " " + big.name));
+      add("mid", 0, `${travel ? "Utazás" : "Egyszeri nagy vásárlás"}: ${escapeHtml(big.name)}`, `${formatFt(big.amount)} – ez egymaga a havi vágy-kereted ${tgt.want > 0 ? Math.round(big.amount / tgt.want * 100) : 0}%-a.`,
+        `Az ilyen tervezhető kiadásra gyűjts előre: havi ${formatFt(r1000(big.amount / 6))} félretéve fél év alatt megvan, és nem borítja fel a hónapot. Vegyél fel rá megtakarítási célt („${travel ? "Nyaralás" : "Nagy vásárlás"}").`);
+    } else if (inc > 0 && g.sum >= inc * 0.04) {
+      add("low", 0, `${escapeHtml(g.label)}: ${formatFt(g.sum)}`, `${g.count} tétel, a bevételed ${pct(g.sum)}%-a.`, `Ha sokallod, szabj rá havi keretet a Kategóriák fülön.`);
+    }
+  });
+  // megtakarítás
+  if (inc > 0 && rule.save > 0) {
+    const short = tgt.save - r.bucket.saving;
+    if (short > 0) add("high", short, "Kevés a megtakarítás",
+      `${formatFt(r.bucket.saving)} ment félre (a bevétel ${pct(r.bucket.saving)}%-a). A célod ${rule.save}% = ${formatFt(tgt.save)}, tehát <b>${formatFt(short)}</b> hiányzik.` +
+      (r.balance > 0 && !r.isCur ? (r.balance <= short ? ` A hónap végén ${formatFt(r.balance)} megmaradt – ezt most azonnal átvezetheted megtakarításba.` : ` A hónap végén ${formatFt(r.balance)} megmaradt – ebből ${formatFt(short)} átvezetésével már meg is lenne a cél.`) : ""),
+      `Állíts be ${formatFt(r1000(tgt.save))} rendszeres utalást a fizetésnap utánra, és vidd fel fix havi tételként.${goals.length ? "" : " Adj meg egy célt is (pl. Vészalap) a Kategóriák fülön."}`);
+    else add("good", 0, "A megtakarítás rendben", `${formatFt(r.bucket.saving)} ment félre – a bevétel ${pct(r.bucket.saving)}%-a, a cél ${rule.save}%.`, "");
+  }
+  // szükségletek
+  if (inc > 0 && r.bucket.need > tgt.need) add("mid", r.bucket.need - tgt.need, "A szükségletek a tervezettnél többe kerültek",
+    `${formatFt(r.bucket.need)} (a bevétel ${pct(r.bucket.need)}%-a), a keret ${rule.need}% = ${formatFt(tgt.need)}. A legnagyobbak: ${names(needG.slice(0, 3))}.`,
+    "A fix költségeken nehezebb faragni: nézd át, van-e olcsóbb telefon- vagy internetcsomag, és az étkezésnél tervezz előre.");
+  // bevásárlás gyakorisága
+  const food = needG.concat(wantG).filter(g => sumAmt(g.items.filter(isFood)) / g.sum > 0.5 && sumAmt(g.items.filter(isOrderItem)) / g.sum <= 0.5);
+  const foodCount = food.reduce((s, g) => s + g.count, 0), foodSum = food.reduce((s, g) => s + g.sum, 0);
+  if (foodCount >= 6) add("low", foodSum * 0.1, `Bevásárlás: ${foodCount} alkalom`, `Összesen ${formatFt(foodSum)}, átlag kosár ${formatFt(foodSum / foodCount)}. Sok kisebb bevásárlásnál több az „ha már itt vagyok" vétel.`,
+    `Próbálj heti egy nagyobb bevásárlást listával. Már 10% megtakarítás is ${formatFt(foodSum * 0.1)} havonta.`, true);
+  // keret-túllépés
+  r.limitsOver.forEach(c => add("mid", c.sum - catLimit(c.key, r.month), `${escapeHtml(catName(c.key))}: túllépted a keretet`, `${formatFt(c.sum)} a ${formatFt(catLimit(c.key, r.month))} keretből (+${formatFt(c.sum - catLimit(c.key, r.month))}).`, "Nézd meg lent a javasolt keretet, vagy igazítsd a valósághoz."));
+  // előző hónaphoz képest
+  Object.values(r.cats).forEach(c => {
+    const p = r.prevCats[c.key] || 0;
+    if (p > 0 && c.sum > p * 1.2 && c.sum - p > 5000) add("low", c.sum - p, `${escapeHtml(catName(c.key))} nőtt az előző hónaphoz képest`, `${formatFt(p)} → ${formatFt(c.sum)} (+${Math.round((c.sum - p) / p * 100)}%).`, "");
+  });
+  // mintázatok
+  const d = r.dated;
+  if (d.share >= 0.6) {
+    if (d.half2 > d.half1 * 1.5 && d.half2 > 0) add("low", 0, "A hónap második felében többet költöttél", `1–15.: ${formatFt(d.half1)}, 16-tól: ${formatFt(d.half2)}.`, "Oszd be heti keretre a havi összeget, hogy ne a hó végén szaladjon el.");
+    const wkend = d.wd[5] + d.wd[6];
+    if (d.sum > 0 && wkend / d.sum > 0.45) add("low", 0, "A költésed nagy része hétvégére esik", `A napos tételek ${Math.round(wkend / d.sum * 100)}%-a szombat–vasárnap.`, "Tervezd meg előre a hétvégi programot és keretet.");
+  }
+  if (r.undated > 0) add("info", 0, `${r.undated} tételnek nincs napja`, "Ezek kimaradnak a napi és heti statisztikából.", "Szerkesztéssel beírhatod a napot, vagy új tételnél a Nap mező magától kitöltődik.");
+  if (r.bucket.business > 0) add("info", 0, `Vállalkozás: ${formatFt(r.bucket.business)}`, "Külön kezelve, a személyes arányokba nem számít bele.", "");
+
+  const order = { high: 0, mid: 1, low: 2, good: 3, info: 4 };
+  A.sort((a, b) => order[a.sev] - order[b.sev] || b.impact - a.impact);
+  if (!A.some(a => a.sev === "high" || a.sev === "mid")) A.unshift({ sev: "good", impact: 0, title: "Jó hónapot zártál", text: "Nincs olyan terület, ahol komolyan túlköltöttél volna.", todo: "Tartsd ezt a ritmust, és ha tudod, emeld a megtakarítási célt." });
+  return A;
+}
+/* javasolt keretek a következő hónapra (a túllépett rész arányos visszavágásával) */
+function reportPlan(r) {
+  const wantT = r.income * rule5030.want / 100, needT = r.income * rule5030.need / 100;
+  const wantScale = r.bucket.want > wantT && r.bucket.want > 0 ? wantT / r.bucket.want : 1;
+  const needScale = r.bucket.need > needT && r.bucket.need > 0 ? Math.max(0.9, needT / r.bucket.need) : 1; // a szükségleteken legfeljebb 10%-ot faragunk
+  const rows = Object.values(r.cats).filter(c => c.bucket === "need" || c.bucket === "want").map(c => ({
+    key: c.key, name: catName(c.key), actual: c.sum, cur: catLimit(c.key),
+    suggest: Math.max(1000, Math.ceil(c.sum * (c.bucket === "want" ? wantScale : needScale) / 1000) * 1000)
+  })).sort((a, b) => b.actual - a.actual);
+  return { rows, saveTarget: r.income > 0 && rule5030.save > 0 ? r1000(r.income * rule5030.save / 100) : 0 };
+}
+
+/* --- jelentés megjelenítése --- */
+let reportMonth = null;
+/* "októbertől", "januártól" – a toldalék a hónap nevéhez igazodik */
+function monthFromLabel(m) { const n = monthNameLong(m); return n + (/ber$/.test(n) ? "től" : "tól"); }
+function reportSeen() { try { return localStorage.getItem("reportSeen") || ""; } catch { return ""; } }
+/* hónapzáró kártya: az előző hónap jelentése, amíg meg nem nézted (a hónap első 20 napjában) */
+function renderReportCard() {
+  const pm = prevMonthOf(currentMonth());
+  if (selectedMonth === "all" || new Date().getDate() > 20 || reportSeen() === pm) return "";
+  if (!expenseItems.some(it => effMonth(it) === pm)) return "";
+  const name = monthNameLong(pm);
+  return `<div class="card action-card"><div class="ac-ic"><i class="ph-fill ph-chart-bar"></i></div><div class="ac-body"><b>${name.charAt(0).toUpperCase() + name.slice(1)} lezárult</b><span>Elkészült a részletes havi jelentésed.</span></div><button class="btn ac-btn" data-open-report="${pm}">Megnézem</button></div>`;
+}
+function reportBar(label, value, target, income, kind) {
+  const p = income > 0 ? Math.round(value / income * 100) : 0;
+  const ok = kind === "save" ? p >= target : p <= target;
+  return `<div class="rp-bar"><div class="rp-bar-head"><span>${label}</span><span><b>${formatFt(value)}</b> · ${p}% <small>(cél ${target}%)</small></span></div>
+    <div class="bud-track"><div class="bud-fill ${ok ? "ok" : (kind === "save" ? "under" : "over")}" style="width:${Math.min(p, 100)}%"></div><div class="bud-target" style="left:${Math.min(target, 100)}%"></div></div></div>`;
+}
+function renderReportHtml(month) {
+  const r = buildReport(month), sc = reportScore(r), adv = reportAdvice(r), plan = reportPlan(r);
+  const sevIcon = { high: "warning", mid: "warning-circle", low: "lightbulb", good: "check-circle", info: "info" };
+  let h = "";
+  if (!r.count && r.income <= 0) return `<p class="hint">Ebben a hónapban nincs tétel.</p>`;
+
+  // pontszám + fő számok
+  if (sc) h += `<div class="rp-score ${sc.cls}"><div class="rp-score-num">${sc.score}<small>/100</small></div><div class="rp-score-txt"><b>${sc.label}</b>${sc.parts.length ? `<ul>${sc.parts.map(p => `<li>−${p.p} pont: ${p.why}</li>`).join("")}</ul>` : "<span>Minden arány a kereten belül van.</span>"}</div></div>`;
+  h += `<div class="refl-sum">
+      <div><span>Bevétel</span><b>${formatFt(r.income)}</b></div>
+      <div><span>Személyes kiadás</span><b>${formatFt(r.spend)}</b>${r.prevSpend > 0 ? `<small class="${r.spend > r.prevSpend ? "up" : "down"}">${r.spend > r.prevSpend ? "▲" : "▼"} ${Math.abs(Math.round((r.spend - r.prevSpend) / r.prevSpend * 100))}% az előző hónaphoz</small>` : ""}</div>
+      <div><span>Megtakarítás</span><b>${formatFt(r.bucket.saving)}</b><small>a bevétel ${r.income > 0 ? Math.round(r.bucket.saving / r.income * 100) : 0}%-a</small></div>
+      <div><span>${r.isCur ? "Egyenleg eddig" : "Hó végi egyenleg"}</span><b class="${r.balance < 0 ? "neg" : ""}">${formatFt(r.balance)}</b></div>
+    </div>`;
+
+  // teendők
+  h += `<h4 class="rp-h"><i class="ph-fill ph-list-checks"></i> Mit csinálj másképp</h4>`;
+  const gain = adv.filter(a => a.gain).reduce((s, a) => s + a.impact, 0);
+  if (gain >= 1000) h += `<div class="rp-gain"><i class="ph-fill ph-coins"></i><span>Ha a lenti javaslatokat megfogadod, havonta kb. <b>${formatFt(r1000(gain))}</b> marad nálad – ez évente <b>${formatFt(r1000(gain) * 12)}</b>.</span></div>`;
+  h += adv.map(a => `<div class="rp-adv ${a.sev}"><i class="ph-fill ph-${sevIcon[a.sev]}"></i><div><b>${a.title}</b><p>${a.text}</p>${a.todo ? `<p class="rp-todo"><i class="ph-fill ph-arrow-right"></i> ${a.todo}</p>` : ""}</div></div>`).join("");
+
+  // arányok
+  if (r.income > 0) {
+    h += `<h4 class="rp-h"><i class="ph-fill ph-target"></i> Arányok (${ruleLabel()})</h4>`;
+    if (rule5030.need > 0) h += reportBar("Szükségletek", r.bucket.need, rule5030.need, r.income, "spend");
+    if (rule5030.want > 0) h += reportBar("Vágyak", r.bucket.want, rule5030.want, r.income, "spend");
+    if (rule5030.save > 0) h += reportBar("Megtakarítás", r.bucket.saving, rule5030.save, r.income, "save");
+  }
+
+  // terv
+  if (plan.rows.length) {
+    h += `<h4 class="rp-h"><i class="ph-fill ph-calendar-check"></i> Terv a következő hónapra</h4>
+      <table class="rp-table"><thead><tr><th>Kategória</th><th>Most</th><th>Javasolt keret</th></tr></thead><tbody>
+      ${plan.rows.map(p => `<tr><td>${escapeHtml(p.name)}</td><td>${formatFt(p.actual)}</td><td><b>${formatFt(p.suggest)}</b>${p.suggest < p.actual ? ` <small class="down">−${formatFt(p.actual - p.suggest)}</small>` : ""}</td></tr>`).join("")}
+      ${plan.saveTarget ? `<tr class="rp-save"><td>Megtakarítás (legalább)</td><td>${formatFt(r.bucket.saving)}</td><td><b>${formatFt(plan.saveTarget)}</b></td></tr>` : ""}
+      </tbody></table>
+      <button class="btn secondary" id="btnApplyPlan"><i class="ph-fill ph-check"></i> Keretek beállítása</button>
+      <p class="hint" style="margin:-4px 0 0;">A kereteket a Kategóriák fülön bármikor átírhatod. Túllépéskor az app szól.</p>`;
+  }
+
+  // hová ment a pénz
+  const catRows = Object.values(r.cats).sort((a, b) => b.sum - a.sum);
+  const maxCat = Math.max(1, ...catRows.map(c => c.sum));
+  h += `<h4 class="rp-h"><i class="ph-fill ph-chart-pie-slice"></i> Hová ment a pénz</h4>` + catRows.map(c => {
+    const p = r.prevCats[c.key] || 0, diff = p > 0 ? Math.round((c.sum - p) / p * 100) : null;
+    const subs = r.groups.filter(g => g.key === c.key && g.sub).slice(0, 4).map(g => `${escapeHtml(g.sub)} ${formatFt(g.sum)}`).join(" · ");
+    return `<div class="rp-cat"><div class="rp-cat-head"><span><span class="bd-dot" style="background:${catHex(c.key)}"></span> ${escapeHtml(catName(c.key))} <small>${c.count} db</small></span><span><b>${formatFt(c.sum)}</b>${r.income > 0 ? ` · ${Math.round(c.sum / r.income * 100)}%` : ""}${diff !== null ? ` <small class="${diff > 0 ? "up" : "down"}">${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}%</small>` : ""}</span></div>
+      <div class="rp-cat-bar"><div style="width:${Math.round(c.sum / maxCat * 100)}%;background:${catHex(c.key)}"></div></div>${subs ? `<div class="rp-cat-subs">${subs}</div>` : ""}</div>`;
+  }).join("");
+
+  // legnagyobb tételek + gyakori helyek
+  if (r.top.length) h += `<h4 class="rp-h"><i class="ph-fill ph-arrow-fat-lines-up"></i> Legnagyobb tételek</h4><div class="rp-list">${r.top.map(it => `<div><span>${escapeHtml(it.name)} <small>${escapeHtml(catName(it.color))}${it.day ? " · " + itemDateLabel(it) : ""}</small></span><b>${formatFt(it.amount)}</b></div>`).join("")}</div>`;
+  if (r.merchants.length) h += `<h4 class="rp-h"><i class="ph-fill ph-repeat"></i> Hol költesz gyakran</h4><div class="rp-list">${r.merchants.map(m => `<div><span>${escapeHtml(m.name)} <small>${m.count} alkalom · átlag ${formatFt(m.sum / m.count)}</small></span><b>${formatFt(m.sum)}</b></div>`).join("")}</div>`;
+
+  // mintázatok
+  const d = r.dated;
+  h += `<h4 class="rp-h"><i class="ph-fill ph-calendar-dots"></i> Mintázatok</h4><div class="refl-sum">
+      <div><span>Napi átlag</span><b>${formatFt(r.dailyAvg)}</b><small>${r.daysElapsed} napra</small></div>
+      ${d.maxDay ? `<div><span>Legdrágább nap</span><b>${itemDateLabel({ month, day: d.maxDay.day })}</b><small>${formatFt(d.maxDay.sum)}</small></div>` : ""}
+      ${d.share >= 0.6 ? `<div><span>Költésmentes napok</span><b>${d.noSpend}</b><small>a ${r.daysElapsed}-ből</small></div><div><span>1–15. / 16-tól</span><b>${formatFt(d.half1)}</b><small>${formatFt(d.half2)}</small></div>` : ""}
+    </div>`;
+  if (d.share >= 0.6 && d.sum > 0) {
+    const mx = Math.max(1, ...d.wd);
+    h += `<div class="rp-wd">${d.wd.map((v, i) => `<div><div class="rp-wd-bar"><div style="height:${Math.max(3, Math.round(v / mx * 100))}%" title="${formatFt(v)}"></div></div><span>${WEEKDAYS[i]}</span></div>`).join("")}</div><p class="hint" style="text-align:center;margin:4px 0 0;">Költés a hét napjai szerint</p>`;
+  } else if (r.undated > 0) h += `<p class="hint">A napi bontáshoz a tételek nagyobb részének kellene nap (most ${Math.round(d.share * 100)}% van dátumozva).</p>`;
+
+  // AI
+  h += `<h4 class="rp-h"><i class="ph-fill ph-sparkle"></i> AI-elemzés</h4><div id="rpAi"><p class="hint" style="margin:0 0 8px;">Szöveges, személyre szabott kiértékelés a fenti adatok alapján${mentorItems ? " (a tételeidet is látja)" : " (csak összesítéseket lát)"}.</p><button class="btn secondary" id="btnReportAi"><i class="ph-fill ph-sparkle"></i> Kérek AI-elemzést</button></div>`;
+  return h;
+}
+function openReport(month) {
+  reportMonth = month;
+  if (month === prevMonthOf(currentMonth())) { try { localStorage.setItem("reportSeen", month); } catch {} }
+  const name = monthLabel(month);
+  document.getElementById("rpTitle").innerHTML = `<i class="ph-fill ph-chart-bar"></i> ${escapeHtml(name)}`;
+  document.getElementById("rpBody").innerHTML = renderReportHtml(month);
+  const ap = document.getElementById("btnApplyPlan");
+  if (ap) ap.addEventListener("click", applyReportPlan);
+  const ai = document.getElementById("btnReportAi");
+  if (ai) ai.addEventListener("click", () => runReportAi(month));
+  document.getElementById("btnReportReflect").hidden = month >= currentMonth();
+  document.getElementById("reportModal").classList.add("show");
+  document.querySelector("#reportModal .modal").scrollTop = 0;
+}
+function closeReport() { document.getElementById("reportModal").classList.remove("show"); reportMonth = null; renderList(); }
+function applyReportPlan() {
+  if (!reportMonth) return;
+  const plan = reportPlan(buildReport(reportMonth));
+  if (!confirm(`Beállítom a javasolt havi kereteket ${plan.rows.length} kategóriára (${monthFromLabel(nextMonthOf(reportMonth))})?\n\n${plan.rows.map(p => `${p.name}: ${formatFt(p.suggest)}`).join("\n")}\n\nA meglévő kereteket felülírja.`)) return;
+  const from = nextMonthOf(reportMonth);
+  plan.rows.forEach(p => { customCategories[p.key] = Object.assign({}, allCategories()[p.key], { limit: p.suggest, limitFrom: from }); });
+  saveCategories();
+  const b = document.getElementById("btnApplyPlan");
+  if (b) { b.disabled = true; b.innerHTML = '<i class="ph-fill ph-check-circle"></i> Keretek beállítva'; }
+  toast(`✅ Keretek beállítva ${monthFromLabel(from)} – túllépéskor szólok.`);
+}
+/* AI-elemzés: ugyanazokat az összesítéseket kapja, amiket a jelentés mutat */
+const REPORT_SYSTEM = `Te egy tapasztalt, őszinte, de bátorító pénzügyi tudatosság mentor vagy. Magyarul, tegezve írj. A felhasználó egy hónapjának adatait kapod. Készíts részletes, konkrét havi kiértékelést ebben a szerkezetben: 1) "Összkép" – 2-3 mondat. 2) "Hol költöttél túl" – legfeljebb 3 terület, konkrét összegekkel és azzal, hogy miért gond. 3) "Teendők a következő hónapra" – 4-5 konkrét, mérhető lépés forintösszegekkel. 4) "Amit jól csináltál" – 1-2 dolog. Csak a kapott számokra támaszkodj, ne találj ki adatot. Legfeljebb kb. 300 szó. NE ajánlj konkrét befektetési terméket, részvényt, alapot, kriptovalutát vagy pénzügyi szolgáltatót; befektetési, adó- vagy jogi kérdésben javasolj független, engedéllyel rendelkező szakembert.`;
+function reportDataText(month) {
+  const r = buildReport(month), sc = reportScore(r);
+  const L = [];
+  L.push(`Hónap: ${month}${r.isCur ? " (még tart)" : " (lezárt)"}. Költségvetési cél: szükséglet ${rule5030.need}%, vágy ${rule5030.want}%, megtakarítás ${rule5030.save}%.`);
+  L.push(`Bevétel: ${Math.round(r.income)} Ft. Szükséglet: ${Math.round(r.bucket.need)} Ft. Vágy: ${Math.round(r.bucket.want)} Ft. Megtakarítás: ${Math.round(r.bucket.saving)} Ft. Vállalkozás (külön): ${Math.round(r.bucket.business)} Ft. Egyenleg: ${Math.round(r.balance)} Ft.${sc ? ` Pontszám: ${sc.score}/100.` : ""}`);
+  if (r.prevSpend > 0) L.push(`Előző havi személyes kiadás: ${Math.round(r.prevSpend)} Ft.`);
+  L.push("Csoportok (besorolás | kategória / alkategória | darab | összeg): " + r.groups.slice(0, 25).map(g => `${bucketMeta(g.bucket).t} | ${catName(g.key)}${g.sub ? " / " + g.sub : ""} | ${g.count} | ${Math.round(g.sum)} Ft`).join("; "));
+  L.push(`Napi átlag: ${Math.round(r.dailyAvg)} Ft.` + (r.dated.share >= 0.6 ? ` Költésmentes napok: ${r.dated.noSpend}. A hónap első fele: ${Math.round(r.dated.half1)} Ft, második fele: ${Math.round(r.dated.half2)} Ft.` : ""));
+  if (goals.length) L.push("Megtakarítási célok: " + goals.map(g => `${g.name} ${goalProgress(g)}/${g.target} Ft`).join("; "));
+  if (mentorItems) {
+    const clean = (s) => String(s || "").replace(/[\r\n|]+/g, " ").trim();
+    L.push("Tételek (dátum | név | összeg | kategória):\n" + expenseItems.filter(it => effMonth(it) === month && (it.type || "expense") !== "income").slice(0, 200)
+      .map(it => `${it.month}${it.day ? "-" + String(it.day).padStart(2, "0") : ""} | ${clean(it.name).slice(0, 50)} | ${Math.round(Number(it.amount))} Ft | ${clean(catName(it.color))}${it.sub ? " / " + clean(it.sub) : ""}`).join("\n"));
+  }
+  return L.join("\n");
+}
+async function runReportAi(month) {
+  const box = document.getElementById("rpAi");
+  if (!geminiKey) { box.innerHTML = `<p class="hint">Az AI-elemzéshez egy ingyenes AI-kulcs kell: Kategóriák → AI beolvasás → kulcs mentése.</p>`; return; }
+  box.innerHTML = `<div class="ocr-status"><i class="ph-fill ph-spinner"></i> <span>Elemzés készül… (pár másodperc)</span></div>`;
+  try {
+    const reply = await aiChat(REPORT_SYSTEM, [{ role: "user", content: "Itt vannak a havi adataim, kérlek értékeld ki:\n\n" + reportDataText(month) }]);
+    if (reportMonth !== month) return; // közben bezárták
+    box.innerHTML = `<div class="rp-ai">${fmtChat(reply || "Most nem sikerült elemzést készíteni, próbáld újra.")}</div><p class="hint" style="margin:8px 0 0;">AI által készített összefoglaló – a számokat a fenti jelentésben ellenőrizheted. Nem befektetési tanács.</p>`;
+  } catch (e) {
+    box.innerHTML = `<p class="ocr-err-txt">⚠️ ${escapeHtml(e.message + ocrErrorHint(e.message))}</p><button class="btn secondary" id="btnReportAi"><i class="ph-fill ph-sparkle"></i> Újrapróbálom</button>`;
+    document.getElementById("btnReportAi").addEventListener("click", () => runReportAi(month));
+  }
+}
+document.getElementById("btnReportClose").addEventListener("click", closeReport);
+document.getElementById("btnReportClose2").addEventListener("click", closeReport);
+document.getElementById("btnReportReflect").addEventListener("click", () => { const m = reportMonth; closeReport(); if (m) openReflection(m); });
+document.getElementById("reportModal").addEventListener("click", e => { if (e.target.id === "reportModal") closeReport(); });
 
 /* ---------- Kategória szerkesztés ---------- */
 function openCatEdit(key) {
