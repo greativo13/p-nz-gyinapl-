@@ -380,6 +380,7 @@
   .ocr-row input[type="text"], .ocr-row input[type="number"], .ocr-row .ocr-cat { padding: 9px 10px; font-size: 14px; }
   .ocr-row .ocr-cat { width: 100%; }
   .ocr-row-bottom { display: flex; gap: 8px; }
+  .ocr-row .ocr-sub { margin: 8px 0 0; }
   .ocr-row-bottom .ocr-cat { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
   .ocr-row .ocr-date { width: 150px; flex-shrink: 0; margin-bottom: 0; padding: 9px 8px; font-size: 14px; min-height: 0; }
   .ocr-dup { font-size: 12px; color: #b45309; display: flex; align-items: center; gap: 5px; }
@@ -1653,7 +1654,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v66"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v67"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -1735,8 +1736,12 @@ async function extractAI(file) {
   const b64 = await fileToBase64(file);
   const mime = file.type || "image/png";
   const catNames = Object.values(allCategories()).map(c => c.name);
+  const catList = Object.keys(allCategories()).map(k => {
+    const subs = catSubs(k);
+    return catName(k) + (subs.length ? " (alkategóriák: " + subs.join(", ") + ")" : "");
+  }).join("; ");
   const now = new Date(), yest = new Date(now.getTime() - 864e5);
-  const prompt = `Ez egy bankszámla vagy költés-app képernyőképe. Nyerd ki belőle a TÉNYLEGES tranzakciókat (vásárlások, kiadások). Hagyd ki: napi/időszaki összegzők, egyenleg, időpontok, és az apró kerekítés/megtakarítás (spare change) összegek. Minden tételhez: name = a bolt/kereskedő neve; amount = pozitív egész forintösszeg; category = pontosan egy ezek közül: ${catNames.join(", ")}; date = a tranzakció dátuma "YYYY-MM-DD" formában, ha látszik vagy kikövetkeztethető (a mai nap ${isoDate(now)}, tehát "ma" = ${isoDate(now)}, "tegnap" = ${isoDate(yest)}; ha csak hónap és nap látszik, az évet a mai dátumhoz igazítsd), különben null. Válaszolj KIZÁRÓLAG egy JSON tömbbel, például: [{"name":"Tesco","amount":11499,"category":"Étkezés","date":"${isoDate(now)}"}]`;
+  const prompt = `Ez egy bankszámla vagy költés-app képernyőképe. Nyerd ki belőle a TÉNYLEGES tranzakciókat (vásárlások, kiadások). Hagyd ki: napi/időszaki összegzők, egyenleg, időpontok, és az apró kerekítés/megtakarítás (spare change) összegek. Minden tételhez: name = a bolt/kereskedő neve; amount = pozitív egész forintösszeg; category = pontosan egy ezek közül: ${catNames.join(", ")}; subcategory = a választott kategória egyik alkategóriája pontosan így írva, vagy null, ha egyik sem illik (kategóriák és alkategóriáik: ${catList}); date = a tranzakció dátuma "YYYY-MM-DD" formában, ha látszik vagy kikövetkeztethető (a mai nap ${isoDate(now)}, tehát "ma" = ${isoDate(now)}, "tegnap" = ${isoDate(yest)}; ha csak hónap és nap látszik, az évet a mai dátumhoz igazítsd), különben null. Válaszolj KIZÁRÓLAG egy JSON tömbbel, például: [{"name":"Tesco","amount":11499,"category":"Étkezés","subcategory":null,"date":"${isoDate(now)}"}]`;
   let txt = "";
   if (viaOR) {
     txt = await openRouterRequest(prompt, b64, mime);
@@ -1758,8 +1763,10 @@ async function extractAI(file) {
   return arr.filter(o => o && o.name && parseHuf(o.amount) > 0).map(o => {
     let color = byName[deburr(o.category || "")];
     if (!color) { const g = guessCategory(o.name); color = g ? g.color : fallback; }
+    // alkategória: az AI javaslata, ha valóban a kategória alkategóriája (ékezet/kisbetű-függetlenül); különben a bolt-szótár
+    const aiSub = catSubs(color).find(s => deburr(s) === deburr(o.subcategory || ""));
     const g2 = guessCategory(o.name);
-    const sub = (g2 && g2.color === color) ? g2.sub : "";
+    const sub = aiSub || ((g2 && g2.color === color) ? g2.sub : "");
     return { name: String(o.name).trim().slice(0, 40), amount: parseHuf(o.amount), use: true, color, sub, date: cleanAiDate(o.date) };
   });
 }
@@ -1869,9 +1876,12 @@ function renderOcrRows() {
       <div class="ocr-row-bottom">
         <select class="ocr-cat" data-ocr-cat="${i}">${opts}</select>
         <input type="date" class="ocr-date" value="${c.date || ""}" data-ocr-date="${i}" aria-label="Dátum">
-      </div>${c.dup ? `<div class="ocr-dup"><i class="ph-fill ph-info"></i> Már felvitted – ezért nincs kipipálva</div>` : ""}`;
+      </div>
+      <select class="ocr-cat ocr-sub" data-ocr-sub="${i}" aria-label="Alkategória"></select>${c.dup ? `<div class="ocr-dup"><i class="ph-fill ph-info"></i> Már felvitted – ezért nincs kipipálva</div>` : ""}`;
     box.appendChild(row);
+    fillOcrSubs(row.querySelector("[data-ocr-sub]"), c);
   });
+  box.querySelectorAll("[data-ocr-sub]").forEach(el => el.addEventListener("change", e => ocrCandidates[+e.target.dataset.ocrSub].sub = e.target.value));
   box.querySelectorAll("[data-ocr-use]").forEach(el => el.addEventListener("change", e => ocrCandidates[+e.target.dataset.ocrUse].use = e.target.checked));
   box.querySelectorAll("[data-ocr-name]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrName].name = e.target.value));
   box.querySelectorAll("[data-ocr-amt]").forEach(el => el.addEventListener("input", e => ocrCandidates[+e.target.dataset.ocrAmt].amount = Number(e.target.value)));
@@ -1880,7 +1890,15 @@ function renderOcrRows() {
     const c = ocrCandidates[+e.target.dataset.ocrCat];
     c.color = e.target.value;
     if (c.sub && !catSubs(c.color).includes(c.sub)) c.sub = ""; // ha a régi alkategória nem illik az új kategóriához
+    fillOcrSubs(e.target.closest(".ocr-row").querySelector("[data-ocr-sub]"), c);
   }));
+}
+/* alkategória-választó a beolvasott tételhez; ha a kategóriának nincs alkategóriája, rejtve marad */
+function fillOcrSubs(sel, c) {
+  const subs = catSubs(c.color);
+  sel.innerHTML = `<option value="">— nincs alkategória</option>` + subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  sel.value = subs.includes(c.sub) ? c.sub : "";
+  sel.hidden = !subs.length;
 }
 function closeOcr() { document.getElementById("ocrModal").classList.remove("show"); ocrCandidates = []; }
 document.getElementById("btnOcr").addEventListener("click", () => document.getElementById("ocrFile").click());
