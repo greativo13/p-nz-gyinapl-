@@ -614,6 +614,8 @@
   .wish-calc input[type="number"] { width: 110px; padding: 8px 10px; margin: 0; font-size: 16px; border-radius: 10px; }
   .wish-eta { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
   .wish-eta b { color: var(--text); }
+  .wish-ask { background: var(--soft); border-radius: 12px; padding: 10px 12px 12px; }
+  .wish-ask p { font-size: 13.5px; color: var(--text); margin: 0 0 10px; line-height: 1.4; }
   .wish-row .wish-save { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 8px; }
   .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
   .set-sec { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow-card); }
@@ -1909,6 +1911,21 @@ function wishEtaText(amount, monthly) {
   const len = k >= 12 ? `${k} hónap (${Math.floor(k / 12)} év${k % 12 ? " " + (k % 12) + " hónap" : ""})` : `${k} hónap`;
   return `≈ <b>${len}</b> alatt jön össze · kb. ${yr}${monthNameLong(target)}`;
 }
+/* megerősítés a kártyán belül (az iPhone-os rendszer-ablak néha magától bezárul) */
+let wishAsk = null; // {id, action: "skip" | "plan"}
+function wishPlanInfo(w) {
+  const monthly = w.monthly || wishSuggestMonthly();
+  const k = Math.max(1, Math.ceil(w.amount / monthly));
+  const from = planStartCycle("9999-12");
+  return { k, from, due: addMonthsTo(from, k - 1), per: Math.ceil(w.amount / k / 100) * 100 };
+}
+function wishAskHtml(w, action) {
+  const txt = action === "plan"
+    ? (() => { const i = wishPlanInfo(w); return `Havonta kb. <b>${formatFt(i.per)}</b>, ${i.k} fizetésen át, kb. ${escapeHtml(monthLabelShort(i.due))}-ig. A fizetésnapi teendők között jelenik meg, a kívánságlistáról lekerül.`; })()
+    : `Biztos nem veszed meg? A <b>${formatFt(w.amount)}</b> a megspórolt összeghez kerül.`;
+  const yes = action === "plan" ? `<i class="ph-fill ph-piggy-bank"></i> Igen, gyűjtök rá` : `<i class="ph-fill ph-check"></i> Igen, nem kell`;
+  return `<div class="wish-ask"><p>${txt}</p><div class="btn-row"><button type="button" class="btn" data-wish-yes>${yes}</button><button type="button" class="btn secondary" data-wish-no>Mégse</button></div></div>`;
+}
 function renderWishlist() {
   fillWishCats();
   const list = document.getElementById("wishList");
@@ -1927,8 +1944,8 @@ function renderWishlist() {
       <div class="wish-head"><span class="wish-name">${dot}${escapeHtml(w.name)}</span><b>${formatFt(w.amount)}</b></div>
       <div class="wish-calc"><span>Havonta félretennék</span><input type="number" inputmode="numeric" min="1" data-wish-monthly value="${monthly}" aria-label="Havi félretétel (Ft)"><span>Ft</span></div>
       <div class="wish-eta">${wishEtaText(w.amount, monthly)}${w.monthly ? "" : " <span class=\"lbl-hint\">(javaslat – átírhatod)</span>"}</div>
-      <button type="button" class="btn wish-save" data-wish-plan><i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}</button>
-      <div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>
+      ${wishAsk && wishAsk.id === w.id ? wishAskHtml(w, wishAsk.action) : `<button type="button" class="btn wish-save" data-wish-plan><i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}</button>
+      <div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>`}
     </div>`;
   }).join("");
 }
@@ -1979,22 +1996,35 @@ document.getElementById("wishList").addEventListener("change", (e) => {
   if (!w) return;
   const v = Math.round(Number(inp.value));
   if (v > 0 && v < 1e10) w.monthly = v; else delete w.monthly;
-  saveWishlist(); renderWishlist();
+  saveWishlist();
+  // csak a sor szövegeit frissítjük: a teljes újrarajzolás elnyelné a közben megnyomott gombot
+  const row = inp.closest("[data-wish]");
+  const monthly = w.monthly || wishSuggestMonthly();
+  if (!w.monthly) inp.value = monthly;
+  const eta = row.querySelector(".wish-eta");
+  if (eta) eta.innerHTML = wishEtaText(w.amount, monthly) + (w.monthly ? "" : ' <span class="lbl-hint">(javaslat – átírhatod)</span>');
+  const pb = row.querySelector("[data-wish-plan]");
+  if (pb) pb.innerHTML = `<i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}`;
 });
 document.getElementById("wishList").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-plan]");
+  const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-plan], [data-wish-yes], [data-wish-no]");
   if (!btn) return;
   const idx = wishlist.findIndex(x => x.id === btn.closest("[data-wish]").dataset.wish);
   if (idx < 0) return;
   const w = wishlist[idx];
-  if (btn.hasAttribute("data-wish-plan")) {
+  if (btn.hasAttribute("data-wish-no")) { wishAsk = null; renderWishlist(); return; }
+  if (btn.hasAttribute("data-wish-skip") || btn.hasAttribute("data-wish-plan")) {
+    if (btn.hasAttribute("data-wish-plan") && plans.length >= 30) return toast("⚠️ Legfeljebb 30 tervezett kiadás lehet.");
+    wishAsk = { id: w.id, action: btn.hasAttribute("data-wish-plan") ? "plan" : "skip" };
+    renderWishlist();
+    return;
+  }
+  const action = btn.hasAttribute("data-wish-yes") && wishAsk && wishAsk.id === w.id ? wishAsk.action : (btn.hasAttribute("data-wish-buy") ? "buy" : "");
+  wishAsk = null;
+  if (!action) { renderWishlist(); return; }
+  if (action === "plan") {
     // átkerül a tervezett kiadások közé: a lejárat úgy, hogy a havi részlet ne legyen több a megadottnál
-    const monthly = w.monthly || wishSuggestMonthly();
-    const k = Math.max(1, Math.ceil(w.amount / monthly));
-    const from = planStartCycle("9999-12");
-    const due = addMonthsTo(from, k - 1);
-    if (plans.length >= 30) return toast("⚠️ Legfeljebb 30 tervezett kiadás lehet.");
-    if (!confirm(`Gyűjtesz rá: „${w.name}” – ${formatFt(w.amount)}\n\nHavonta kb. ${formatFt(Math.ceil(w.amount / k / 100) * 100)}, ${k} fizetésen át, kb. ${monthLabelShort(due)}-ig.\nA fizetésnapi teendők között jelenik meg, és a kívánságlistáról lekerül.`)) return;
+    const { from, due } = wishPlanInfo(w);
     const p = sanitizePlans([{ name: w.name, target: w.amount, due, from }])[0];
     plans.push(p); plans.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : 0);
     savePlans();
@@ -2002,8 +2032,7 @@ document.getElementById("wishList").addEventListener("click", (e) => {
     toast(`🐷 ${w.name}: bekerült a tervezett kiadások közé`);
     return;
   }
-  if (btn.hasAttribute("data-wish-skip")) {
-    if (!confirm(`Nem veszed meg: „${w.name}”?\n\nA ${formatFt(w.amount)} a megspórolt összeghez kerül.`)) return;
+  if (action === "skip") {
     wishSaved.total += w.amount; wishSaved.count++;
     wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
     toast(`🎉 ${formatFt(w.amount)} megspórolva`);
@@ -2252,7 +2281,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v76"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v77"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
