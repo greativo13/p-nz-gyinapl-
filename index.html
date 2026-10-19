@@ -1422,6 +1422,13 @@ function catHex(key) {
   if (typeof col === "string" && /^#[0-9a-fA-F]{3,8}$/.test(col)) return col; // csak valódi hex – attribútumba kerül
   return COLOR_HEX[col] || "#94a3a0";
 }
+/* hex szín + átlátszóság (pl. "1f"); a 3 jegyű és az eleve átlátszó kódokat is kezeli */
+function hexTint(hex, alpha) {
+  let h = String(hex || "").replace("#", "");
+  if (h.length === 3 || h.length === 4) h = h.slice(0, 3).split("").map(c => c + c).join("");
+  h = h.slice(0, 6);
+  return /^[0-9a-fA-F]{6}$/.test(h) ? "#" + h + alpha : "transparent";
+}
 function formatFt(n) { return new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft"; }
 
 /* ---------- Hónap segédek ---------- */
@@ -2274,7 +2281,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v80"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v81"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3171,7 +3178,8 @@ function renderList() {
           + (byDay ? "" : " · " + itemDateLabel(it))
           + (it.forMonth ? ` · <span class="exp-shift"><i class="ph-fill ph-arrow-bend-down-right"></i> ${escapeHtml(monthNameLong(it.forMonth))}</span>` : "")
           + (it.note ? ` · <i>${escapeHtml(it.note)}</i>` : "");
-        lHtml += `<button type="button" class="exp-row" data-edit="${i}">
+        const tint = hexTint(isIncome ? "#17a35a" : catHex(it.color), "1f"); // halvány kategóriaszín háttérnek
+        lHtml += `<button type="button" class="exp-row" data-edit="${i}" style="background:${tint}">
           <span class="exp-ic" style="background:${col}">${isIncome ? '<i class="ph-fill ph-trend-up"></i>' : iconHtml(catIcon(it.color))}</span>
           <span class="exp-txt"><span class="exp-name">${escapeHtml(it.name)}</span><span class="exp-meta">${meta}</span></span>
           <span class="exp-amt ${isIncome ? "amt-in" : ""}">${isIncome ? "+" : "−"}${formatFt(it.amount)}</span>
