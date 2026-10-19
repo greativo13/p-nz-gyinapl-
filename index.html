@@ -604,6 +604,9 @@
   @keyframes wishFlash { 0%, 40% { box-shadow: 0 0 0 3px var(--green-accent); } 100% { box-shadow: var(--shadow-card); } }
   .wish-saved { font-size: 13px; color: var(--soft-text); background: var(--soft); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   #wCat { margin-bottom: 12px; }
+  .wish-saved .ws-txt { flex: 1; min-width: 0; }
+  .wish-saved .ws-txt small { display: block; font-size: 12px; opacity: 0.8; margin-top: 1px; }
+  .ws-btn { border: none; background: var(--card); color: var(--soft-text); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
   .wish-list { display: flex; flex-direction: column; gap: 10px; }
   .wish-empty { font-size: 13px; color: var(--muted); }
   .wish-row { border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
@@ -1931,7 +1934,9 @@ function renderWishlist() {
   const list = document.getElementById("wishList");
   const savedEl = document.getElementById("wishSaved");
   if (wishSaved.total > 0) {
-    savedEl.innerHTML = `<i class="ph-fill ph-piggy-bank"></i><span>Eddig <b>${formatFt(wishSaved.total)}-ot</b> nem költöttél el (${wishSaved.count} dolog).</span>`;
+    savedEl.innerHTML = wishAsk && wishAsk.id === "_reset"
+      ? `<span class="ws-txt">Nullázod a számlálót?</span><button type="button" class="ws-btn" data-wsaved-yes>Igen</button><button type="button" class="ws-btn" data-wsaved-no>Mégse</button>`
+      : `<i class="ph-fill ph-piggy-bank"></i><span class="ws-txt">Megspórolva: <b>${formatFt(wishSaved.total)}</b><small>${wishSaved.count} dolgot végül nem vettél meg</small></span><button type="button" class="ws-btn" data-wsaved-reset title="Számláló nullázása" aria-label="Számláló nullázása"><i class="ph ph-arrow-counter-clockwise"></i></button>`;
     savedEl.hidden = false;
   } else savedEl.hidden = true;
   if (!wishlist.length) { list.innerHTML = `<div class="wish-empty">Még üres.</div>`; return; }
@@ -2005,6 +2010,13 @@ document.getElementById("wishList").addEventListener("change", (e) => {
   if (eta) eta.innerHTML = wishEtaText(w.amount, monthly) + (w.monthly ? "" : ' <span class="lbl-hint">(javaslat – átírhatod)</span>');
   const pb = row.querySelector("[data-wish-plan]");
   if (pb) pb.innerHTML = `<i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}`;
+});
+document.getElementById("wishSaved").addEventListener("click", (e) => {
+  if (e.target.closest("[data-wsaved-reset]")) wishAsk = { id: "_reset" };
+  else if (e.target.closest("[data-wsaved-yes]")) { wishAsk = null; wishSaved = { total: 0, count: 0 }; saveWishlist(); toast("Számláló nullázva"); }
+  else if (e.target.closest("[data-wsaved-no]")) wishAsk = null;
+  else return;
+  renderWishlist();
 });
 document.getElementById("wishList").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-plan], [data-wish-yes], [data-wish-no]");
@@ -2281,7 +2293,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v77"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v78"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
