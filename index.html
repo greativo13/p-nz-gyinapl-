@@ -611,6 +611,12 @@
   .wish-eta { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
   .wish-eta b { color: var(--text); }
   .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
+  .ov-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+  .ov-tabs button { border: none; background: none; border-radius: 10px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--chip-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .ov-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+  #panel-list[data-ov="month"] .ov-items, #panel-list[data-ov="month"] .ov-insights,
+  #panel-list[data-ov="items"] .ov-month, #panel-list[data-ov="items"] .ov-insights,
+  #panel-list[data-ov="insights"] .ov-month, #panel-list[data-ov="insights"] .ov-items { display: none !important; }
   .hero-free { margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); background: var(--soft); border-radius: 12px; padding: 9px 11px; }
   .hero-free i { color: var(--green-accent); margin-top: 2px; }
   .hero-free small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
@@ -758,8 +764,15 @@
         <span class="tb-ic" aria-hidden="true"><i class="ph-fill ph-calendar-blank"></i></span>
         <select id="monthFilter" aria-label="Hónap választása"></select>
       </div>
-      <div id="summaryArea"></div>
+      <div class="ov-tabs" id="ovTabs" role="tablist" hidden>
+        <button type="button" role="tab" data-ov="month"><i class="ph-fill ph-house"></i> Hónap</button>
+        <button type="button" role="tab" data-ov="items"><i class="ph-fill ph-list-bullets"></i> Tételek</button>
+        <button type="button" role="tab" data-ov="insights"><i class="ph-fill ph-chart-line-up"></i> Elemzés</button>
+      </div>
+      <div id="summaryArea" class="ov-month"></div>
+      <div id="insightArea" class="ov-insights"></div>
 
+      <div class="ov-items">
       <div class="list-controls" id="listControls" style="display:none">
         <div class="search-wrap"><i class="ph-fill ph-magnifying-glass"></i><input type="search" id="searchInput" placeholder="Keresés..."></div>
         <select id="sortSelect">
@@ -773,6 +786,7 @@
       <div id="expenseListArea"></div>
       <hr class="divider" id="clearDivider" style="display:none">
       <button class="btn danger" id="btnClearAll" style="display:none"><i class="ph-fill ph-trash"></i> Az összes adat törlése</button>
+      </div>
     </section>
 
     <!-- ============ KATEGÓRIÁK ============ -->
@@ -2116,7 +2130,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v70"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v71"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2767,9 +2781,20 @@ function wireSummaryActions(area) {
   area.querySelectorAll("[data-open-report]").forEach(b => b.addEventListener("click", () => openReport(b.dataset.openReport)));
 }
 
+/* ---------- Áttekintés alfülek: Hónap / Tételek / Elemzés ---------- */
+let ovTab = "month";
+try { const t = localStorage.getItem("ovTab"); if (t === "month" || t === "items" || t === "insights") ovTab = t; } catch {}
+function setOvTab(t, remember) {
+  if (remember !== false) { ovTab = t; try { localStorage.setItem("ovTab", t); } catch {} }
+  document.getElementById("panel-list").dataset.ov = t;
+  document.querySelectorAll("#ovTabs [data-ov]").forEach(b => { const on = b.dataset.ov === t; b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
+}
+document.querySelectorAll("#ovTabs [data-ov]").forEach(b => b.addEventListener("click", () => { setOvTab(b.dataset.ov); window.scrollTo({ top: 0 }); }));
+
 /* ---------- Lista / összesítés ---------- */
 function renderList() {
   const summaryArea = document.getElementById("summaryArea");
+  const insightArea = document.getElementById("insightArea");
   const listArea = document.getElementById("expenseListArea");
   const toolbar = document.getElementById("listToolbar");
   const controls = document.getElementById("listControls");
@@ -2778,7 +2803,8 @@ function renderList() {
   if (expenseItems.length === 0) {
     toolbar.style.display = "none";
     controls.style.display = "none";
-    summaryArea.innerHTML = "";
+    summaryArea.innerHTML = ""; insightArea.innerHTML = "";
+    setOvTab("items", false); document.getElementById("ovTabs").hidden = true;
     listArea.innerHTML = '<div class="empty"><span class="big"><i class="ph-fill ph-tray"></i></span>Még nincs egyetlen tétel sem.<br>Koppints a lenti <b><i class="ph-fill ph-plus"></i></b> gombra az elsőhöz!</div>';
     document.getElementById("btnClearAll").style.display = "none";
     document.getElementById("clearDivider").style.display = "none";
@@ -2800,7 +2826,10 @@ function renderList() {
 
   if (monthView.length === 0) {
     controls.style.display = "none";
-    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
+    insightArea.innerHTML = renderMentorCard() || `<div class="empty"><span class="big"><i class="ph-fill ph-chart-line-up"></i></span>Ehhez a hónaphoz még nincs mit elemezni.</div>`;
+    wireSummaryActions(insightArea);
+    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -2873,12 +2902,12 @@ function renderList() {
     bd += `<div class="bd-group">
       <div class="bd-row ${hasSubs ? "has-subs" : ""}" ${hasSubs ? `data-toggle="${e.key}"` : ""}>
         <span class="bd-dot" style="background:${catHex(e.key)}"></span>
-        <span class="bd-name">${escapeHtml(catName(e.key))}${hasSubs ? '<span class="bd-caret">▴</span>' : ""}</span>
+        <span class="bd-name">${escapeHtml(catName(e.key))}${hasSubs ? '<span class="bd-caret">▾</span>' : ""}</span>
         <span class="bd-count">${e.count} db</span>
         <span class="bd-amount">${formatFt(e.sum)}</span>
       </div>`;
     if (hasSubs) {
-      bd += `<div class="bd-subs" data-subs="${e.key}">`;
+      bd += `<div class="bd-subs" data-subs="${e.key}" hidden>`;
       subEntries.forEach(se => {
         bd += `<div class="bd-subrow"><span class="bd-subname">${se.name === "" ? "— nincs alkategória" : escapeHtml(se.name)}</span><span class="bd-subamt">${formatFt(se.sum)}</span></div>`;
       });
@@ -2912,18 +2941,21 @@ function renderList() {
       </div>
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
-    </div>` + renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderGoalsCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
+    </div>` + renderGoalsCard();
+  insightArea.innerHTML = renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
+  document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
+  wireSummaryActions(insightArea);
 
   // 50-30-20 elrejtése
-  const hideBtn = summaryArea.querySelector("[data-hide5030]");
+  const hideBtn = insightArea.querySelector("[data-hide5030]");
   if (hideBtn) hideBtn.addEventListener("click", () => {
     show5030 = false; saveView(); renderList();
     toast("🎯 " + ruleLabel() + " elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
   });
-  const editBtn = summaryArea.querySelector("[data-edit5030]");
+  const editBtn = insightArea.querySelector("[data-edit5030]");
   if (editBtn) editBtn.addEventListener("click", openRuleEdit);
-  const hideCoachBtn = summaryArea.querySelector("[data-hidecoach]");
+  const hideCoachBtn = insightArea.querySelector("[data-hidecoach]");
   if (hideCoachBtn) hideCoachBtn.addEventListener("click", () => {
     showCoach = false; saveCoach(); renderList();
     toast("🧭 Coach elrejtve · Kategóriák → Adatok alatt visszakapcsolható");
