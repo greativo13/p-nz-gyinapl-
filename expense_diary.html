@@ -614,6 +614,7 @@
   .wish-calc input[type="number"] { width: 110px; padding: 8px 10px; margin: 0; font-size: 16px; border-radius: 10px; }
   .wish-eta { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
   .wish-eta b { color: var(--text); }
+  .wish-row .wish-save { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 8px; }
   .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
   .set-sec { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow-card); }
   .set-sec > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 15px; color: var(--text); }
@@ -1926,6 +1927,7 @@ function renderWishlist() {
       <div class="wish-head"><span class="wish-name">${dot}${escapeHtml(w.name)}</span><b>${formatFt(w.amount)}</b></div>
       <div class="wish-calc"><span>Havonta félretennék</span><input type="number" inputmode="numeric" min="1" data-wish-monthly value="${monthly}" aria-label="Havi félretétel (Ft)"><span>Ft</span></div>
       <div class="wish-eta">${wishEtaText(w.amount, monthly)}${w.monthly ? "" : " <span class=\"lbl-hint\">(javaslat – átírhatod)</span>"}</div>
+      <button type="button" class="btn wish-save" data-wish-plan><i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}</button>
       <div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>
     </div>`;
   }).join("");
@@ -1980,11 +1982,26 @@ document.getElementById("wishList").addEventListener("change", (e) => {
   saveWishlist(); renderWishlist();
 });
 document.getElementById("wishList").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-wish-buy], [data-wish-skip]");
+  const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-plan]");
   if (!btn) return;
   const idx = wishlist.findIndex(x => x.id === btn.closest("[data-wish]").dataset.wish);
   if (idx < 0) return;
   const w = wishlist[idx];
+  if (btn.hasAttribute("data-wish-plan")) {
+    // átkerül a tervezett kiadások közé: a lejárat úgy, hogy a havi részlet ne legyen több a megadottnál
+    const monthly = w.monthly || wishSuggestMonthly();
+    const k = Math.max(1, Math.ceil(w.amount / monthly));
+    const from = planStartCycle("9999-12");
+    const due = addMonthsTo(from, k - 1);
+    if (plans.length >= 30) return toast("⚠️ Legfeljebb 30 tervezett kiadás lehet.");
+    if (!confirm(`Gyűjtesz rá: „${w.name}” – ${formatFt(w.amount)}\n\nHavonta kb. ${formatFt(Math.ceil(w.amount / k / 100) * 100)}, ${k} fizetésen át, kb. ${monthLabelShort(due)}-ig.\nA fizetésnapi teendők között jelenik meg, és a kívánságlistáról lekerül.`)) return;
+    const p = sanitizePlans([{ name: w.name, target: w.amount, due, from }])[0];
+    plans.push(p); plans.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : 0);
+    savePlans();
+    wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
+    toast(`🐷 ${w.name}: bekerült a tervezett kiadások közé`);
+    return;
+  }
   if (btn.hasAttribute("data-wish-skip")) {
     if (!confirm(`Nem veszed meg: „${w.name}”?\n\nA ${formatFt(w.amount)} a megspórolt összeghez kerül.`)) return;
     wishSaved.total += w.amount; wishSaved.count++;
@@ -2235,7 +2252,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v75"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v76"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
