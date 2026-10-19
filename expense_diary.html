@@ -647,6 +647,14 @@
   .edit-extra { margin-top: 2px; }
   .edit-extra .btn { font-size: 14px; }
   .btn.danger-text { color: var(--danger); }
+  .sub-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .sub-row:first-of-type { border-top: none; }
+  .sub-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text); display: flex; flex-direction: column; }
+  .sub-st { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+  .sub-st.ok { color: var(--green-accent); }
+  .sub-st.warn { color: #c47a0a; }
+  .sub-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sub-x { border: none; background: none; color: var(--muted); padding: 6px; cursor: pointer; font-size: 15px; }
   .ov-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
   .ov-tabs button { border: none; background: none; border-radius: 10px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--chip-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
   .ov-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
@@ -2261,7 +2269,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v84"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v85"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2825,7 +2833,62 @@ function wireSummaryActions(area) {
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
   wireMentorActions(area);
   wirePlansActions(area);
+  area.querySelectorAll("[data-sub-hide]").forEach(b => b.addEventListener("click", () => {
+    if (!subsHidden.includes(b.dataset.subHide)) subsHidden.push(b.dataset.subHide);
+    saveSubsHidden(); renderList(); toast("Elrejtve az előfizetések közül");
+  }));
   area.querySelectorAll("[data-open-report]").forEach(b => b.addEventListener("click", () => openReport(b.dataset.openReport)));
+}
+
+/* ---------- Előfizetések (Elemzés fül) ----------
+   Előfizetés = Streaming / App / Szoftver / Előfizetés alkategóriás kiadás, vagy ismert szolgáltatás neve.
+   Ugyanaz a szolgáltatás egy csoport (pl. "Disney" és "Disney+"); az utolsó 2 hónapban látott csoportok számítanak. */
+const SUB_SUBS = ["streaming", "app", "szoftver", "elofizetes", "elofizetesek"];
+const SUB_KW = ["netflix", "disney", "spotify", "hbo", "skyshowtime", "youtube", "primevideo", "appletv", "applemusic", "icloud", "googleone", "audible", "deezer", "tidal",
+  "chatgpt", "openai", "claude", "anthropic", "microsoft", "office365", "capcut", "canva", "adobe", "notion", "figma", "github", "duolingo", "storytel", "max"];
+let subsHidden = []; // a felhasználó szerint nem előfizetés (csoportkulcsok)
+try { const h = JSON.parse(localStorage.getItem("subsHidden") || "[]"); if (Array.isArray(h)) subsHidden = h.filter(x => typeof x === "string" && /^[a-z0-9]{1,30}$/.test(x)).slice(0, 100); } catch {}
+function saveSubsHidden() { try { localStorage.setItem("subsHidden", JSON.stringify(subsHidden)); } catch {} }
+function subKey(it) {
+  const n = deburr(it.name).replace(/[^a-z0-9 ]+/g, " ").trim();
+  const flat = n.replace(/\s+/g, "");
+  const kw = SUB_KW.find(k => k === "max" ? /^max\b/.test(n) : flat.includes(k));
+  if (kw) return kw === "openai" ? "chatgpt" : kw === "anthropic" ? "claude" : kw;
+  if (!SUB_SUBS.includes(deburr(it.sub || "").trim())) return "";
+  return (n.split(" ")[0] || "").slice(0, 30);
+}
+function subscriptionGroups() {
+  const cur = currentMonth(), prev = prevMonthOf(cur);
+  const groups = {};
+  expenseItems.forEach(it => {
+    if ((it.type || "expense") === "income" || !it.month || it.month > cur || it.month < prev) return;
+    const k = subKey(it);
+    if (!k || subsHidden.includes(k)) return;
+    const g = groups[k] || (groups[k] = { key: k, last: null });
+    const rank = it.month + String(it.day || 0).padStart(2, "0");
+    if (!g.last || rank > g.lastRank) { g.last = it; g.lastRank = rank; }
+  });
+  return Object.values(groups).sort((a, b) => Number(b.last.amount) - Number(a.last.amount));
+}
+function renderSubsCard() {
+  if (selectedMonth !== currentMonth()) return "";
+  const gs = subscriptionGroups();
+  if (!gs.length) return "";
+  const cur = currentMonth(), today = new Date().getDate();
+  // az "elmaradt?" (valószínűleg lemondott) tételek nem számítanak a havi összegbe
+  const missed = g => g.last.month !== cur && !(g.last.day && g.last.day > today);
+  const total = gs.filter(g => !missed(g)).reduce((s, g) => s + Number(g.last.amount), 0);
+  const rows = gs.map(g => {
+    const it = g.last;
+    let st;
+    if (it.month === cur) st = `<span class="sub-st ok">✓ ${it.day ? it.day + "." : "ebben a hónapban"}</span>`;
+    else if (it.day && it.day > today) st = `<span class="sub-st">várható ${it.day}.</span>`;
+    else st = `<span class="sub-st warn">elmaradt? (múltkor ${it.day ? it.day + "." : "előző hónapban"})</span>`;
+    return `<div class="sub-row"><span class="ns-dot" style="background:${catHex(it.color)}"></span><span class="sub-name">${escapeHtml(it.name)}${st}</span><span class="sub-amt">${formatFt(it.amount)}</span><button type="button" class="sub-x" data-sub-hide="${g.key}" title="Nem előfizetés" aria-label="Nem előfizetés"><i class="ph ph-x"></i></button></div>`;
+  }).join("");
+  return `<div class="card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-repeat"></i> Előfizetések</h2>
+    <p class="hint" style="margin:0 0 10px">Havonta kb. <b>${formatFt(total)}</b> · évente <b>${formatFt(total * 12)}</b></p>${rows}
+    <p class="hint" style="margin:10px 0 0">Az „elmaradt?” tételek nincsenek benne az összegben: vagy lemondtad, vagy még nem írtad be. A ✕ elrejti, ami nem előfizetés.</p></div>`;
 }
 
 /* ---------- Áttekintés alfülek: Hónap / Tételek / Elemzés ---------- */
@@ -2989,7 +3052,7 @@ function renderList() {
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
     </div>` + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard();
-  insightArea.innerHTML = renderMentorCard() + renderTrend();
+  insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
   wireSummaryActions(insightArea);
@@ -4248,7 +4311,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, subsHidden, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -4307,6 +4370,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
       if (Array.isArray(st.plans)) { plans = sanitizePlans(st.plans); savePlans(); }
+      if (Array.isArray(st.subsHidden)) { subsHidden = st.subsHidden.filter(x => typeof x === "string" && /^[a-z0-9]{1,30}$/.test(x)).slice(0, 100); saveSubsHidden(); }
       if (st.wishlist && typeof st.wishlist === "object") { wishlist = sanitizeWishlist(st.wishlist.list); wishSaved = sanitizeWishSaved(st.wishlist.saved); saveWishlist(); }
       if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
       if (st.mentor) { mentor = sanitizeMentor(st.mentor); saveMentor(); }
