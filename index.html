@@ -599,6 +599,11 @@
   .sub-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .sub-chip { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--input-bg); color: var(--text); transition: all 0.12s; }
   .sub-chip:active { transform: scale(0.95); }
+  .name-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 14px; }
+  .name-sugg .sub-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 12.5px; max-width: 100%; }
+  .name-sugg .ns-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .name-sugg .ns-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name-sugg .ns-meta { font-weight: 500; color: var(--muted); white-space: nowrap; }
   .sub-chip.selected { border-color: var(--green-accent); background: var(--soft); color: var(--soft-text); }
   .sub-edit { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
   .sub-edit:empty::before { content: "Még nincs alkategória."; color: var(--muted); font-size: 13px; }
@@ -671,6 +676,7 @@
 
         <label for="mName">Tétel neve</label>
         <input type="text" id="mName" placeholder="pl. Bevásárlás, Fizetés..." autocomplete="off">
+        <div class="name-sugg" id="nameSugg" hidden></div>
 
         <label for="mAmount">Összeg (Ft)</label>
         <input type="number" id="mAmount" placeholder="pl. 2500" inputmode="numeric">
@@ -1530,7 +1536,7 @@ function submitManual() {
     const fixedEl = document.getElementById("mFixed");
     if (fixedEl.checked) setRecurring(added, true);
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
-    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift();
+    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift(); hideNameSugg();
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
     if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
@@ -1570,6 +1576,8 @@ const OCR_RULES = [
   { color: "gray",  sub: "",           k: ["media markt","mediamarkt","euronics","emag","alza","allegro","temu","aliexpress","ebay","amazon"] }
 ];
 function guessCategory(name) {
+  const learned = historyGuess(name); // amit korábban te adtál meg, az erősebb a bolt-szótárnál
+  if (learned) return learned;
   const n = deburr(name);
   const cats = allCategories();
   for (const rule of OCR_RULES) {
@@ -1584,6 +1592,114 @@ function guessCategory(name) {
   }
   return null;
 }
+
+/* ---------- Tanuló beírás: korábbi tételek alapján ---------- */
+/* név (+típus) → a legutóbbi ilyen nevű tétel; "legutóbbi" = hónap, nap, majd felvétel sorrendje */
+function nameHistory() {
+  const map = new Map();
+  expenseItems.forEach((it, i) => {
+    const n = deburr(it.name).trim().replace(/\s+/g, " ");
+    if (!n) return;
+    const type = (it.type || "expense") === "income" ? "income" : "expense";
+    const key = type + "|" + n;
+    const rank = (it.month || "") + "-" + String(it.day || 0).padStart(2, "0") + "-" + String(i).padStart(6, "0");
+    const cur = map.get(key);
+    if (!cur) map.set(key, { it, n, type, rank, count: 1 });
+    else { cur.count++; if (rank > cur.rank) { cur.it = it; cur.rank = rank; } }
+  });
+  return map;
+}
+/* kiadás-kategória tipp a korábbi tételekből (képbeolvasáshoz is) */
+function historyGuess(name) {
+  const q = deburr(name).trim().replace(/\s+/g, " ");
+  if (!q) return null;
+  const cats = allCategories();
+  const words = s => " " + s.replace(/[^a-z0-9&]+/g, " ").trim() + " "; // írásjelek → szóköz ("claude.ai" → "claude ai")
+  const qw = words(q);
+  let best = null;
+  for (const h of nameHistory().values()) {
+    if (h.type !== "expense" || !cats[h.it.color]) continue;
+    if (h.n === q) { best = h; break; }
+    // pl. "INTERFOOD KFT" ↔ korábbi "Interfood" (csak legalább 4 betűs, egész szavas egyezés)
+    if (h.n.length >= 4 && qw.includes(words(h.n)) && (!best || h.n.length > best.n.length)) best = h;
+  }
+  if (!best) return null;
+  const sub = best.it.sub && catSubs(best.it.color).includes(best.it.sub) ? best.it.sub : "";
+  return { color: best.it.color, sub };
+}
+function hideNameSugg() { const box = document.getElementById("nameSugg"); box.hidden = true; box.innerHTML = ""; }
+function renderNameSugg() {
+  const box = document.getElementById("nameSugg");
+  const q = deburr(document.getElementById("mName").value).trim().replace(/\s+/g, " ");
+  if (q.length < 2) return hideNameSugg();
+  const hits = [];
+  for (const h of nameHistory().values()) {
+    let score;
+    if (h.n === q) score = 0;
+    else if (h.n.startsWith(q)) score = 1;
+    else if (h.n.split(" ").some(w => w.startsWith(q))) score = 2;
+    else continue;
+    hits.push({ h, score });
+  }
+  hits.sort((a, b) => a.score - b.score || b.h.count - a.h.count || (b.h.rank > a.h.rank ? 1 : -1));
+  const top = hits.slice(0, 4);
+  if (!top.length) return hideNameSugg();
+  box.innerHTML = "";
+  top.forEach(({ h }) => {
+    const it = h.it;
+    const chip = document.createElement("div");
+    chip.className = "sub-chip";
+    const label = h.type === "income" ? "Bevétel" : (it.sub || catName(it.color));
+    const dot = h.type === "income" ? "#1f9d5b" : catHex(it.color);
+    chip.innerHTML = `<span class="ns-dot" style="background:${dot}"></span><span class="ns-name">${escapeHtml(it.name)}</span><span class="ns-meta">${escapeHtml(label)} · ${formatFt(it.amount)}</span>`;
+    chip.addEventListener("click", () => applyHistoryItem(it, true));
+    a11yClick(chip);
+    box.appendChild(chip);
+  });
+  box.hidden = false;
+}
+/* korábbi tétel adatainak betöltése az űrlapba (név, típus, kategória, alkategória, besorolás, opcionálisan összeg) */
+function applyHistoryItem(it, withAmount, quiet) {
+  const type = (it.type || "expense") === "income" ? "income" : "expense";
+  document.getElementById("mName").value = it.name;
+  if (getTypeToggle("typeToggle") !== type) {
+    const tb = Array.from(document.querySelectorAll("#typeToggle .type-btn")).find(b => b.dataset.type === type);
+    if (tb) tb.click();
+  }
+  if (type === "expense") {
+    const cb = Array.from(document.querySelectorAll("#manualColors .color-btn")).find(b => b.dataset.key === it.color);
+    if (cb) {
+      cb.click(); // alkategóriák újrarajzolása + besorolás alapértelmezésre
+      document.querySelectorAll("#manualSubs .sub-chip").forEach(c => c.classList.toggle("selected", !!it.sub && c.dataset.sub === it.sub));
+      setBucket("manualBucket", it.bucket || catBucket(it.color));
+    }
+  } else {
+    document.querySelectorAll("#manualIncs .sub-chip").forEach(c => c.classList.toggle("selected", !!it.sub && c.dataset.sub === it.sub));
+    autoShift();
+  }
+  const amountEl = document.getElementById("mAmount");
+  if (withAmount) amountEl.value = Number(it.amount) || "";
+  if (quiet) return; // mező elhagyásakor: ne vegyük el a fókuszt, és a javaslatsor maradjon koppintható
+  hideNameSugg();
+  try { amountEl.focus({ preventScroll: true }); } catch { amountEl.focus(); }
+  if (withAmount) { try { amountEl.select(); } catch {} }
+}
+/* pontos névegyezésnél (Enter / mező elhagyása) magától átveszi a kategóriát – az összeget nem */
+function autoApplyExactName() {
+  const nameEl = document.getElementById("mName");
+  const q = deburr(nameEl.value).trim().replace(/\s+/g, " ");
+  if (!q) return false;
+  const type = getTypeToggle("typeToggle");
+  const h = nameHistory().get(type + "|" + q);
+  if (!h) return false;
+  const typed = nameEl.value;
+  applyHistoryItem(h.it, false, true);
+  nameEl.value = typed; // a beírt alakot meghagyjuk
+  return true;
+}
+document.getElementById("mName").addEventListener("input", renderNameSugg);
+document.getElementById("mName").addEventListener("change", autoApplyExactName);
+
 function loadTesseract() {
   return new Promise((resolve, reject) => {
     if (window.Tesseract) return resolve(window.Tesseract);
@@ -1654,7 +1770,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v67"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v68"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */

@@ -1,5 +1,5 @@
 /* Pénzügyi Napló – Service Worker (offline támogatás) */
-const CACHE = "penzugyi-naplo-v67";
+const CACHE = "penzugyi-naplo-v68";
 const CORE = [
   "./",
   "./index.html",
