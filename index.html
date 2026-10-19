@@ -787,6 +787,7 @@
         <label for="mNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
         <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
+        <label class="view-toggle" id="mVaultWrap"><input type="checkbox" id="mVault"> <i class="ph-fill ph-vault"></i> A széfből fizettem <span class="lbl-hint">(nem csökkenti a havi egyenleget)</span></label>
 
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
@@ -1727,7 +1728,15 @@ function submitManual() {
     }
     const fixedEl = document.getElementById("mFixed");
     if (fixedEl.checked) setRecurring(added, true);
-    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
+    // széfből fizetve: egy ugyanakkora "Széfből" bevétel kioltja, így a havi egyenleg nem borul fel
+    const vaultEl = document.getElementById("mVault");
+    const fromVault = type === "expense" && vaultEl.checked;
+    if (fromVault) {
+      if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
+      addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day });
+    }
+    vaultEl.checked = false;
+    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · széfből (kiegyenlítve)" : ""}`, "success");
     nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift(); hideNameSugg();
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
@@ -2269,7 +2278,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v85"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v86"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -4463,6 +4472,7 @@ function init() {
     entryType = t;
     document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : "";
     document.getElementById("manualIncWrap").style.display = t === "income" ? "" : "none";
+    document.getElementById("mVaultWrap").hidden = t === "income";
     autoShift();
   });
   renderIncPicker("manualIncWrap", "manualIncs", "");
