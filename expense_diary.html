@@ -611,6 +611,20 @@
   .wish-eta { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
   .wish-eta b { color: var(--text); }
   .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
+  .hero-free { margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); background: var(--soft); border-radius: 12px; padding: 9px 11px; }
+  .hero-free i { color: var(--green-accent); margin-top: 2px; }
+  .hero-free small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .hero-free.neg b { color: var(--danger); }
+  .plan-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); flex-wrap: wrap; cursor: pointer; margin: 0; font-weight: 400; }
+  .plan-row:first-of-type { border-top: none; }
+  .plan-row input[type="checkbox"] { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--green-accent); margin: 0; }
+  .plan-ok.wait { color: var(--muted); }
+  .plan-ok { color: var(--green-accent); font-size: 22px; line-height: 1; flex-shrink: 0; }
+  .plan-info { flex: 1; min-width: 0; font-size: 14px; color: var(--text); }
+  .plan-info small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .plan-amt { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text); }
+  .plan-row .plan-done { width: auto; min-height: 34px; padding: 6px 12px; font-size: 13px; margin: 0 0 0 32px; }
+  .plan-total { border-top: 1px solid var(--border); padding-top: 10px; font-size: 14px; text-align: right; color: var(--chip-text); }
   .name-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 14px; }
   .name-sugg .sub-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 12.5px; max-width: 100%; }
   .ns-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -802,6 +816,19 @@
           <input type="number" id="goalTarget" placeholder="Célösszeg (Ft)" inputmode="numeric">
         </div>
         <button class="btn secondary" id="btnAddGoal"><i class="ph-fill ph-plus"></i> Cél hozzáadása</button>
+      </div>
+
+      <hr class="divider">
+      <h2><i class="ph-fill ph-calendar-star"></i> Tervezett kiadások</h2>
+      <div class="card">
+        <p class="hint" style="margin:0 0 10px;">Amire előre tudod, hogy pénz kell (utazás, karácsony, féléves díj). Az app kiszámolja, mennyit tegyél félre fizetésenként, és az Áttekintésben kipipálhatod („Fizetésnapi teendők”).</p>
+        <div id="planList" class="mgr-list"></div>
+        <input type="text" id="planName" placeholder="Mire? (pl. Karácsony)" autocomplete="off" maxlength="40">
+        <div class="mgr-form">
+          <input type="number" id="planTarget" placeholder="Összeg (Ft)" inputmode="numeric">
+          <input type="month" id="planDue" aria-label="Mikorra kell">
+        </div>
+        <button class="btn secondary" id="btnAddPlan"><i class="ph-fill ph-plus"></i> Tervezett kiadás hozzáadása</button>
       </div>
 
       <hr class="divider">
@@ -1130,6 +1157,7 @@ const DEFAULT_INCOME_CATS = ["Fizetés", "Mellékes", "Nyeremény / ajándék", 
 let incomeCats = DEFAULT_INCOME_CATS.slice(); // bevétel-típusok
 let recurring = [];   // fix havi tétel-sablonok: {name, amount, type, color, sub, bucket?, note?}
 let goals = [];       // megtakarítási célok: {name, target} – a megtakarítás-alkategória nevéhez kötve
+let plans = [];       // tervezett kiadások: {id, name, target, due: YYYY-MM, paid: {keret-hónap: Ft}}
 let wishlist = [];    // kívánságlista: {id, name, amount, color, sub, monthly?, added}
 let wishSaved = { total: 0, count: 0 }; // amit a kívánságlistáról végül nem vettél meg
 let trendMode = "all"; // trend: "all" = bevétel vs kiadás, egyébként kategória-kulcs
@@ -1200,6 +1228,24 @@ function sanitizeWishlist(arr) {
   });
   return out.slice(0, 50);
 }
+function sanitizePlans(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [], ids = new Set(), MRE = /^\d{4}-(0[1-9]|1[0-2])$/;
+  arr.forEach(p => {
+    if (!p || typeof p.name !== "string" || !p.name.trim()) return;
+    const target = Math.round(Number(p.target));
+    if (!(target > 0 && target < 1e10) || typeof p.due !== "string" || !MRE.test(p.due)) return;
+    let id = typeof p.id === "string" && /^[a-z0-9]{1,24}$/.test(p.id) ? p.id : "";
+    while (!id || ids.has(id)) id = Math.random().toString(36).slice(2, 12);
+    ids.add(id);
+    const paid = {};
+    if (p.paid && typeof p.paid === "object") Object.keys(p.paid).forEach(k => { const v = Math.round(Number(p.paid[k])); if (MRE.test(k) && v > 0 && v < 1e10) paid[k] = v; });
+    const x = { id, name: p.name.trim().slice(0, 40), target, due: p.due, paid };
+    if (typeof p.from === "string" && MRE.test(p.from) && p.from <= p.due) x.from = p.from; // ettől a körtől kell félretenni
+    out.push(x);
+  });
+  return out.slice(0, 30);
+}
 function sanitizeWishSaved(o) {
   const total = Math.round(Number(o && o.total)), count = Math.round(Number(o && o.count));
   return { total: total > 0 && total < 1e12 ? total : 0, count: count > 0 && count < 1e6 ? count : 0 };
@@ -1239,6 +1285,7 @@ function loadData() {
   try { incomeCats = sanitizeIncomeCats(JSON.parse(localStorage.getItem("incomeCats") || "null")); } catch { incomeCats = DEFAULT_INCOME_CATS.slice(); }
   try { recurring = sanitizeRecurring(JSON.parse(localStorage.getItem("recurring") || "[]")); } catch { recurring = []; }
   try { goals = sanitizeGoals(JSON.parse(localStorage.getItem("goals") || "[]")); } catch { goals = []; }
+  try { plans = sanitizePlans(JSON.parse(localStorage.getItem("plans") || "[]")); } catch { plans = []; }
   try { const w = JSON.parse(localStorage.getItem("wishlist") || "null") || {}; wishlist = sanitizeWishlist(w.list); wishSaved = sanitizeWishSaved(w.saved); } catch { wishlist = []; wishSaved = { total: 0, count: 0 }; }
   try { const s = localStorage.getItem("showMentor"); showMentor = s === null ? true : s === "true"; } catch { showMentor = true; }
   try { mentor = sanitizeMentor(JSON.parse(localStorage.getItem("mentor") || "null")); } catch {}
@@ -1268,6 +1315,7 @@ function saveRule() { try { localStorage.setItem("rule5030", JSON.stringify(rule
 function saveIncomeCats() { try { localStorage.setItem("incomeCats", JSON.stringify(incomeCats)); } catch {} }
 function saveRecurring() { try { localStorage.setItem("recurring", JSON.stringify(recurring)); } catch {} }
 function saveGoals() { try { localStorage.setItem("goals", JSON.stringify(goals)); } catch {} }
+function savePlans() { try { localStorage.setItem("plans", JSON.stringify(plans)); } catch {} }
 function saveWishlist() { try { localStorage.setItem("wishlist", JSON.stringify({ list: wishlist, saved: wishSaved })); } catch {} }
 function saveBalanceInc() { try { localStorage.setItem("balanceInc", JSON.stringify(balanceInc)); } catch {} }
 function ruleLabel() { return [rule5030.need, rule5030.want, rule5030.save].filter(n => n > 0).join("-"); }
@@ -1592,6 +1640,14 @@ function submitManual() {
         const spentThis = expenseItems.filter(it => it.color === color && (it.month || "") === month && (it.type || "expense") !== "income").reduce((s, it) => s + Number(it.amount), 0);
         if (spentThis > lim) toast(`⚠ ${catName(color)}: túllépted a havi keretet (${formatFt(spentThis)} / ${formatFt(lim)})`);
       }
+      // impulzív (vágy) kiadásnál: ha emiatt már a tervezett félretételekből menne, szóljunk
+      const em = effMonth(added);
+      if (itemBucket(added) === "want" && (plans.length || recurring.length) && (em === currentMonth() || em === planCycle())) {
+        const f = freeMoney(em);
+        if (f < 0) toast(`⚠ Elfogyott a szabad pénzed (${formatFt(f)}) – ez már a fix tételek vagy a tervezett félretételek pénze.`);
+      }
+    } else if (isSalary(added) && plans.length) {
+      showMsg("manualMsg", `✅ Fizetés rögzítve: ${formatFt(added.amount)}. Nézd meg az Áttekintésben a fizetésnapi teendőket (${formatFt(planCycleTotal(planCycle()))} félretétel).`, "success");
     }
   } else {
     showMsg("manualMsg", "⚠️ " + res.reason, "error");
@@ -1849,6 +1905,147 @@ document.getElementById("wishList").addEventListener("click", (e) => {
   toast(`✅ Kiadásként rögzítve: ${w.name} – ${formatFt(w.amount)}`);
 });
 
+/* ---------- Tervezett kiadások + fizetésnapi teendők + szabad pénz ---------- */
+function monthDiff(a, b) { const [ya, ma] = a.split("-").map(Number), [yb, mb] = b.split("-").map(Number); return (yb - ya) * 12 + (mb - ma); }
+function isSalary(it) { return (it.type || "expense") === "income" && deburr(it.sub || "").trim() === "fizetes"; }
+/* a félretétel "köre" = a legutóbb beírt fizetés keret-hónapja (hó végi fizetés → következő hónap); legalább az aktuális hónap */
+function planCycle() {
+  const cur = currentMonth();
+  let best = "";
+  expenseItems.forEach(it => { if (isSalary(it)) { const m = effMonth(it); if (m > best) best = m; } });
+  return best > cur ? best : cur;
+}
+function planSaved(p) { return Object.values(p.paid).reduce((s, v) => s + v, 0); }
+/* ebben a körben ennyit kell félretenni: a még hiányzó összeg elosztva a hátralévő fizetésekkel (a kör saját befizetése nélkül, hogy a pipálás ne változtassa) */
+/* (a lejárat hónapja is számít: pl. decemberi karácsonyra az október és a november végi fizetés is jut) */
+function planPortion(p, cycle) {
+  const before = Object.keys(p.paid).filter(k => k !== cycle).reduce((s, k) => s + p.paid[k], 0);
+  const remaining = p.target - before;
+  if (remaining <= 0) return 0;
+  const n = Math.max(1, monthDiff(cycle, p.due) + 1);
+  return Math.min(remaining, Math.ceil(remaining / n / 100) * 100);
+}
+function planStarted(p, cycle) { return !p.from || p.from <= cycle; }
+/* új tervnél: ha a fizetés friss (7 napon belül), már ebből a körből tegyen félre, különben a következő fizetéstől */
+function planStartCycle(due) {
+  const cycle = planCycle();
+  let last = null;
+  expenseItems.forEach(it => {
+    if (!isSalary(it) || !it.month) return;
+    const [y, m] = it.month.split("-").map(Number);
+    const d = new Date(y, m - 1, clampDay(it.day || 1, it.month));
+    if (!last || d > last) last = d;
+  });
+  const fresh = last && (Date.now() - last.getTime()) <= 7 * 864e5;
+  const from = fresh ? cycle : nextMonthOf(cycle);
+  return from > due ? cycle : from;
+}
+/* a kör összes félretétele (kipipált vagy még esedékes) */
+function planCycleTotal(cycle) { return plans.reduce((s, p) => s + (planStarted(p, cycle) ? (p.paid[cycle] || planPortion(p, cycle)) : 0), 0); }
+/* egy hónap egyenlege – ugyanúgy, mint az Áttekintés fő száma */
+function monthBalance(month) {
+  let income = 0, spend = 0, savings = 0, business = 0;
+  expenseItems.forEach(it => {
+    if (effMonth(it) !== month) return;
+    const amt = Number(it.amount);
+    if ((it.type || "expense") === "income") { income += amt; return; }
+    const b = itemBucket(it);
+    if (b === "saving") savings += amt; else if (b === "business") business += amt; else spend += amt;
+  });
+  return income - spend - (balanceInc.save ? savings : 0) - (balanceInc.biz ? business : 0);
+}
+/* szabad pénz = egyenleg − még fel nem vitt fix kiadások − a kör tervezett félretételei */
+function freeMoney(month) {
+  let f = monthBalance(month);
+  if (month >= currentMonth()) f -= pendingRecurring(month).filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
+  if (month === planCycle()) f -= planCycleTotal(month);
+  return f;
+}
+function renderFreeMoney(month) {
+  const cycle = planCycle();
+  if (month !== currentMonth() && month !== cycle) return "";
+  if (!plans.length && !recurring.length) return ""; // tervek nélkül ugyanaz, mint az egyenleg
+  const f = freeMoney(month);
+  const days = month === currentMonth() ? daysInMonth(month) - new Date().getDate() + 1 : daysInMonth(month);
+  const daily = f > 0 ? ` · naponta kb. <b>${formatFt(Math.floor(f / days / 100) * 100)}</b>` : "";
+  return `<div class="hero-free ${f < 0 ? "neg" : ""}"><i class="ph-fill ph-wallet"></i><span>Szabad pénz: <b>${formatFt(f)}</b>${daily}<small>fix tételek és tervezett félretételek után</small></span></div>`;
+}
+function renderPlansCard(month) {
+  if (!plans.length) return "";
+  const cycle = planCycle();
+  if (month !== cycle && !(month === currentMonth() && cycle > month)) return "";
+  let todo = 0, total = 0, upcoming = 0;
+  const rows = plans.map(p => {
+    const saved = planSaved(p);
+    if (!planStarted(p, cycle)) {
+      const next = planPortion(p, p.from);
+      upcoming += next;
+      return `<div class="plan-row"><span class="plan-ok wait"><i class="ph-fill ph-hourglass-medium"></i></span><span class="plan-info"><b>${escapeHtml(p.name)}</b><small>${formatFt(p.target)} · ${escapeHtml(monthLabelShort(p.due))} · a következő fizetéstől</small></span><span class="plan-amt">${formatFt(next)}</span></div>`;
+    }
+    const left = monthDiff(cycle, p.due);
+    const portion = p.paid[cycle] || planPortion(p, cycle);
+    const dueTxt = left < 0 ? "lejárt" : monthLabelShort(p.due);
+    const prog = `félretéve ${formatFt(saved)} / ${formatFt(p.target)} · ${escapeHtml(dueTxt)}`;
+    const doneBtn = (saved >= p.target || left < 0) ? `<button type="button" class="btn secondary plan-done" data-plan-done="${p.id}"><i class="ph-fill ph-check-circle"></i> Lezárom</button>` : "";
+    if (!portion) return `<div class="plan-row"><span class="plan-ok"><i class="ph-fill ph-check-circle"></i></span><span class="plan-info"><b>${escapeHtml(p.name)}</b><small>${prog} · megvan</small></span>${doneBtn}</div>`;
+    total += portion;
+    if (!p.paid[cycle]) todo++;
+    return `<label class="plan-row"><input type="checkbox" data-plan-pay="${p.id}" ${p.paid[cycle] ? "checked" : ""}><span class="plan-info"><b>${escapeHtml(p.name)}</b><small>${prog}</small></span><span class="plan-amt">${formatFt(portion)}</span>${doneBtn}</label>`;
+  }).join("");
+  const title = todo ? `Fizetésnapi teendők` : `Tervezett kiadások`;
+  const sub = todo
+    ? `${escapeHtml(monthNameLong(cycle))}i keret · tedd félre (pl. Revolut-széfbe), és pipáld ki`
+    : (total ? `${escapeHtml(monthNameLong(cycle))}i félretételek kész ✓` : (upcoming ? `A következő fizetéskor kb. ${formatFt(upcoming)} kell félretenni.` : "Minden megvan ✓"));
+  return `<div class="card plans-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-calendar-star"></i> ${title}</h2><p class="hint" style="margin:0 0 10px">${sub}</p>${rows}${total ? `<div class="plan-total">Ebben a körben összesen: <b>${formatFt(total)}</b></div>` : ""}</div>`;
+}
+function wirePlansActions(area) {
+  area.querySelectorAll("[data-plan-pay]").forEach(cb => cb.addEventListener("change", () => {
+    const p = plans.find(x => x.id === cb.dataset.planPay);
+    if (!p) return;
+    const cycle = planCycle();
+    if (cb.checked) p.paid[cycle] = planPortion(p, cycle); else delete p.paid[cycle];
+    savePlans(); renderList();
+  }));
+  area.querySelectorAll("[data-plan-done]").forEach(b => b.addEventListener("click", (e) => {
+    e.preventDefault();
+    const i = plans.findIndex(x => x.id === b.dataset.planDone);
+    if (i < 0 || !confirm(`Lezárod: „${plans[i].name}”?\n\nA tervezett kiadás eltűnik a listából (a tételeid megmaradnak).`)) return;
+    plans.splice(i, 1); savePlans(); renderList();
+  }));
+}
+function renderPlansManager() {
+  const list = document.getElementById("planList");
+  const cycle = planCycle();
+  list.innerHTML = plans.length ? plans.map(p => `<div class="mgr-row"><span class="mgr-name"><i class="ph-fill ph-calendar-star"></i> ${escapeHtml(p.name)}<small>${escapeHtml(monthLabelShort(p.due))} · ${planStarted(p, cycle) ? "most " + formatFt(planPortion(p, cycle)) : "a következő fizetéstől " + formatFt(planPortion(p, p.from))}</small></span><span class="mgr-amt">${formatFt(planSaved(p))} / ${formatFt(p.target)}</span><button class="icon-btn del" data-del-plan="${p.id}" title="Törlés" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
+    : `<div class="mgr-empty">Még nincs tervezett kiadásod.</div>`;
+  list.querySelectorAll("[data-del-plan]").forEach(b => b.addEventListener("click", () => {
+    const i = plans.findIndex(x => x.id === b.dataset.delPlan);
+    if (i < 0 || !confirm(`Törlöd: „${plans[i].name}”?`)) return;
+    plans.splice(i, 1); savePlans(); renderPlansManager(); renderList();
+  }));
+  const due = document.getElementById("planDue");
+  if (!due.value) due.value = nextMonthOf(currentMonth());
+}
+function addPlan() {
+  const name = document.getElementById("planName").value.trim();
+  const target = Math.round(Number(document.getElementById("planTarget").value));
+  const due = document.getElementById("planDue").value;
+  if (!name) return showMsg("catMsg", "⚠️ Add meg, mire kell a pénz.", "error");
+  if (!(target > 0)) return showMsg("catMsg", "⚠️ Adj meg érvényes összeget.", "error");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(due)) return showMsg("catMsg", "⚠️ Add meg, melyik hónapra kell.", "error");
+  if (due < currentMonth()) return showMsg("catMsg", "⚠️ A hónap nem lehet a múltban.", "error");
+  if (plans.length >= 30) return showMsg("catMsg", "⚠️ Legfeljebb 30 tervezett kiadás lehet.", "error");
+  const p = sanitizePlans([{ name, target, due, from: planStartCycle(due) }])[0];
+  plans.push(p); plans.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : 0);
+  savePlans();
+  document.getElementById("planName").value = ""; document.getElementById("planTarget").value = "";
+  renderPlansManager(); renderList();
+  const started = planStarted(p, planCycle());
+  const portion = planPortion(p, started ? planCycle() : p.from);
+  showMsg("catMsg", `✅ Felvéve: ${name} – ${formatFt(target)}, ${monthLabelShort(due)}. ${started ? "Most" : "A következő fizetéstől"} kb. ${formatFt(portion)} kell félretenni fizetésenként.`, "success");
+}
+document.getElementById("btnAddPlan").addEventListener("click", addPlan);
+
 function loadTesseract() {
   return new Promise((resolve, reject) => {
     if (window.Tesseract) return resolve(window.Tesseract);
@@ -1919,7 +2116,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v69"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v70"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2566,6 +2763,7 @@ function wireSummaryActions(area) {
   const ts = area.querySelector("[data-trend-mode]");
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
   wireMentorActions(area);
+  wirePlansActions(area);
   area.querySelectorAll("[data-open-report]").forEach(b => b.addEventListener("click", () => openReport(b.dataset.openReport)));
 }
 
@@ -2602,7 +2800,7 @@ function renderList() {
 
   if (monthView.length === 0) {
     controls.style.display = "none";
-    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + renderMentorCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -2696,7 +2894,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -2708,7 +2906,7 @@ function renderList() {
             ${savings > 0 ? `<span class="flow-save"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás ${formatFt(savings)}</span>` : ""}
             ${business > 0 ? `<span class="flow-biz"><i class="ph-fill ph-briefcase"></i> Vállalkozás ${formatFt(business)}</span>` : ""}
           </div>
-          ${cmpHtml}${weekHtml}
+          ${renderFreeMoney(selectedMonth)}${cmpHtml}${weekHtml}
         </div>
         ${donutHtml}
       </div>
@@ -2928,7 +3126,7 @@ function renderCategories() {
   if (tCoach) tCoach.checked = showCoach;
   const tMentor = document.getElementById("toggleMentor");
   if (tMentor) tMentor.checked = showMentor;
-  renderGoalsManager(); renderRecurringManager(); renderIncomeCatsManager();
+  renderGoalsManager(); renderPlansManager(); renderRecurringManager(); renderIncomeCatsManager();
   const kf = document.getElementById("geminiKey");
   if (kf) { kf.value = geminiKey; updateKeyStatus(); }
   // egyenleg-beállítások: csak akkor mutatjuk, ha van ilyen bucket-ű kategória
@@ -3977,7 +4175,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -4035,6 +4233,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.incomeCats)) { incomeCats = sanitizeIncomeCats(st.incomeCats); saveIncomeCats(); }
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
+      if (Array.isArray(st.plans)) { plans = sanitizePlans(st.plans); savePlans(); }
       if (st.wishlist && typeof st.wishlist === "object") { wishlist = sanitizeWishlist(st.wishlist.list); wishSaved = sanitizeWishSaved(st.wishlist.saved); saveWishlist(); }
       if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
       if (st.mentor) { mentor = sanitizeMentor(st.mentor); saveMentor(); }
