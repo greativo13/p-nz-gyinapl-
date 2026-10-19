@@ -2261,7 +2261,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v83"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v84"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3597,12 +3597,7 @@ function renderMentorCard() {
   const due = reflectionDue();
   if (due) html += `<div class="mt-block mt-due"><div class="mt-label"><i class="ph-fill ph-notebook"></i> Havi visszatekintés</div><b>${escapeHtml(monthLabel(due))} lezárult</b><div class="mt-desc">Nézd meg, hogy ment, és válaszolj 3 rövid kérdésre (kb. 2 perc).</div><div class="mt-btns"><button class="btn mt-btn" data-mt-reflect="${due}">Kitöltöm</button></div></div>`;
 
-  // (a heti kihívás kikerült: nem használta – a mentor a leckékre és a beszélgetésre szorítkozik)
-
-  // a hét leckéje
-  const L = lessonOfWeek(s), readN = mentor.read.length;
-  html += `<div class="mt-block"><div class="mt-label"><i class="ph-fill ph-book-open-text"></i> ${L ? "A hét leckéje" : "Minden leckét elolvastál 🎓"}</div>${L ? `<b>${L.title}</b><div class="mt-desc">${L.teaser}</div>` : ""}
-    <div class="mt-btns">${L ? `<button class="btn mt-btn" data-mt-lesson="${L.id}">Elolvasom (1 perc)</button>` : ""}<button class="btn secondary mt-btn" data-mt-library>Tudástár (${readN}/${LESSONS.length})</button></div></div>`;
+  // (a heti kihívás és a leckék kikerültek: a mentor a havi visszatekintés + AI-beszélgetés)
 
   html += `<button class="btn mt-ask" data-mt-chat><i class="ph-fill ph-chats-circle"></i> Kérdezd a mentort (AI)</button></div>`;
   return html;
