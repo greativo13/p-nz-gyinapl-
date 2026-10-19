@@ -599,9 +599,21 @@
   .sub-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .sub-chip { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--input-bg); color: var(--text); transition: all 0.12s; }
   .sub-chip:active { transform: scale(0.95); }
+  .wish-saved { font-size: 13px; color: var(--soft-text); background: var(--soft); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .wish-list { display: flex; flex-direction: column; gap: 10px; }
+  .wish-empty { font-size: 13px; color: var(--muted); }
+  .wish-row { border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .wish-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; }
+  .wish-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .wish-head b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .wish-calc { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--chip-text); }
+  .wish-calc input[type="number"] { width: 110px; padding: 8px 10px; margin: 0; font-size: 16px; border-radius: 10px; }
+  .wish-eta { font-size: 13px; color: var(--muted); margin: 8px 0 10px; }
+  .wish-eta b { color: var(--text); }
+  .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
   .name-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 14px; }
   .name-sugg .sub-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; font-size: 12.5px; max-width: 100%; }
-  .name-sugg .ns-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ns-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .name-sugg .ns-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .name-sugg .ns-meta { font-weight: 500; color: var(--muted); white-space: nowrap; }
   .sub-chip.selected { border-color: var(--green-accent); background: var(--soft); color: var(--soft-text); }
@@ -712,8 +724,16 @@
         <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
 
-        <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
-        <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
+        <div class="btn-row">
+          <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
+          <button class="btn secondary" id="btnWish"><i class="ph-fill ph-hourglass-medium"></i> Még gondolkodom</button>
+        </div>
+        <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A „Még gondolkodom” kiadás helyett a kívánságlistára teszi.</p>
+      </div>
+      <div class="card" id="wishCard" hidden>
+        <h2><i class="ph-fill ph-heart"></i> Kívánságlista</h2>
+        <div class="wish-saved" id="wishSaved" hidden></div>
+        <div class="wish-list" id="wishList"></div>
       </div>
       <button class="btn secondary" id="btnCopyPrev"><i class="ph-fill ph-copy"></i> Előző havi tételek másolása</button>
     </section>
@@ -1110,6 +1130,8 @@ const DEFAULT_INCOME_CATS = ["Fizetés", "Mellékes", "Nyeremény / ajándék", 
 let incomeCats = DEFAULT_INCOME_CATS.slice(); // bevétel-típusok
 let recurring = [];   // fix havi tétel-sablonok: {name, amount, type, color, sub, bucket?, note?}
 let goals = [];       // megtakarítási célok: {name, target} – a megtakarítás-alkategória nevéhez kötve
+let wishlist = [];    // kívánságlista: {id, name, amount, color, sub, monthly?, added}
+let wishSaved = { total: 0, count: 0 }; // amit a kívánságlistáról végül nem vettél meg
 let trendMode = "all"; // trend: "all" = bevétel vs kiadás, egyébként kategória-kulcs
 
 /* ---------- LocalStorage ---------- */
@@ -1160,6 +1182,28 @@ function sanitizeGoals(arr) {
   return arr.filter(g => g && typeof g.name === "string" && g.name.trim() && Number(g.target) > 0)
     .map(g => ({ name: g.name.trim().slice(0, 30), target: Math.round(Number(g.target)) })).slice(0, 20);
 }
+function sanitizeWishlist(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [], ids = new Set();
+  arr.forEach(w => {
+    if (!w || typeof w.name !== "string" || !w.name.trim()) return;
+    const amount = Math.round(Number(w.amount));
+    if (!(amount > 0 && amount < 1e10)) return;
+    let id = typeof w.id === "string" && /^[a-z0-9]{1,24}$/.test(w.id) ? w.id : "";
+    while (!id || ids.has(id)) id = Math.random().toString(36).slice(2, 12);
+    ids.add(id);
+    const x = { id, name: w.name.trim().slice(0, 60), amount, color: typeof w.color === "string" && KEY_RE.test(w.color) ? w.color : "", sub: typeof w.sub === "string" ? w.sub.trim().slice(0, 40) : "" };
+    const monthly = Math.round(Number(w.monthly));
+    if (monthly > 0 && monthly < 1e10) x.monthly = monthly;
+    x.added = typeof w.added === "string" && /^\d{4}-\d{2}-\d{2}$/.test(w.added) ? w.added : "";
+    out.push(x);
+  });
+  return out.slice(0, 50);
+}
+function sanitizeWishSaved(o) {
+  const total = Math.round(Number(o && o.total)), count = Math.round(Number(o && o.count));
+  return { total: total > 0 && total < 1e12 ? total : 0, count: count > 0 && count < 1e6 ? count : 0 };
+}
 function sanitizeItems(arr) {
   if (!Array.isArray(arr)) return [];
   const out = [];
@@ -1195,6 +1239,7 @@ function loadData() {
   try { incomeCats = sanitizeIncomeCats(JSON.parse(localStorage.getItem("incomeCats") || "null")); } catch { incomeCats = DEFAULT_INCOME_CATS.slice(); }
   try { recurring = sanitizeRecurring(JSON.parse(localStorage.getItem("recurring") || "[]")); } catch { recurring = []; }
   try { goals = sanitizeGoals(JSON.parse(localStorage.getItem("goals") || "[]")); } catch { goals = []; }
+  try { const w = JSON.parse(localStorage.getItem("wishlist") || "null") || {}; wishlist = sanitizeWishlist(w.list); wishSaved = sanitizeWishSaved(w.saved); } catch { wishlist = []; wishSaved = { total: 0, count: 0 }; }
   try { const s = localStorage.getItem("showMentor"); showMentor = s === null ? true : s === "true"; } catch { showMentor = true; }
   try { mentor = sanitizeMentor(JSON.parse(localStorage.getItem("mentor") || "null")); } catch {}
   try { mentorItems = localStorage.getItem("mentorItems") === "true"; } catch { mentorItems = false; }
@@ -1223,6 +1268,7 @@ function saveRule() { try { localStorage.setItem("rule5030", JSON.stringify(rule
 function saveIncomeCats() { try { localStorage.setItem("incomeCats", JSON.stringify(incomeCats)); } catch {} }
 function saveRecurring() { try { localStorage.setItem("recurring", JSON.stringify(recurring)); } catch {} }
 function saveGoals() { try { localStorage.setItem("goals", JSON.stringify(goals)); } catch {} }
+function saveWishlist() { try { localStorage.setItem("wishlist", JSON.stringify({ list: wishlist, saved: wishSaved })); } catch {} }
 function saveBalanceInc() { try { localStorage.setItem("balanceInc", JSON.stringify(balanceInc)); } catch {} }
 function ruleLabel() { return [rule5030.need, rule5030.want, rule5030.save].filter(n => n > 0).join("-"); }
 
@@ -1700,6 +1746,109 @@ function autoApplyExactName() {
 document.getElementById("mName").addEventListener("input", renderNameSugg);
 document.getElementById("mName").addEventListener("change", autoApplyExactName);
 
+/* ---------- Kívánságlista ("Még gondolkodom") ---------- */
+/* javasolt havi félretétel: az utolsó (legfeljebb) 3 lezárt hónap átlagos maradékának negyede
+   (bevétel − nem-megtakarítás kiadás), 1000-re kerekítve; ha ebből nem jön ki értelmes szám, 10 000 Ft */
+function wishSuggestMonthly() {
+  const cur = currentMonth();
+  const months = [...new Set(expenseItems.map(effMonth).filter(m => m && m < cur))].sort().slice(-3);
+  let sum = 0, n = 0;
+  months.forEach(m => {
+    let inc = 0, exp = 0;
+    expenseItems.forEach(it => {
+      if ((it.type || "expense") === "income") { if (effMonth(it) === m) inc += Number(it.amount); }
+      else if ((it.month || "") === m && itemBucket(it) !== "saving") exp += Number(it.amount);
+    });
+    if (inc > 0) { sum += inc - exp; n++; }
+  });
+  const s = n ? Math.round(sum / n * 0.25 / 1000) * 1000 : 0;
+  return s >= 2000 ? s : 10000;
+}
+function addMonthsTo(m, k) { const [y, mo] = m.split("-").map(Number); const d = new Date(y, mo - 1 + k, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function wishEtaText(amount, monthly) {
+  const k = Math.max(1, Math.ceil(amount / monthly));
+  const target = addMonthsTo(currentMonth(), k);
+  const yr = target.slice(0, 4) !== currentMonth().slice(0, 4) ? target.slice(0, 4) + ". " : "";
+  const len = k >= 12 ? `${k} hónap (${Math.floor(k / 12)} év${k % 12 ? " " + (k % 12) + " hónap" : ""})` : `${k} hónap`;
+  return `≈ <b>${len}</b> alatt jön össze · kb. ${yr}${monthNameLong(target)}`;
+}
+function renderWishlist() {
+  const card = document.getElementById("wishCard");
+  const list = document.getElementById("wishList");
+  const savedEl = document.getElementById("wishSaved");
+  card.hidden = !wishlist.length && !wishSaved.total;
+  if (wishSaved.total > 0) {
+    savedEl.innerHTML = `<i class="ph-fill ph-piggy-bank"></i><span>Eddig <b>${formatFt(wishSaved.total)}-ot</b> nem költöttél el (${wishSaved.count} dolog).</span>`;
+    savedEl.hidden = false;
+  } else savedEl.hidden = true;
+  if (!wishlist.length) { list.innerHTML = `<div class="wish-empty">Üres. Ha bizonytalan vagy egy vásárlásban, írd be fent, és nyomd meg a „Még gondolkodom” gombot.</div>`; return; }
+  const sugg = wishSuggestMonthly();
+  const cats = allCategories();
+  list.innerHTML = wishlist.map(w => {
+    const monthly = w.monthly || sugg;
+    const dot = cats[w.color] ? `<span class="ns-dot" style="background:${catHex(w.color)}"></span>` : "";
+    return `<div class="wish-row" data-wish="${w.id}">
+      <div class="wish-head"><span class="wish-name">${dot}${escapeHtml(w.name)}</span><b>${formatFt(w.amount)}</b></div>
+      <div class="wish-calc"><span>Havonta félretennék</span><input type="number" inputmode="numeric" min="1" data-wish-monthly value="${monthly}" aria-label="Havi félretétel (Ft)"><span>Ft</span></div>
+      <div class="wish-eta">${wishEtaText(w.amount, monthly)}${w.monthly ? "" : " <span class=\"lbl-hint\">(javaslat – átírhatod)</span>"}</div>
+      <div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>
+    </div>`;
+  }).join("");
+}
+function submitWish() {
+  const nameEl = document.getElementById("mName");
+  const amountEl = document.getElementById("mAmount");
+  if (getTypeToggle("typeToggle") === "income") return showMsg("manualMsg", "⚠️ A kívánságlista kiadásokra való.", "error");
+  const name = nameEl.value.trim();
+  const amount = Math.round(Number(amountEl.value));
+  if (!name) return showMsg("manualMsg", "⚠️ Írd be, mit vennél meg.", "error");
+  if (!(amount > 0)) return showMsg("manualMsg", "⚠️ Add meg, mennyibe kerül.", "error");
+  if (wishlist.length >= 50) return showMsg("manualMsg", "⚠️ A kívánságlista megtelt (50 tétel). Dönts néhányról.", "error");
+  const w = sanitizeWishlist([{ name, amount, color: getPickerValue("manualColors") || "", sub: getSubValue("manualSubs"), added: isoDate(new Date()) }])[0];
+  wishlist.unshift(w);
+  saveWishlist();
+  nameEl.value = ""; amountEl.value = ""; hideNameSugg();
+  document.querySelectorAll("#manualSubs .sub-chip").forEach(c => c.classList.remove("selected"));
+  renderWishlist();
+  showMsg("manualMsg", `💭 Felírva a kívánságlistára: ${name} – ${formatFt(amount)}. Lent látod, mennyi idő alatt jönne össze rá a pénz.`, "success");
+}
+document.getElementById("btnWish").addEventListener("click", submitWish);
+document.getElementById("wishList").addEventListener("change", (e) => {
+  const inp = e.target.closest("[data-wish-monthly]");
+  if (!inp) return;
+  const w = wishlist.find(x => x.id === inp.closest("[data-wish]").dataset.wish);
+  if (!w) return;
+  const v = Math.round(Number(inp.value));
+  if (v > 0 && v < 1e10) w.monthly = v; else delete w.monthly;
+  saveWishlist(); renderWishlist();
+});
+document.getElementById("wishList").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-wish-buy], [data-wish-skip]");
+  if (!btn) return;
+  const idx = wishlist.findIndex(x => x.id === btn.closest("[data-wish]").dataset.wish);
+  if (idx < 0) return;
+  const w = wishlist[idx];
+  if (btn.hasAttribute("data-wish-skip")) {
+    if (!confirm(`Nem veszed meg: „${w.name}”?\n\nA ${formatFt(w.amount)} a megspórolt összeghez kerül.`)) return;
+    wishSaved.total += w.amount; wishSaved.count++;
+    wishlist.splice(idx, 1); saveWishlist(); renderWishlist();
+    toast(`🎉 ${formatFt(w.amount)} megspórolva`);
+    return;
+  }
+  if (!allCategories()[w.color]) {
+    // a kategória azóta megszűnt: betöltjük az űrlapba, ott választ kategóriát
+    applyHistoryItem({ name: w.name, amount: w.amount, type: "expense", color: "", sub: "" }, true);
+    wishlist.splice(idx, 1); saveWishlist(); renderWishlist();
+    showMsg("manualMsg", "Válassz kategóriát, és add hozzá.", "success");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  const res = addEntry(w.name, w.amount, w.color, currentMonth(), "expense", w.sub, undefined, true, { day: new Date().getDate() });
+  if (!res.ok) return showMsg("manualMsg", "⚠️ " + res.reason, "error");
+  wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
+  toast(`✅ Kiadásként rögzítve: ${w.name} – ${formatFt(w.amount)}`);
+});
+
 function loadTesseract() {
   return new Promise((resolve, reject) => {
     if (window.Tesseract) return resolve(window.Tesseract);
@@ -1770,7 +1919,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v68"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v69"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3828,7 +3977,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -3886,10 +4035,12 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.incomeCats)) { incomeCats = sanitizeIncomeCats(st.incomeCats); saveIncomeCats(); }
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
+      if (st.wishlist && typeof st.wishlist === "object") { wishlist = sanitizeWishlist(st.wishlist.list); wishSaved = sanitizeWishSaved(st.wishlist.saved); saveWishlist(); }
       if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
       if (st.mentor) { mentor = sanitizeMentor(st.mentor); saveMentor(); }
       if (typeof st.mentorItems === "boolean") { mentorItems = st.mentorItems; saveMentorItems(); }
       renderIncPicker("manualIncWrap", "manualIncs", "");
+      renderWishlist();
       selectedMonth = currentMonth();
       buildManualPicker("green");
       renderCategories();
@@ -3979,6 +4130,7 @@ function init() {
     autoShift();
   });
   renderIncPicker("manualIncWrap", "manualIncs", "");
+  renderWishlist();
   document.getElementById("mShift").addEventListener("change", () => { shiftTouched = true; });
   document.getElementById("manualIncs").addEventListener("click", autoShift);
   document.getElementById("mDay").addEventListener("input", autoShift);
