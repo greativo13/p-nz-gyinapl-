@@ -1913,11 +1913,6 @@ function openWishTab() {
   const card = document.getElementById("wishCard");
   card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
 }
-function renderWishSummaryCard() {
-  if (!wishlist.length) return "";
-  const sum = wishlist.reduce((s, w) => s + w.amount, 0);
-  return `<div class="card action-card"><div class="ac-ic"><i class="ph-fill ph-heart"></i></div><div class="ac-body"><b>Kívánságlista: ${wishlist.length} dolog</b><span>összesen ${formatFt(sum)} · még gondolkodsz rajtuk</span></div><button class="btn ac-btn" data-open-wish>Megnézem</button></div>`;
-}
 function submitWish() {
   const nameEl = document.getElementById("mName");
   const amountEl = document.getElementById("mAmount");
@@ -2202,7 +2197,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v73"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v74"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2850,7 +2845,6 @@ function wireSummaryActions(area) {
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
   wireMentorActions(area);
   wirePlansActions(area);
-  area.querySelectorAll("[data-open-wish]").forEach(b => b.addEventListener("click", openWishTab));
   area.querySelectorAll("[data-open-report]").forEach(b => b.addEventListener("click", () => openReport(b.dataset.openReport)));
 }
 
@@ -2902,7 +2896,7 @@ function renderList() {
     document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
     insightArea.innerHTML = renderMentorCard() || `<div class="empty"><span class="big"><i class="ph-fill ph-chart-line-up"></i></span>Ehhez a hónaphoz még nincs mit elemezni.</div>`;
     wireSummaryActions(insightArea);
-    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + renderWishSummaryCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -3014,7 +3008,7 @@ function renderList() {
       </div>
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
-    </div>` + renderWishSummaryCard() + renderGoalsCard();
+    </div>` + renderGoalsCard();
   insightArea.innerHTML = renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderBudget(income, needs, wants, savings, balance) + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
