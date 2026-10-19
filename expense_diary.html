@@ -602,7 +602,6 @@
   #wishCard { scroll-margin-top: 12px; }
   #wishCard.flash { animation: wishFlash 1.4s ease; }
   @keyframes wishFlash { 0%, 40% { box-shadow: 0 0 0 3px var(--green-accent); } 100% { box-shadow: var(--shadow-card); } }
-  #wCat { margin-bottom: 12px; }
   .wish-list { display: flex; flex-direction: column; gap: 10px; }
   .wish-empty { font-size: 13px; color: var(--muted); }
   .wish-row { border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
@@ -806,10 +805,7 @@
         <h2><i class="ph-fill ph-heart"></i> Kívánságlista</h2>
         <p class="hint" style="margin:0 0 12px">Amit megvennél, de még gondolkodsz rajta. Írd fel, és nézd meg, mennyi idő alatt jönne össze rá a pénz.</p>
         <input type="text" id="wName" placeholder="Mit vennél meg? (pl. Fülhallgató)" maxlength="60" autocomplete="off">
-        <div class="mgr-form">
-          <input type="number" id="wAmount" placeholder="Ár (Ft)" inputmode="numeric">
-          <select id="wCat" aria-label="Kategória"></select>
-        </div>
+        <input type="number" id="wAmount" placeholder="Ár (Ft)" inputmode="numeric">
         <button class="btn" id="btnWishAdd"><i class="ph-fill ph-plus"></i> Felírom</button>
         <hr class="divider" style="margin:6px 0 14px">
         <div class="wish-list" id="wishList"></div>
@@ -1693,6 +1689,7 @@ function addEntry(name, amount, color, month, type, sub, bucket, force, extra) {
   return { ok: true };
 }
 
+let pendingWishId = null; // a kívánságlistáról "Megvettem"-mel érkezett tétel: sikeres hozzáadáskor lekerül a listáról
 function submitManual() {
   const nameEl = document.getElementById("mName");
   const amountEl = document.getElementById("mAmount");
@@ -1715,6 +1712,11 @@ function submitManual() {
   if (res.ok) {
     const t = type === "income" ? "Bevétel" : "Kiadás";
     const added = expenseItems[expenseItems.length - 1];
+    if (pendingWishId) {
+      const wi = wishlist.findIndex(x => x.id === pendingWishId);
+      if (wi >= 0 && type === "expense" && deburr(wishlist[wi].name).trim() === deburr(added.name).trim()) { wishlist.splice(wi, 1); saveWishlist(); renderWishlist(); }
+      pendingWishId = null;
+    }
     const fixedEl = document.getElementById("mFixed");
     if (fixedEl.checked) setRecurring(added, true);
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}`, "success");
@@ -1932,7 +1934,6 @@ function wishAskHtml(w, action) {
   return `<div class="wish-ask"><p>${txt}</p><div class="btn-row"><button type="button" class="btn" data-wish-yes>${yes}</button><button type="button" class="btn secondary" data-wish-no>Mégse</button></div></div>`;
 }
 function renderWishlist() {
-  fillWishCats();
   const list = document.getElementById("wishList");
   if (!wishlist.length) { list.innerHTML = `<div class="wish-empty">Még üres.</div>`; return; }
   const sugg = wishSuggestMonthly();
@@ -1950,44 +1951,25 @@ function renderWishlist() {
   }).join("");
 }
 /* a kívánságlista kártyához görget, és röviden kiemeli */
-/* kategória-választó a kívánság űrlapon (a kategóriák változhatnak, ezért mindig újratöltjük) */
-let wishCatTouched = false;
-function fillWishCats() {
-  const sel = document.getElementById("wCat");
-  const cur = sel.value;
-  const cats = allCategories();
-  sel.innerHTML = `<option value="">Kategória…</option>` + Object.keys(cats).map(k => `<option value="${escapeHtml(k)}">${escapeHtml(cats[k].name)}</option>`).join("");
-  if (cur && cats[cur]) sel.value = cur;
-}
 function submitWish() {
   const nameEl = document.getElementById("wName");
   const amountEl = document.getElementById("wAmount");
-  const catEl = document.getElementById("wCat");
   const name = nameEl.value.trim();
   const amount = Math.round(Number(amountEl.value));
   if (!name) { toast("⚠️ Írd be, mit vennél meg."); return nameEl.focus(); }
   if (!(amount > 0)) { toast("⚠️ Add meg, mennyibe kerül."); return amountEl.focus(); }
   if (wishlist.length >= 50) return toast("⚠️ A kívánságlista megtelt (50 tétel). Dönts néhányról.");
-  const color = catEl.value;
-  const g = guessCategory(name);
-  const sub = g && g.color === color ? g.sub : "";
-  const w = sanitizeWishlist([{ name, amount, color, sub, added: isoDate(new Date()) }])[0];
+  const w = sanitizeWishlist([{ name, amount, color: "", sub: "", added: isoDate(new Date()) }])[0];
   wishlist.unshift(w);
   saveWishlist();
-  nameEl.value = ""; amountEl.value = ""; catEl.value = ""; wishCatTouched = false;
+  nameEl.value = ""; amountEl.value = "";
   renderWishlist();
   const card = document.getElementById("wishCard");
   card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
   toast(`💭 Felírva: ${name} – ${formatFt(amount)}`);
 }
-document.getElementById("wName").addEventListener("change", () => {
-  if (wishCatTouched) return;
-  const g = guessCategory(document.getElementById("wName").value);
-  if (g) document.getElementById("wCat").value = g.color;
-});
 document.getElementById("wName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); document.getElementById("wAmount").focus(); } });
 document.getElementById("wAmount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitWish(); } });
-document.getElementById("wCat").addEventListener("change", () => { wishCatTouched = true; });
 document.getElementById("btnWishAdd").addEventListener("click", submitWish);
 document.getElementById("wishList").addEventListener("change", (e) => {
   const inp = e.target.closest("[data-wish-monthly]");
@@ -2038,19 +2020,17 @@ document.getElementById("wishList").addEventListener("click", (e) => {
     toast(`🎉 ${formatFt(w.amount)} megspórolva`);
     return;
   }
-  if (!allCategories()[w.color]) {
-    // nincs (vagy megszűnt) kategória: átvisszük az Új tétel űrlapra, ott választ kategóriát
-    document.querySelector('.tab[data-panel="manual"]').click();
-    applyHistoryItem({ name: w.name, amount: w.amount, type: "expense", color: "", sub: "" }, true);
-    wishlist.splice(idx, 1); saveWishlist(); renderWishlist();
-    showMsg("manualMsg", "Válassz kategóriát, és add hozzá.", "success");
-    window.scrollTo({ top: 0 });
-    return;
-  }
-  const res = addEntry(w.name, w.amount, w.color, currentMonth(), "expense", w.sub, undefined, true, { day: new Date().getDate() });
-  if (!res.ok) return showMsg("manualMsg", "⚠️ " + res.reason, "error");
-  wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
-  toast(`✅ Kiadásként rögzítve: ${w.name} – ${formatFt(w.amount)}`);
+  // Megvettem: átvisszük az Új tétel űrlapra kitöltve (kategória-tipp a korábbi tételekből / bolt-szótárból);
+  // a kívánság csak akkor kerül le, ha ott tényleg hozzáadja
+  const g = allCategories()[w.color] ? { color: w.color, sub: w.sub } : guessCategory(w.name);
+  document.querySelector('.tab[data-panel="manual"]').click();
+  if (getTypeToggle("typeToggle") !== "expense") document.querySelector('#typeToggle .type-btn[data-type="expense"]').click();
+  applyHistoryItem({ name: w.name, amount: w.amount, type: "expense", color: g ? g.color : "", sub: g ? g.sub : "" }, true);
+  if (!g) document.querySelectorAll("#manualColors .color-btn").forEach(b => b.classList.remove("selected"));
+  document.getElementById("mDay").value = new Date().getDate();
+  pendingWishId = w.id;
+  showMsg("manualMsg", g ? "Ellenőrizd a kategóriát, és nyomd meg a Hozzáadás gombot." : "Válassz kategóriát, és nyomd meg a Hozzáadás gombot.", "success");
+  window.scrollTo({ top: 0 });
 });
 
 /* ---------- Tervezett kiadások + fizetésnapi teendők + szabad pénz ---------- */
@@ -2281,7 +2261,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v81"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v82"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
