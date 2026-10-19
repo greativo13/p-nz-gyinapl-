@@ -941,7 +941,7 @@
         <summary><i class="ph-fill ph-floppy-disk"></i><span class="set-title">Adatok és mentés<small>Mentés, visszaállítás, megjelenítés</small></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card data-actions">
-        <label class="view-toggle"><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
+        <label class="view-toggle" hidden><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
         <label class="view-toggle"><input type="checkbox" id="toggleMentor"> <i class="ph-fill ph-graduation-cap"></i> Mentor az Áttekintésen</label>
         <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> 50-30-20 kimutatás a Listán</label>
         <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
@@ -2261,7 +2261,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v82"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v83"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2624,80 +2624,6 @@ document.getElementById("copyModal").addEventListener("click", (e) => { if (e.ta
 
 /* ---------- 50-30-20 kártya ---------- */
 /* ---------- Pénzügyi coach (beépített, szabály-alapú) ---------- */
-function renderCoach(ctx) {
-  if (!showCoach) return "";
-  const { income, needs, wants, savings, business, spend, balance, entries } = ctx;
-  if (income <= 0 && spend <= 0) return "";
-
-  const isPast = selectedMonth !== "all" && selectedMonth < currentMonth();
-  const title = selectedMonth === "all" ? "Összegzés" : (isPast ? "Havi értékelés" : "Hónap eddig");
-  const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-compass"></i> Coach · ${title}</h2><button class="bud-hide" data-hidecoach title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div>`;
-
-  const pct = (v) => income > 0 ? Math.round(v / income * 100) : 0;
-  const savePct = pct(savings), wantPct = pct(wants), needPct = pct(needs);
-
-  // előző hónap kiadása (személyes)
-  let prevSpend = 0;
-  if (selectedMonth !== "all") {
-    const pm = prevMonthOf(selectedMonth);
-    prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && itemBucket(it) !== "saving" && itemBucket(it) !== "business").reduce((s, it) => s + Number(it.amount), 0);
-  }
-
-  const tips = [];
-  // 1) túlköltés
-  if (balance < 0) {
-    tips.push({ ic: "warning", cls: "bad", t: `Ebben az időszakban <b>${formatFt(-balance)}</b>-tal többet költöttél, mint a bevételed. Érdemes átnézni a legnagyobb tételeket.` });
-  } else if (income > 0) {
-    const when = selectedMonth === "all" ? "maradt összesen" : (isPast ? "maradt a hónap végére" : "a mérleged eddig ebben a hónapban");
-    tips.push({ ic: "check-circle", cls: "good", t: `Pozitív egyenleg: <b>${formatFt(balance)}</b> ${when}.${isPast ? " Szép munka!" : ""}` });
-  }
-  // 2) megtakarítás
-  if (income > 0) {
-    if (savings <= 0) {
-      tips.push({ ic: "piggy-bank", cls: "warn", t: `Ebben a hónapban még nem tettél félre. Már a bevételed ${rule5030.save || 20}%-a (≈ <b>${formatFt(income * (rule5030.save || 20) / 100)}</b>) is sokat számít hosszú távon.` });
-    } else if (rule5030.save > 0 && savePct < rule5030.save) {
-      const diff = Math.max(0, income * rule5030.save / 100 - savings);
-      tips.push({ ic: "piggy-bank", cls: "warn", t: `Megtakarítás: <b>${savePct}%</b> (célod: ${rule5030.save}%). Még kb. <b>${formatFt(diff)}</b> hiányzik a célhoz.` });
-    } else if (rule5030.save > 0) {
-      tips.push({ ic: "piggy-bank", cls: "good", t: `Megtakarítás: <b>${savePct}%</b> — eléred a ${rule5030.save}%-os célt. 👏` });
-    }
-  }
-  // 3) vágyak
-  if (income > 0 && rule5030.want > 0 && wantPct > rule5030.want + 5) {
-    tips.push({ ic: "shopping-bag", cls: "warn", t: `A vágyakra a bevételed <b>${wantPct}%</b>-át költötted (cél: ${rule5030.want}%). Itt lehet a legkönnyebben faragni.` });
-  }
-  // 4) legnagyobb kategória
-  if (entries && entries.length && spend > 0) {
-    const top = entries[0];
-    tips.push({ ic: "chart-pie-slice", cls: "info", t: `A legnagyobb kiadási kategóriád: <b>${escapeHtml(catName(top.key))}</b> — ${formatFt(top.sum)} (a kiadások ${Math.round(top.sum / spend * 100)}%-a).` });
-  }
-  // 5) keret-túllépés
-  if (entries) {
-    const over = entries.filter(e => { const l = catLimit(e.key, selectedMonth); return l > 0 && e.sum > l; });
-    if (over.length) {
-      const o = over[0];
-      tips.push({ ic: "warning-circle", cls: "bad", t: `<b>${escapeHtml(catName(o.key))}</b>: túllépted a havi keretet (${formatFt(o.sum)} / ${formatFt(catLimit(o.key, selectedMonth))}).` });
-    }
-  }
-  // 6) előző hónaphoz képest
-  const curView = selectedMonth === currentMonth(), dayNow = new Date().getDate();
-  if (prevSpend > 0 && !(curView && dayNow < 5)) { // a hónap első napjaiban még nincs mit összevetni
-    const base = curView ? prevSpend * dayNow / daysInMonth(selectedMonth) : prevSpend; // folyamatban lévő hónapnál időarányosan
-    const d = Math.round((spend - base) / base * 100);
-    const than = curView ? "mint az előző hónapban idáig (időarányosan)" : "mint előző hónapban";
-    if (d >= 10) tips.push({ ic: "trend-up", cls: "warn", t: `<b>${d}%</b>-kal többet költöttél, ${than}.` });
-    else if (d <= -10) tips.push({ ic: "trend-down", cls: "good", t: `<b>${Math.abs(d)}%</b>-kal kevesebbet költöttél, ${than}. 👍` });
-  }
-
-  // értékelő fejléc-hangulat
-  let verdict, vcls;
-  if (balance < 0) { verdict = "Feszes hónap – érdemes fékezni egy kicsit."; vcls = "bad"; }
-  else if (income > 0 && savePct >= rule5030.save && (rule5030.want === 0 || wantPct <= rule5030.want)) { verdict = "Kiváló hónap! Tartod az arányokat. 🌟"; vcls = "good"; }
-  else { verdict = "Rendben haladsz, van még hova fejlődni."; vcls = "warn"; }
-
-  const list = tips.slice(0, 5).map(t => `<div class="coach-tip ${t.cls}"><i class="ph-fill ph-${t.ic}"></i><span>${t.t}</span></div>`).join("");
-  return `<div class="card">${head}<div class="coach-verdict ${vcls}">${verdict}</div>${list}</div>`;
-}
 
 function renderBudget(income, needs, wants, savings, leftover) {
   if (!show5030) return "";
@@ -2870,16 +2796,6 @@ function renderGoalsCard() {
     </div>`;
   }).join("");
   return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph-fill ph-piggy-bank"></i> Megtakarítási célok</h2>${rows}</div>`;
-}
-function renderIncomeCard(monthView) {
-  const inc = monthView.filter(it => (it.type || "expense") === "income");
-  if (inc.length < 2 && !inc.some(it => it.sub)) return "";
-  const groups = {};
-  inc.forEach(it => { const k = it.sub || "Nincs megadva"; groups[k] = groups[k] || { sum: 0, count: 0 }; groups[k].sum += Number(it.amount); groups[k].count++; });
-  const total = inc.reduce((s, it) => s + Number(it.amount), 0);
-  const rows = Object.keys(groups).sort((a, b) => groups[b].sum - groups[a].sum).map(k =>
-    `<div class="bd-row"><span class="bd-dot" style="background:var(--income)"></span><span class="bd-name">${escapeHtml(k)}</span><span class="bd-count">${Math.round(groups[k].sum / total * 100)}%</span><span class="bd-amount">${formatFt(groups[k].sum)}</span></div>`).join("");
-  return `<div class="card"><h2 style="margin-bottom:10px"><i class="ph-fill ph-trend-up"></i> Bevételek</h2>${rows}</div>`;
 }
 /* ezen a héten (hétfőtől máig) elköltött személyes kiadás – csak napos tételekből */
 function weekSpend() {
@@ -3073,7 +2989,7 @@ function renderList() {
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
     </div>` + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard();
-  insightArea.innerHTML = renderIncomeCard(monthView) + renderCoach({ income, needs, wants, savings, business, spend, balance, entries }) + renderMentorCard() + renderTrend();
+  insightArea.innerHTML = renderMentorCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
   wireSummaryActions(insightArea);
@@ -3086,11 +3002,6 @@ function renderList() {
   });
   const editBtn = summaryArea.querySelector("[data-edit5030]");
   if (editBtn) editBtn.addEventListener("click", openRuleEdit);
-  const hideCoachBtn = insightArea.querySelector("[data-hidecoach]");
-  if (hideCoachBtn) hideCoachBtn.addEventListener("click", () => {
-    showCoach = false; saveCoach(); renderList();
-    toast("🧭 Coach elrejtve · Beállítások → Adatok alatt visszakapcsolható");
-  });
 
   // alkategória-bontás ki/be nyitása
   summaryArea.querySelectorAll("[data-toggle]").forEach(el => {
@@ -3686,25 +3597,7 @@ function renderMentorCard() {
   const due = reflectionDue();
   if (due) html += `<div class="mt-block mt-due"><div class="mt-label"><i class="ph-fill ph-notebook"></i> Havi visszatekintés</div><b>${escapeHtml(monthLabel(due))} lezárult</b><div class="mt-desc">Nézd meg, hogy ment, és válaszolj 3 rövid kérdésre (kb. 2 perc).</div><div class="mt-btns"><button class="btn mt-btn" data-mt-reflect="${due}">Kitöltöm</button></div></div>`;
 
-  // heti kihívás
-  const streak = challengeStreak();
-  const last = mentor.hist[mentor.hist.length - 1];
-  const lastTxt = last && last.week === prevWeekKey(wk) ? `<div class="mt-last ${last.ok ? "ok" : "bad"}">${last.ok ? "✅" : "❌"} Múlt hét – ${CHALLENGES[last.id].title}: ${last.ok ? "sikerült!" : "most nem jött össze, de ez is tanulság."}</div>` : "";
-  html += `<div class="mt-block"><div class="mt-label"><i class="ph-fill ph-trophy"></i> Heti kihívás${streak >= 2 ? ` · 🔥 ${streak} hete sikeres` : ""}</div>${lastTxt}`;
-  if (mentor.ch) {
-    const def = CHALLENGES[mentor.ch.id], r = challengeResult(mentor.ch);
-    const capKind = def.kind === "max" || def.kind === "maxCount";
-    const cls = capKind ? (r.ok ? "ok" : "bad") : (r.ok ? "ok" : "");
-    html += `<b><i class="ph-fill ph-${def.icon}"></i> ${def.title}</b><div class="mt-desc">${def.desc(mentor.ch.target)}</div>
-      <div class="mt-bar"><div class="${cls}" style="width:${capKind && def.kind === "maxCount" ? 100 : r.pct}%"></div></div>
-      <div class="mt-prog ${cls}">${r.txt}${capKind && !r.ok ? " – túlléptél, de a hét még nem ért véget 💪" : ""}${!capKind && r.ok ? " – megvan! 🎉" : ""}</div>
-      <div class="mt-hint">Csak a nappal felvitt tételek számítanak. A hét végén (vasárnap éjfél) kiértékelem.</div>`;
-  } else {
-    const order = recommendedChallenges(s), id = order[mentor.offer % order.length], def = CHALLENGES[id], t = def.target(s);
-    html += `<b><i class="ph-fill ph-${def.icon}"></i> ${def.title}</b><div class="mt-desc">${def.desc(t)}</div>
-      <div class="mt-btns"><button class="btn mt-btn" data-mt-accept="${id}" data-mt-target="${t}">Elfogadom</button><button class="btn secondary mt-btn" data-mt-other>Másikat</button></div>`;
-  }
-  html += `</div>`;
+  // (a heti kihívás kikerült: nem használta – a mentor a leckékre és a beszélgetésre szorítkozik)
 
   // a hét leckéje
   const L = lessonOfWeek(s), readN = mentor.read.length;
