@@ -614,7 +614,6 @@
   .wish-eta b { color: var(--text); }
   .wish-ask { background: var(--soft); border-radius: 12px; padding: 10px 12px 12px; }
   .wish-ask p { font-size: 13.5px; color: var(--text); margin: 0 0 10px; line-height: 1.4; }
-  .wish-row .wish-save { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 8px; }
   .wish-row .btn-row .btn { min-height: 40px; padding: 9px 12px; font-size: 14px; margin-bottom: 0; }
   .set-sec { background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 10px; box-shadow: var(--shadow-card); }
   .set-sec > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 15px; color: var(--text); }
@@ -661,6 +660,10 @@
   .fx-info { flex: 1; min-width: 0; font-size: 14px; color: var(--text); display: flex; flex-direction: column; }
   .fx-info small { font-size: 12px; color: var(--muted); }
   .fx-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sub-move { background: var(--soft); border-radius: 12px; padding: 10px 12px; margin: 4px 0 12px; }
+  .sub-move p { font-size: 13.5px; margin: 0 0 8px; color: var(--text); }
+  .sub-move select { margin-bottom: 10px; }
+  .sub-move .btn { font-size: 14px; min-height: 42px; margin-bottom: 0; }
   .ov-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
   .ov-tabs button { border: none; background: none; border-radius: 10px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--chip-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
   .ov-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
@@ -1193,6 +1196,7 @@
     </div>
     <label>Alkategóriák</label>
     <div class="sub-edit" id="catEditSubsList"></div>
+    <div class="sub-move" id="catEditMove" hidden></div>
     <div class="sub-add-row">
       <input type="text" id="catEditSubInput" placeholder="Új alkategória neve..." autocomplete="off">
       <button type="button" class="btn secondary sub-add-btn" id="catEditSubAdd">Hozzáad</button>
@@ -1948,19 +1952,9 @@ function wishEtaText(amount, monthly) {
   return `≈ <b>${len}</b> alatt jön össze · kb. ${yr}${monthNameLong(target)}`;
 }
 /* megerősítés a kártyán belül (az iPhone-os rendszer-ablak néha magától bezárul) */
-let wishAsk = null; // {id, action: "skip" | "plan"}
-function wishPlanInfo(w) {
-  const monthly = w.monthly || wishSuggestMonthly();
-  const k = Math.max(1, Math.ceil(w.amount / monthly));
-  const from = planStartCycle("9999-12");
-  return { k, from, due: addMonthsTo(from, k - 1), per: Math.ceil(w.amount / k / 100) * 100 };
-}
-function wishAskHtml(w, action) {
-  const txt = action === "plan"
-    ? (() => { const i = wishPlanInfo(w); return `Havonta kb. <b>${formatFt(i.per)}</b>, ${i.k} fizetésen át, kb. ${escapeHtml(monthLabelShort(i.due))}-ig. A fizetésnapi teendők között jelenik meg, a kívánságlistáról lekerül.`; })()
-    : `Biztos nem veszed meg? A <b>${formatFt(w.amount)}</b> a megspórolt összeghez kerül.`;
-  const yes = action === "plan" ? `<i class="ph-fill ph-piggy-bank"></i> Igen, gyűjtök rá` : `<i class="ph-fill ph-check"></i> Igen, nem kell`;
-  return `<div class="wish-ask"><p>${txt}</p><div class="btn-row"><button type="button" class="btn" data-wish-yes>${yes}</button><button type="button" class="btn secondary" data-wish-no>Mégse</button></div></div>`;
+let wishAsk = null; // {id, action: "skip"}
+function wishAskHtml(w) {
+  return `<div class="wish-ask"><p>Biztos nem veszed meg? A <b>${formatFt(w.amount)}</b> a megspórolt összeghez kerül.</p><div class="btn-row"><button type="button" class="btn" data-wish-yes><i class="ph-fill ph-check"></i> Igen, nem kell</button><button type="button" class="btn secondary" data-wish-no>Mégse</button></div></div>`;
 }
 function renderWishlist() {
   const list = document.getElementById("wishList");
@@ -1974,8 +1968,7 @@ function renderWishlist() {
       <div class="wish-head"><span class="wish-name">${dot}${escapeHtml(w.name)}</span><b>${formatFt(w.amount)}</b></div>
       <div class="wish-calc"><span>Havonta félretennék</span><input type="number" inputmode="numeric" min="1" data-wish-monthly value="${monthly}" aria-label="Havi félretétel (Ft)"><span>Ft</span></div>
       <div class="wish-eta">${wishEtaText(w.amount, monthly)}${w.monthly ? "" : " <span class=\"lbl-hint\">(javaslat – átírhatod)</span>"}</div>
-      ${wishAsk && wishAsk.id === w.id ? wishAskHtml(w, wishAsk.action) : `<button type="button" class="btn wish-save" data-wish-plan><i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}</button>
-      <div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>`}
+      ${wishAsk && wishAsk.id === w.id ? wishAskHtml(w) : `<div class="btn-row"><button type="button" class="btn secondary" data-wish-buy><i class="ph-fill ph-shopping-cart"></i> Megvettem</button><button type="button" class="btn secondary" data-wish-skip><i class="ph-fill ph-x"></i> Nem kell</button></div>`}
     </div>`;
   }).join("");
 }
@@ -2014,35 +2007,22 @@ document.getElementById("wishList").addEventListener("change", (e) => {
   if (!w.monthly) inp.value = monthly;
   const eta = row.querySelector(".wish-eta");
   if (eta) eta.innerHTML = wishEtaText(w.amount, monthly) + (w.monthly ? "" : ' <span class="lbl-hint">(javaslat – átírhatod)</span>');
-  const pb = row.querySelector("[data-wish-plan]");
-  if (pb) pb.innerHTML = `<i class="ph-fill ph-piggy-bank"></i> Gyűjtök rá – havi ${formatFt(monthly)}`;
 });
 document.getElementById("wishList").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-plan], [data-wish-yes], [data-wish-no]");
+  const btn = e.target.closest("[data-wish-buy], [data-wish-skip], [data-wish-yes], [data-wish-no]");
   if (!btn) return;
   const idx = wishlist.findIndex(x => x.id === btn.closest("[data-wish]").dataset.wish);
   if (idx < 0) return;
   const w = wishlist[idx];
   if (btn.hasAttribute("data-wish-no")) { wishAsk = null; renderWishlist(); return; }
-  if (btn.hasAttribute("data-wish-skip") || btn.hasAttribute("data-wish-plan")) {
-    if (btn.hasAttribute("data-wish-plan") && plans.length >= 30) return toast("⚠️ Legfeljebb 30 tervezett kiadás lehet.");
-    wishAsk = { id: w.id, action: btn.hasAttribute("data-wish-plan") ? "plan" : "skip" };
+  if (btn.hasAttribute("data-wish-skip")) {
+    wishAsk = { id: w.id, action: "skip" };
     renderWishlist();
     return;
   }
   const action = btn.hasAttribute("data-wish-yes") && wishAsk && wishAsk.id === w.id ? wishAsk.action : (btn.hasAttribute("data-wish-buy") ? "buy" : "");
   wishAsk = null;
   if (!action) { renderWishlist(); return; }
-  if (action === "plan") {
-    // átkerül a tervezett kiadások közé: a lejárat úgy, hogy a havi részlet ne legyen több a megadottnál
-    const { from, due } = wishPlanInfo(w);
-    const p = sanitizePlans([{ name: w.name, target: w.amount, due, from }])[0];
-    plans.push(p); plans.sort((a, b) => a.due < b.due ? -1 : a.due > b.due ? 1 : 0);
-    savePlans();
-    wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
-    toast(`🐷 ${w.name}: bekerült a tervezett kiadások közé`);
-    return;
-  }
   if (action === "skip") {
     wishSaved.total += w.amount; wishSaved.count++;
     wishlist.splice(idx, 1); saveWishlist(); renderWishlist(); renderList();
@@ -2174,6 +2154,8 @@ function wirePlansActions(area) {
 function updateSetCounts() {
   const n = { plans: plans.length, recur: recurring.length, goals: goals.length, cats: Object.keys(allCategories()).length };
   document.querySelectorAll("[data-count]").forEach(el => { const v = n[el.dataset.count]; el.textContent = v ? String(v) : ""; el.hidden = !v; });
+  // a "Nagyobb dolgok" széf mellett ezek csak akkor látszanak, ha van bennük valami (hogy törölni lehessen)
+  ["plans", "goals"].forEach(k => { const d = document.querySelector(`.set-sec[data-sec="${k}"]`); if (d) d.hidden = !n[k]; });
 }
 (function wireSettingSections() {
   let open = [];
@@ -2290,7 +2272,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v88"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v89"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2859,6 +2841,12 @@ function renderFastLine(month) {
   return `<div class="hero-week"><i class="ph-fill ph-hamburger"></i><span>Gyorskaja: <b>${formatFt(sum)}</b> · ${f.length} alkalom</span></div>`;
 }
 
+/* hó végén, ha a következő havi fizetés már beírva: egy koppintással a következő hónapra vált */
+function renderNextMonthCard(month) {
+  const cycle = planCycle();
+  if (month !== currentMonth() || cycle <= month) return "";
+  return `<div class="card action-card"><div class="ac-ic"><i class="ph-fill ph-calendar-plus"></i></div><div class="ac-body"><b>Megjött a ${escapeHtml(monthNameLong(cycle))}i fizetés</b><span>A ${escapeHtml(monthNameLong(cycle))}i keretedet a következő hónapnál látod.</span></div><button class="btn ac-btn" data-goto-month="${cycle}">Megnézem</button></div>`;
+}
 function renderRecurringCard(month) {
   // csak az aktuális (vagy jövőbeli) hónapnál kínáljuk fel – régi hónapok böngészésekor ne zavarjon
   if (!recurring.length || !month || month === "all" || month < currentMonth()) return "";
@@ -2929,6 +2917,7 @@ function wireSummaryActions(area) {
   wireMentorActions(area);
   wirePlansActions(area);
   wireFixSuggest(area);
+  area.querySelectorAll("[data-goto-month]").forEach(b => b.addEventListener("click", () => { selectedMonth = b.dataset.gotoMonth; renderList(); window.scrollTo({ top: 0 }); }));
   area.querySelectorAll("[data-sub-hide]").forEach(b => b.addEventListener("click", () => {
     if (!subsHidden.includes(b.dataset.subHide)) subsHidden.push(b.dataset.subHide);
     saveSubsHidden(); renderList(); toast("Elrejtve az előfizetések közül");
@@ -3035,7 +3024,7 @@ function renderList() {
     document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
     insightArea.innerHTML = renderMentorCard() || `<div class="empty"><span class="big"><i class="ph-fill ph-chart-line-up"></i></span>Ehhez a hónaphoz még nincs mit elemezni.</div>`;
     wireSummaryActions(insightArea);
-    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -3131,7 +3120,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -3251,11 +3240,18 @@ document.getElementById("searchInput").addEventListener("input", (e) => { search
 document.getElementById("sortSelect").addEventListener("change", (e) => { sortMode = e.target.value; renderList(); });
 document.getElementById("monthFilter").addEventListener("change", (e) => { selectedMonth = e.target.value; renderList(); });
 
+/* "A széfből fizettem": a kiadás és a hozzá felvett "Széfből – …" bevétel párt alkot */
+function findVaultPair(it) {
+  if (!it || (it.type || "expense") !== "expense") return -1;
+  return expenseItems.findIndex(x => (x.type || "expense") === "income" && x.sub === "Széfből" && x.name === "Széfből – " + it.name
+    && Number(x.amount) === Number(it.amount) && (x.month || "") === (it.month || "") && (x.day || 0) === (it.day || 0));
+}
 function deleteExpense(i) {
   const it = expenseItems[i];
   if (!it) return;
-  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}`)) {
-    expenseItems.splice(i, 1);
+  const pi = findVaultPair(it);
+  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\nA hozzá tartozó „Széfből” bevétel is törlődik." : ""}`)) {
+    [i, pi].filter(x => x >= 0).sort((a, b) => b - a).forEach(x => expenseItems.splice(x, 1)); // a nagyobb indexet előbb
     saveItems();
     renderList();
   }
@@ -3335,6 +3331,12 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (note) item.note = note;
   if (type === "income" && document.getElementById("editShift").checked) item.forMonth = nextMonthOf(month);
   const old = expenseItems[editIndex];
+  const pairIdx = findVaultPair(old); // széfes pár: a bevétel kövesse a kiadás változását
+  if (pairIdx >= 0 && type === "expense") {
+    const pr = expenseItems[pairIdx];
+    pr.name = "Széfből – " + name; pr.amount = amount; pr.month = month;
+    if (item.day) pr.day = item.day; else delete pr.day;
+  }
   const wasFixed = isRecurring(old), wantFixed = document.getElementById("editFixed").checked;
   if (wasFixed) setRecurring(old, false);          // régi sablon le (név/kategória változhatott)
   if (wantFixed) setRecurring(item, true);         // új adatokkal vissza
@@ -4343,11 +4345,33 @@ function openCatEdit(key) {
   setBucket("catEditBucket", catBucket(key));
   document.getElementById("catEditLimit").value = catLimit(key) || "";
   catEditSubs = catSubs(key).slice();
+  catEditMoves = {}; catEditPending = null;
   renderCatEditSubs();
   document.getElementById("catEditModal").classList.add("show");
 }
 
 let catEditSubs = [];
+let catEditMoves = {};    // törölt alkategória → ahová a tételei kerülnek ("" = alkategória nélkül); mentéskor hajtjuk végre
+let catEditPending = null; // a most törölni kívánt, tételeket tartalmazó alkategória
+function subItemCount(key, sub) { return expenseItems.filter(it => it.color === key && (it.type || "expense") !== "income" && (it.sub || "") === sub).length; }
+function renderCatEditMove() {
+  const box = document.getElementById("catEditMove");
+  if (!catEditPending) { box.hidden = true; box.innerHTML = ""; return; }
+  const n = subItemCount(catEditKey, catEditPending);
+  const others = catEditSubs.filter(x => x !== catEditPending);
+  box.innerHTML = `<p>A(z) <b>${escapeHtml(catEditPending)}</b> alkategóriában ${n} tétel van. Hová kerüljenek?</p>
+    <select id="catEditMoveTo">${others.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")}<option value="">(alkategória nélkül)</option></select>
+    <div class="btn-row"><button type="button" class="btn" id="catEditMoveOk">Törlés és áthelyezés</button><button type="button" class="btn secondary" id="catEditMoveNo">Mégse</button></div>`;
+  box.hidden = false;
+  document.getElementById("catEditMoveOk").addEventListener("click", () => {
+    const from = catEditPending, to = document.getElementById("catEditMoveTo").value;
+    catEditMoves[from] = to;
+    Object.keys(catEditMoves).forEach(k => { if (catEditMoves[k] === from) catEditMoves[k] = to; }); // láncolt áthelyezés
+    catEditSubs = catEditSubs.filter(x => x !== from);
+    catEditPending = null; renderCatEditSubs();
+  });
+  document.getElementById("catEditMoveNo").addEventListener("click", () => { catEditPending = null; renderCatEditMove(); });
+}
 function renderCatEditSubs() {
   const box = document.getElementById("catEditSubsList");
   box.innerHTML = "";
@@ -4358,10 +4382,14 @@ function renderCatEditSubs() {
     span.textContent = s;
     const btn = document.createElement("button");
     btn.type = "button"; btn.innerHTML = '<i class="ph-fill ph-x"></i>'; btn.title = "Törlés";
-    btn.addEventListener("click", () => { catEditSubs.splice(i, 1); renderCatEditSubs(); });
+    btn.addEventListener("click", () => {
+      if (subItemCount(catEditKey, s) > 0) { catEditPending = s; renderCatEditMove(); return; } // van benne tétel: kérdezzük meg, hová kerüljön
+      catEditSubs.splice(i, 1); renderCatEditSubs();
+    });
     tag.appendChild(span); tag.appendChild(btn);
     box.appendChild(tag);
   });
+  renderCatEditMove();
 }
 function addCatEditSub() {
   const inp = document.getElementById("catEditSubInput");
@@ -4390,10 +4418,16 @@ document.getElementById("btnCatSave").addEventListener("click", () => {
   if (newCat.limit > 0 && newCat.limit === Number(prevCat.limit) && prevCat.limitFrom) newCat.limitFrom = prevCat.limitFrom;
   customCategories[catEditKey] = newCat;
   saveCategories();
+  // törölt alkategóriák tételeinek áthelyezése
+  let moved = 0;
+  Object.keys(catEditMoves).forEach(from => {
+    expenseItems.forEach(it => { if (it.color === catEditKey && (it.type || "expense") !== "income" && (it.sub || "") === from) { it.sub = catEditMoves[from]; moved++; } });
+  });
+  if (moved) { saveItems(); renderList(); }
   closeCatEdit();
   renderCategories();
   buildManualPicker(getPickerValue("manualColors") || "green");
-  showMsg("catMsg", "✅ Kategória frissítve!", "success");
+  showMsg("catMsg", "✅ Kategória frissítve!" + (moved ? ` ${moved} tétel áthelyezve.` : ""), "success");
 });
 
 /* ---------- Export / Import ---------- */
