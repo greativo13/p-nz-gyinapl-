@@ -655,6 +655,12 @@
   .sub-st.warn { color: #c47a0a; }
   .sub-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .sub-x { border: none; background: none; color: var(--muted); padding: 6px; cursor: pointer; font-size: 15px; }
+  .fx-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); margin: 0; font-weight: 400; cursor: pointer; }
+  .fx-row:first-of-type { border-top: none; }
+  .fx-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--green-accent); flex-shrink: 0; }
+  .fx-info { flex: 1; min-width: 0; font-size: 14px; color: var(--text); display: flex; flex-direction: column; }
+  .fx-info small { font-size: 12px; color: var(--muted); }
+  .fx-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .ov-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
   .ov-tabs button { border: none; background: none; border-radius: 10px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--chip-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
   .ov-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
@@ -1710,6 +1716,9 @@ function submitManual() {
   const noteEl = document.getElementById("mNote");
   const extra = { day: validDay(document.getElementById("mDay").value), note: noteEl.value };
   if (type === "income" && document.getElementById("mShift").checked) extra.forMonth = nextMonthOf(month);
+  // havi számla kétszer ugyanabban a hónapban? (nem tiltjuk, csak szólunk – pl. a következő havi már most jött)
+  const dupPrev = type === "expense" && isPeriodicName(nameEl.value)
+    ? expenseItems.find(it => (it.type || "expense") === "expense" && (it.month || "") === month && normName(it.name) === normName(nameEl.value)) : null;
   let res = addEntry(nameEl.value, amountEl.value, color, month, type, sub, bucketSel, false, extra);
   if (!res.ok && res.dup) {
     if (confirm(`Úgy tűnik, ez a tétel már szerepel ebben a hónapban:\n\n„${nameEl.value.trim()}" – ${formatFt(amountEl.value)}\n\nMégis hozzáadod?`)) {
@@ -1737,6 +1746,9 @@ function submitManual() {
     }
     vaultEl.checked = false;
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · széfből (kiegyenlítve)" : ""}`, "success");
+    if (dupPrev) {
+      showMsg("manualMsg", `✅ Hozzáadva. ℹ️ ${added.name} ebben a hónapban már szerepelt (${itemDateLabel(dupPrev)}). Ha ez már a következő havi számla, a Tételek fülön átállíthatod a hónapját.`, "info");
+    }
     nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift(); hideNameSugg();
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
@@ -2278,7 +2290,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v86"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v87"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2773,6 +2785,80 @@ function pendingRecurring(month) {
   const have = new Set(expenseItems.filter(it => effMonth(it) === month).map(recurringKey));
   return recurring.filter(t => !have.has(recurringKey(t)));
 }
+/* ---------- Fix tételek felismerése ----------
+   Ismétlődő = ugyanaz a név az utolsó 3 hónapból legalább 2-ben, havonta átlag legfeljebb 1,5-ször
+   (a Tesco / Interfood-féle sűrű vásárlás így kiesik), és a két utolsó összeg legfeljebb 20%-kal tér el. */
+let fixDismissed = []; // "nem fix" jelölésű nevek (ékezet nélkül)
+try { const x = JSON.parse(localStorage.getItem("fixDismissed") || "[]"); if (Array.isArray(x)) fixDismissed = x.filter(v => typeof v === "string" && v.length <= 60).slice(0, 200); } catch {}
+function saveFixDismissed() { try { localStorage.setItem("fixDismissed", JSON.stringify(fixDismissed)); } catch {} }
+function normName(s) { return deburr(s).replace(/\s+/g, " ").trim(); }
+function periodicGroups() {
+  const cur = currentMonth(), from = addMonthsTo(cur, -2);
+  const g = {};
+  expenseItems.forEach(it => {
+    if ((it.type || "expense") === "income" || !it.month || it.month < from || it.month > cur) return;
+    const k = normName(it.name);
+    if (!k) return;
+    (g[k] = g[k] || []).push(it);
+  });
+  const out = [];
+  Object.keys(g).forEach(k => {
+    const items = g[k].slice().sort((a, b) => (a.month + String(a.day || 0).padStart(2, "0")).localeCompare(b.month + String(b.day || 0).padStart(2, "0")));
+    const months = new Set(items.map(i => i.month));
+    if (months.size < 2 || items.length / months.size > 1.5) return;
+    const a = Number(items[items.length - 1].amount), b = Number(items[items.length - 2].amount);
+    if (Math.abs(a - b) > Math.max(a, b) * 0.2) return;
+    out.push({ key: k, last: items[items.length - 1] });
+  });
+  return out;
+}
+function isPeriodicName(name) { const k = normName(name); return periodicGroups().some(p => p.key === k); }
+function fixSuggestions() {
+  const have = new Set(recurring.map(t => normName(t.name)));
+  return periodicGroups().filter(p => !have.has(p.key) && !fixDismissed.includes(p.key)).sort((a, b) => Number(b.last.amount) - Number(a.last.amount));
+}
+function renderFixSuggestCard(month) {
+  if (month !== currentMonth()) return "";
+  const s = fixSuggestions();
+  if (!s.length) return "";
+  const rows = s.map(p => {
+    const it = p.last;
+    return `<label class="fx-row"><input type="checkbox" checked data-fx="${escapeHtml(p.key)}"><span class="fx-info"><b>${escapeHtml(it.name)}</b><small>${escapeHtml(catName(it.color))}${it.sub ? " › " + escapeHtml(it.sub) : ""}${it.day ? " · " + it.day + "." : ""}</small></span><span class="fx-amt">${formatFt(it.amount)}</span><button type="button" class="sub-x" data-fx-no="${escapeHtml(p.key)}" title="Nem fix" aria-label="Nem fix"><i class="ph ph-x"></i></button></label>`;
+  }).join("");
+  return `<div class="card fx-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-arrows-clockwise"></i> Ezek havonta ismétlődnek</h2>
+    <p class="hint" style="margin:0 0 8px">Felveszed őket fix tételnek? Így a szabad pénz pontosabb lesz. Ami már nem jön (pl. lejárt törlesztő), azt a ✕ elrejti.</p>${rows}
+    <button type="button" class="btn" data-fx-add style="margin:10px 0 0"><i class="ph-fill ph-check"></i> Felveszem a kijelölteket</button></div>`;
+}
+function wireFixSuggest(area) {
+  area.querySelectorAll("[data-fx-no]").forEach(b => b.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (!fixDismissed.includes(b.dataset.fxNo)) fixDismissed.push(b.dataset.fxNo);
+    saveFixDismissed(); renderList();
+  }));
+  area.querySelectorAll("[data-fx-add]").forEach(b => b.addEventListener("click", () => {
+    const keys = [...area.querySelectorAll("[data-fx]:checked")].map(c => c.dataset.fx);
+    const groups = periodicGroups();
+    let n = 0;
+    keys.forEach(k => { const p = groups.find(x => x.key === k); if (p) { setRecurring(p.last, true); n++; } });
+    renderList();
+    if (n) toast(`✅ ${n} fix tétel felvéve · a Beállításokban módosíthatod`);
+  }));
+}
+/* ---------- Gyorskaja (név alapján, bármelyik kategóriában) ---------- */
+const FAST_KW = ["burger king", "burgerking", "mcdonald", "mc donald", "kfc", "wolt", "foodora", "netpincer", "starbucks", "subway", "gyros", "kebab", "pizza", "fornetti", "bolt food", "popeyes", "five guys", "taco bell"];
+function isFastFood(it) {
+  const n = deburr(it.name), sb = deburr(it.sub || "");
+  if ((it.type || "expense") === "income" || sb === "ajandek" || sb === "utazas") return false; // pl. Starbucks-bögre szuvenírnek
+  return FAST_KW.some(k => n.includes(k));
+}
+function renderFastLine(month) {
+  if (month === "all") return "";
+  const f = expenseItems.filter(it => (it.month || "") === month && isFastFood(it));
+  if (!f.length) return "";
+  const sum = f.reduce((s, it) => s + Number(it.amount), 0);
+  return `<div class="hero-week"><i class="ph-fill ph-hamburger"></i><span>Gyorskaja: <b>${formatFt(sum)}</b> · ${f.length} alkalom</span></div>`;
+}
+
 function renderRecurringCard(month) {
   // csak az aktuális (vagy jövőbeli) hónapnál kínáljuk fel – régi hónapok böngészésekor ne zavarjon
   if (!recurring.length || !month || month === "all" || month < currentMonth()) return "";
@@ -2842,6 +2928,7 @@ function wireSummaryActions(area) {
   if (ts) ts.addEventListener("change", e => { trendMode = e.target.value; renderList(); });
   wireMentorActions(area);
   wirePlansActions(area);
+  wireFixSuggest(area);
   area.querySelectorAll("[data-sub-hide]").forEach(b => b.addEventListener("click", () => {
     if (!subsHidden.includes(b.dataset.subHide)) subsHidden.push(b.dataset.subHide);
     saveSubsHidden(); renderList(); toast("Elrejtve az előfizetések közül");
@@ -2948,7 +3035,7 @@ function renderList() {
     document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
     insightArea.innerHTML = renderMentorCard() || `<div class="empty"><span class="big"><i class="ph-fill ph-chart-line-up"></i></span>Ehhez a hónaphoz még nincs mit elemezni.</div>`;
     wireSummaryActions(insightArea);
-    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -3042,7 +3129,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -3054,7 +3141,7 @@ function renderList() {
             ${savings > 0 ? `<span class="flow-save"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás ${formatFt(savings)}</span>` : ""}
             ${business > 0 ? `<span class="flow-biz"><i class="ph-fill ph-briefcase"></i> Vállalkozás ${formatFt(business)}</span>` : ""}
           </div>
-          ${renderFreeMoney(selectedMonth)}${cmpHtml}${weekHtml}
+          ${renderFreeMoney(selectedMonth)}${cmpHtml}${weekHtml}${renderFastLine(selectedMonth)}
         </div>
         ${donutHtml}
       </div>
@@ -4320,7 +4407,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, subsHidden, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, subsHidden, fixDismissed, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -4379,6 +4466,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
       if (Array.isArray(st.plans)) { plans = sanitizePlans(st.plans); savePlans(); }
+      if (Array.isArray(st.fixDismissed)) { fixDismissed = st.fixDismissed.filter(v => typeof v === "string" && v.length <= 60).slice(0, 200); saveFixDismissed(); }
       if (Array.isArray(st.subsHidden)) { subsHidden = st.subsHidden.filter(x => typeof x === "string" && /^[a-z0-9]{1,30}$/.test(x)).slice(0, 100); saveSubsHidden(); }
       if (st.wishlist && typeof st.wishlist === "object") { wishlist = sanitizeWishlist(st.wishlist.list); wishSaved = sanitizeWishSaved(st.wishlist.saved); saveWishlist(); }
       if (typeof st.showMentor === "boolean") { showMentor = st.showMentor; saveMentorView(); }
