@@ -2290,7 +2290,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v87"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v88"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3080,7 +3080,9 @@ function renderList() {
     const pm = prevMonthOf(selectedMonth);
     const prevSpend = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && itemBucket(it) !== "saving" && itemBucket(it) !== "business").reduce((s, it) => s + Number(it.amount), 0);
     const curView = selectedMonth === currentMonth(), dayNow = new Date().getDate();
-    if (prevSpend > 0 && curView && dayNow < 5) {
+    if (selectedMonth > currentMonth()) {
+      cmpHtml = ""; // még el sem kezdődött hónap: nincs mit összehasonlítani
+    } else if (prevSpend > 0 && curView && dayNow < 5) {
       cmpHtml = `<div class="hero-compare cmp-flat">Összehasonlítás az előző hónappal az 5. naptól</div>`;
     } else if (prevSpend > 0) {
       const base = curView ? prevSpend * dayNow / daysInMonth(selectedMonth) : prevSpend; // folyamatban lévő hónapnál időarányosan
