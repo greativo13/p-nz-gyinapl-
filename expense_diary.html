@@ -654,9 +654,9 @@
   .sub-st.warn { color: #c47a0a; }
   .sub-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .sub-x { border: none; background: none; color: var(--muted); padding: 6px; cursor: pointer; font-size: 15px; }
-  .fx-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); margin: 0; font-weight: 400; cursor: pointer; }
+  .fx-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
   .fx-row:first-of-type { border-top: none; }
-  .fx-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--green-accent); flex-shrink: 0; }
+  .fx-add { border: none; background: var(--green-btn); color: #fff; border-radius: 10px; padding: 7px 10px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .fx-info { flex: 1; min-width: 0; font-size: 14px; color: var(--text); display: flex; flex-direction: column; }
   .fx-info small { font-size: 12px; color: var(--muted); }
   .fx-amt { font-weight: 700; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -2272,7 +2272,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v89"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v90"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2805,11 +2805,10 @@ function renderFixSuggestCard(month) {
   if (!s.length) return "";
   const rows = s.map(p => {
     const it = p.last;
-    return `<label class="fx-row"><input type="checkbox" checked data-fx="${escapeHtml(p.key)}"><span class="fx-info"><b>${escapeHtml(it.name)}</b><small>${escapeHtml(catName(it.color))}${it.sub ? " › " + escapeHtml(it.sub) : ""}${it.day ? " · " + it.day + "." : ""}</small></span><span class="fx-amt">${formatFt(it.amount)}</span><button type="button" class="sub-x" data-fx-no="${escapeHtml(p.key)}" title="Nem fix" aria-label="Nem fix"><i class="ph ph-x"></i></button></label>`;
+    return `<div class="fx-row"><span class="fx-info"><b>${escapeHtml(it.name)}</b><small>${escapeHtml(it.sub || catName(it.color))}${it.day ? " · " + it.day + "." : ""}</small></span><span class="fx-amt">${formatFt(it.amount)}</span><button type="button" class="fx-add" data-fx-add="${escapeHtml(p.key)}"><i class="ph-fill ph-plus"></i> Hozzáad</button><button type="button" class="sub-x" data-fx-no="${escapeHtml(p.key)}" title="Nem fix" aria-label="Nem fix"><i class="ph ph-x"></i></button></div>`;
   }).join("");
   return `<div class="card fx-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-arrows-clockwise"></i> Ezek havonta ismétlődnek</h2>
-    <p class="hint" style="margin:0 0 8px">Felveszed őket fix tételnek? Így a szabad pénz pontosabb lesz. Ami már nem jön (pl. lejárt törlesztő), azt a ✕ elrejti.</p>${rows}
-    <button type="button" class="btn" data-fx-add style="margin:10px 0 0"><i class="ph-fill ph-check"></i> Felveszem a kijelölteket</button></div>`;
+    <p class="hint" style="margin:0 0 8px">Amelyik fix, add hozzá – így a szabad pénz pontosabb lesz. Ami már nem jön (pl. lejárt törlesztő), azt a ✕ elrejti.</p>${rows}</div>`;
 }
 function wireFixSuggest(area) {
   area.querySelectorAll("[data-fx-no]").forEach(b => b.addEventListener("click", (e) => {
@@ -2818,12 +2817,11 @@ function wireFixSuggest(area) {
     saveFixDismissed(); renderList();
   }));
   area.querySelectorAll("[data-fx-add]").forEach(b => b.addEventListener("click", () => {
-    const keys = [...area.querySelectorAll("[data-fx]:checked")].map(c => c.dataset.fx);
-    const groups = periodicGroups();
-    let n = 0;
-    keys.forEach(k => { const p = groups.find(x => x.key === k); if (p) { setRecurring(p.last, true); n++; } });
+    const p = periodicGroups().find(x => x.key === b.dataset.fxAdd);
+    if (!p) return;
+    setRecurring(p.last, true);
     renderList();
-    if (n) toast(`✅ ${n} fix tétel felvéve · a Beállításokban módosíthatod`);
+    toast(`✅ ${p.last.name}: fix tétel lett`);
   }));
 }
 /* ---------- Gyorskaja (név alapján, bármelyik kategóriában) ---------- */
