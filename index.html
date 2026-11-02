@@ -239,12 +239,11 @@
   #incCatList { margin-bottom: 12px; }
   /* Fix tételek felvitele */
   .recur-list { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-  .recur-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
-  .recur-row input[type="checkbox"] { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--green-accent); }
+  .recur-row { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px; }
   .recur-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .recur-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
   .recur-cat { font-size: 12px; color: var(--muted); }
-  .recur-row .recur-amt { width: 100px; margin: 0; padding: 9px 10px; font-size: 14px; text-align: right; flex-shrink: 0; }
+  .recur-row .recur-amt { width: 88px; margin: 0; padding: 9px 10px; font-size: 14px; text-align: right; flex-shrink: 0; }
   /* Trend-választó */
   .trend-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
   .trend-head .trend-sel { width: auto; max-width: 55%; margin: 0; padding: 7px 10px; font-size: 13px; border-radius: 10px; }
@@ -1113,10 +1112,7 @@
     <h3><i class="ph-fill ph-arrows-clockwise"></i> Fix havi tételek</h3>
     <p class="hint" id="recurHint" style="margin:-6px 0 12px;"></p>
     <div id="recurList" class="recur-list"></div>
-    <div class="btn-row" style="margin-top:12px">
-      <button class="btn" id="btnRecurDo"><i class="ph-fill ph-plus"></i> Kijelöltek hozzáadása</button>
-      <button class="btn secondary" id="btnRecurCancel">Mégse</button>
-    </div>
+    <button class="btn secondary" id="btnRecurCancel" style="margin-top:12px">Kész</button>
   </div>
 </div>
 
@@ -2272,7 +2268,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v91"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v92"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2557,39 +2553,35 @@ function openRecurModal(month) {
     const idx = recurring.indexOf(t);
     const isInc = t.type === "income";
     const label = isInc ? "Bevétel" + (t.sub ? " › " + t.sub : "") : catName(t.color) + (t.sub ? " › " + t.sub : "");
-    const row = document.createElement("label");
+    const row = document.createElement("div");
     row.className = "recur-row";
-    row.innerHTML = `<input type="checkbox" checked data-ri="${idx}">
-      <span class="recur-info"><span class="recur-name">${escapeHtml(t.name)}</span><span class="recur-cat">${escapeHtml(label)}${t.day ? " · " + t.day + "." : ""}</span></span>
-      <input type="number" class="recur-amt" value="${Number(t.amount)}" data-ra="${idx}" inputmode="numeric" aria-label="Összeg">`;
+    row.innerHTML = `<span class="recur-info"><span class="recur-name">${escapeHtml(t.name)}</span><span class="recur-cat">${escapeHtml(t.sub || label)}${t.day ? " · " + t.day + "." : ""}</span></span>
+      <input type="number" class="recur-amt" value="${Number(t.amount)}" data-ra="${idx}" inputmode="numeric" aria-label="Összeg">
+      <button type="button" class="fx-add" data-ri="${idx}"><i class="ph-fill ph-plus"></i> Hozzáad</button>`;
     box.appendChild(row);
   });
   document.getElementById("recurModal").classList.add("show");
 }
 function closeRecurModal() { document.getElementById("recurModal").classList.remove("show"); recurTargetMonth = null; }
-function doRecurAdd() {
+/* egy fix tétel felvitele a hónapra (soronkénti "Hozzáad" gomb) */
+function doRecurAdd(btn) {
   const month = recurTargetMonth;
-  if (!month) return;
-  let added = 0, changed = false;
-  document.querySelectorAll("#recurList [data-ri]").forEach(cb => {
-    if (!cb.checked) return;
-    const idx = Number(cb.dataset.ri);
-    const t = recurring[idx];
-    if (!t) return;
-    const amtEl = document.querySelector(`#recurList [data-ra="${idx}"]`);
-    const amount = Math.round(Number(amtEl && amtEl.value));
-    if (!amount || amount <= 0) return;
-    if (amount !== Number(t.amount)) { t.amount = amount; changed = true; } // pl. áremelés → marad a következő hónapokra is
-    const shift = t.shiftNext && t.type === "income"; // hó végi fizetés: az előző hónap végén érkezik, erre a hónapra számít
-    const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
-    if (res.ok) added++;
-  });
-  if (changed) saveRecurring();
-  closeRecurModal();
+  const idx = Number(btn.dataset.ri);
+  const t = recurring[idx];
+  if (!month || !t) return;
+  const amtEl = document.querySelector(`#recurList [data-ra="${idx}"]`);
+  const amount = Math.round(Number(amtEl && amtEl.value));
+  if (!amount || amount <= 0) { toast("⚠️ Adj meg érvényes összeget."); return; }
+  if (amount !== Number(t.amount)) { t.amount = amount; saveRecurring(); } // pl. áremelés → marad a következő hónapokra is
+  const shift = t.shiftNext && t.type === "income"; // hó végi fizetés: az előző hónap végén érkezik, erre a hónapra számít
+  const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
+  if (!res.ok) { toast("⚠️ " + res.reason); return; }
+  btn.closest(".recur-row").remove();
+  toast(`✅ ${t.name} hozzáadva (${monthLabelShort(month)})`);
   renderList();
-  toast(`✅ ${added} fix tétel hozzáadva (${monthLabelShort(month)})`);
+  if (!document.querySelector("#recurList .recur-row")) closeRecurModal(); // mind felvive
 }
-document.getElementById("btnRecurDo").addEventListener("click", doRecurAdd);
+document.getElementById("recurList").addEventListener("click", (e) => { const b = e.target.closest("button[data-ri]"); if (b) doRecurAdd(b); });
 document.getElementById("btnRecurCancel").addEventListener("click", closeRecurModal);
 document.getElementById("recurModal").addEventListener("click", e => { if (e.target.id === "recurModal") closeRecurModal(); });
 
