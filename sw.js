@@ -1,5 +1,5 @@
 /* Pénzügyi Napló – Service Worker (offline támogatás) */
-const CACHE = "penzugyi-naplo-v90";
+const CACHE = "penzugyi-naplo-v91";
 const CORE = [
   "./",
   "./index.html",
@@ -41,7 +41,9 @@ self.addEventListener("fetch", (e) => {
 
   if (isHTML) {
     e.respondWith(
-      fetch(req)
+      // no-cache: a böngésző HTTP-gyorsítótára (GitHub Pages: 10 perc) helyett mindig a szerverrel egyeztet,
+      // így egy új verzió azonnal megérkezik. (Navigációs kérésből nem lehet új Request-et építeni, ezért URL-lel.)
+      fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
         .then((res) => {
           if (res && res.ok) { // hibaoldalt ne tároljunk el a működő app helyett
             const copy = res.clone();
