@@ -115,6 +115,44 @@
     display: flex; align-items: center; justify-content: center; transition: background 0.15s;
   }
   .theme-toggle:active { transform: scale(0.94); }
+  .head-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  /* dashboard */
+  .dash { position: fixed; inset: 0; z-index: 60; background: var(--page); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom)); }
+  .dash-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 12px 12px 10px; background: var(--page); max-width: 480px; margin: 0 auto; }
+  .dash-title { flex: 1; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
+  .dash-title span { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .dash-title b { font-family: var(--font-display); font-size: 17px; color: var(--text); }
+  .dash-nav, .dash-close { width: 38px; height: 38px; border: none; border-radius: 50%; background: var(--chip); color: var(--chip-text); font-size: 17px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .dash-nav:disabled { opacity: 0.35; cursor: default; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 16px; max-width: 480px; margin: 0 auto; }
+  .dtile { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 13px 14px; box-shadow: var(--shadow-card); text-align: left; font: inherit; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .dtile:active { transform: scale(0.98); }
+  .dtile.wide { grid-column: 1 / -1; }
+  .dt-lbl { font-size: 12px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .dt-big { font-family: var(--font-display); font-size: 21px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dt-big.neg { color: var(--danger); }
+  .dt-sub { font-size: 12px; color: var(--muted); line-height: 1.35; }
+  .dt-sub.up { color: var(--danger); } .dt-sub.down { color: var(--green-accent); }
+  .dt-donut { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .dt-donut .donut { width: 92px; height: 92px; flex-shrink: 0; }
+  .dt-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+  .dt-legend div { display: flex; align-items: center; gap: 6px; }
+  .dt-legend span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dt-legend b { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .dt-rule { display: flex; flex-direction: column; gap: 7px; margin-top: 4px; }
+  .dt-rule-row { display: grid; grid-template-columns: 92px 1fr 38px; align-items: center; gap: 8px; font-size: 12.5px; }
+  .dt-rule-track { position: relative; height: 8px; border-radius: 4px; background: var(--chip); overflow: visible; }
+  .dt-rule-fill { height: 100%; border-radius: 4px; }
+  .dt-rule-mark { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text); opacity: 0.55; border-radius: 1px; }
+  .dt-rule-row b { text-align: right; font-variant-numeric: tabular-nums; }
+  .dt-trend { display: flex; align-items: flex-end; gap: 8px; height: 86px; margin-top: 8px; }
+  .dt-tcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+  .dt-tpair { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+  .dt-tbar { width: 40%; max-width: 14px; border-radius: 4px 4px 0 0; min-height: 2px; }
+  .dt-tcol small { font-size: 10.5px; color: var(--muted); }
+  .dt-tcol.sel small { color: var(--text); font-weight: 700; }
+  .dt-keys { display: flex; gap: 12px; font-size: 11.5px; color: var(--muted); }
+  .dt-keys i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 
   /* ---------- Tabs ---------- */
   /* Alsó navigáció (PayPal-szerű) */
@@ -734,9 +772,23 @@
           </svg>Pénzügyi Napló</h1>
         <p>Kövesd a bevételeid és kiadásaid</p>
       </div>
-      <button class="theme-toggle" id="themeToggle" aria-label="Sötét/világos mód">🌙</button>
+      <div class="head-btns">
+        <button class="theme-toggle" id="dashBtn" aria-label="Dashboard nézet" title="Dashboard"><i class="ph-fill ph-squares-four"></i></button>
+        <button class="theme-toggle" id="themeToggle" aria-label="Sötét/világos mód">🌙</button>
+      </div>
     </div>
   </header>
+
+  <!-- ============ DASHBOARD (teljes képernyős áttekintés) ============ -->
+  <div class="dash" id="dashView" hidden role="dialog" aria-label="Dashboard">
+    <div class="dash-top">
+      <button type="button" class="dash-nav" data-dash-step="-1" aria-label="Előző hónap"><i class="ph ph-caret-left"></i></button>
+      <div class="dash-title"><span>Dashboard</span><b id="dashMonth"></b></div>
+      <button type="button" class="dash-nav" data-dash-step="1" aria-label="Következő hónap"><i class="ph ph-caret-right"></i></button>
+      <button type="button" class="dash-close" id="dashClose" aria-label="Bezárás"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="dash-grid" id="dashGrid"></div>
+  </div>
 
   <nav class="bottom-nav">
     <button class="tab active" data-panel="list"><span class="ic"><i class="ph-fill ph-chart-pie-slice"></i></span>Áttekintés</button>
@@ -2268,7 +2320,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v92"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v93"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2965,6 +3017,127 @@ function renderSubsCard() {
     <p class="hint" style="margin:0 0 10px">Havonta kb. <b>${formatFt(total)}</b> · évente <b>${formatFt(total * 12)}</b></p>${rows}
     <p class="hint" style="margin:10px 0 0">Az „elmaradt?” tételek nincsenek benne az összegben: vagy lemondtad, vagy még nem írtad be. A ✕ elrejti, ami nem előfizetés.</p></div>`;
 }
+
+/* ---------- Dashboard: egy képernyős, csempés áttekintés (a fejléc gombjáról) ---------- */
+let dashMonth = null;
+function dashMonths() { return [...new Set([currentMonth(), planCycle(), ...expenseItems.map(effMonth).filter(Boolean)])].sort(); }
+function openDash() {
+  dashMonth = selectedMonth && selectedMonth !== "all" ? selectedMonth : currentMonth();
+  renderDash();
+  const v = document.getElementById("dashView");
+  v.hidden = false; v.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+function closeDash() { document.getElementById("dashView").hidden = true; document.body.style.overflow = ""; }
+function renderDash() {
+  const m = dashMonth, cur = currentMonth();
+  const months = dashMonths(), mi = months.indexOf(m);
+  document.getElementById("dashMonth").textContent = monthLabel(m);
+  document.querySelector('[data-dash-step="-1"]').disabled = mi <= 0;
+  document.querySelector('[data-dash-step="1"]').disabled = mi < 0 || mi >= months.length - 1;
+
+  // összegek (ugyanúgy, mint az Áttekintés)
+  let income = 0, needs = 0, wants = 0, savings = 0;
+  const totals = {};
+  expenseItems.forEach(it => {
+    if (effMonth(it) !== m) return;
+    const a = Number(it.amount);
+    if ((it.type || "expense") === "income") { income += a; return; }
+    const b = itemBucket(it);
+    if (b === "saving") { savings += a; return; }
+    if (b === "business") return;
+    if (b === "need") needs += a; else wants += a;
+    totals[it.color] = (totals[it.color] || 0) + a;
+  });
+  const spend = needs + wants, balance = monthBalance(m);
+  const tiles = [];
+  const tile = (go, cls, html) => tiles.push(`<button type="button" class="dtile ${cls}" data-dash-go="${go}">${html}</button>`);
+
+  // 1) egyenleg
+  tile("month", "", `<span class="dt-lbl"><i class="ph-fill ph-wallet"></i> Egyenleg</span><span class="dt-big ${balance < 0 ? "neg" : ""}">${formatFt(balance)}</span><span class="dt-sub">Bevétel ${formatFt(income)}</span>`);
+  // 2) szabad pénz (ha van mit levonni), különben kiadás/nap
+  if ((m === cur || m === planCycle()) && (plans.length || recurring.length)) {
+    const f = freeMoney(m);
+    const days = m === cur ? daysInMonth(m) - new Date().getDate() + 1 : daysInMonth(m);
+    tile("month", "", `<span class="dt-lbl"><i class="ph-fill ph-coins"></i> Szabad pénz</span><span class="dt-big ${f < 0 ? "neg" : ""}">${formatFt(f)}</span><span class="dt-sub">${f > 0 ? `naponta kb. ${formatFt(Math.floor(f / days / 100) * 100)}` : "fix tételek után"}</span>`);
+  } else {
+    tile("month", "", `<span class="dt-lbl"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</span><span class="dt-big">${formatFt(savings)}</span><span class="dt-sub">${income > 0 ? Math.round(savings / income * 100) + "% a bevételből" : "&nbsp;"}</span>`);
+  }
+  // 3) kiadás + összehasonlítás
+  let cmp = "&nbsp;", cmpCls = "";
+  if (m <= cur) {
+    const pm = prevMonthOf(m);
+    const prev = expenseItems.filter(it => (it.month || "") === pm && (it.type || "expense") !== "income" && ["need", "want"].includes(itemBucket(it))).reduce((s, it) => s + Number(it.amount), 0);
+    if (prev > 0 && m === cur && new Date().getDate() < 5) {
+      cmp = "összehasonlítás az 5. naptól";
+    } else if (prev > 0) {
+      const base = m === cur ? prev * new Date().getDate() / daysInMonth(m) : prev;
+      const pct = Math.round((spend - base) / base * 100);
+      cmp = `${pct > 0 ? "▲" : pct < 0 ? "▼" : "＝"} ${Math.abs(pct)}% az előző hónaphoz${m === cur ? " (időarányosan)" : ""}`;
+      cmpCls = pct > 0 ? "up" : pct < 0 ? "down" : "";
+    }
+  }
+  tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-arrow-up-right"></i> Kiadás</span><span class="dt-big">${formatFt(spend)}</span><span class="dt-sub ${cmpCls}">${cmp}</span>`);
+  // 4) gyorskaja
+  const fast = expenseItems.filter(it => (it.month || "") === m && isFastFood(it));
+  tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-hamburger"></i> Gyorskaja</span><span class="dt-big">${formatFt(fast.reduce((s, it) => s + Number(it.amount), 0))}</span><span class="dt-sub">${fast.length} alkalom</span>`);
+  // 5) kategóriák fánkdiagram + jelmagyarázat (top 4, a többi "Egyéb")
+  const entries = Object.keys(totals).map(k => ({ k, v: totals[k] })).sort((a, b) => b.v - a.v);
+  if (spend > 0) {
+    let acc = 0;
+    const stops = entries.map(e => { const a0 = acc / spend * 100; acc += e.v; return `${catHex(e.k)} ${a0}% ${acc / spend * 100}%`; }).join(", ");
+    const top = entries.slice(0, 4), rest = entries.slice(4).reduce((s, e) => s + e.v, 0);
+    const leg = top.map(e => `<div><span class="ns-dot" style="background:${catHex(e.k)}"></span><span>${escapeHtml(catName(e.k))}</span><b>${Math.round(e.v / spend * 100)}%</b></div>`).join("")
+      + (rest > 0 ? `<div><span class="ns-dot" style="background:var(--chip)"></span><span>Többi</span><b>${Math.round(rest / spend * 100)}%</b></div>` : "");
+    tile("month", "wide", `<span class="dt-lbl"><i class="ph-fill ph-chart-pie-slice"></i> Mire ment el</span><div class="dt-donut"><div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(entries[0].v / spend * 100)}%</b></div></div><div class="dt-legend">${leg}</div></div>`);
+  }
+  // 6) 60-30-10 (vagy a beállított arány)
+  if (show5030 && income > 0) {
+    const rows = [["Szükséglet", needs, rule5030.need, "#3b82f6"], ["Vágy", wants, rule5030.want, "#ec4899"], ["Megtakarítás", savings, rule5030.save, "#14b8a6"]]
+      .map(([n, v, t, c]) => { const pct = Math.round(v / income * 100); return `<div class="dt-rule-row"><span>${n}</span><div class="dt-rule-track"><div class="dt-rule-fill" style="width:${Math.min(pct, 100)}%;background:${c}"></div><div class="dt-rule-mark" style="left:calc(${Math.min(t, 100)}% - 1px)" title="Cél: ${t}%"></div></div><b>${pct}%</b></div>`; }).join("");
+    tile("month", "wide", `<span class="dt-lbl"><i class="ph-fill ph-target"></i> ${escapeHtml(ruleLabel())} · a függőleges vonal a cél</span><div class="dt-rule">${rows}</div>`);
+  }
+  // 7) előfizetések (csak az aktuális hónapra értelmes)
+  if (m === cur) {
+    const gs = subscriptionGroups(), today = new Date().getDate();
+    const act = gs.filter(g => g.last.month === cur || (g.last.day && g.last.day > today));
+    if (gs.length) tile("insights", "", `<span class="dt-lbl"><i class="ph-fill ph-repeat"></i> Előfizetések</span><span class="dt-big">${formatFt(act.reduce((s, g) => s + Number(g.last.amount), 0))}</span><span class="dt-sub">havonta · ${act.length} db</span>`);
+    const w = weekSpend();
+    tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-calendar-check"></i> Ezen a héten</span><span class="dt-big">${formatFt(w.sum)}</span><span class="dt-sub">kiadás hétfő óta</span>`);
+  }
+  // 8) kívánságlista
+  if (wishlist.length) tile("wish", "wide", `<span class="dt-lbl"><i class="ph-fill ph-heart"></i> Kívánságlista</span><span class="dt-big">${wishlist.length} dolog</span><span class="dt-sub">összesen ${formatFt(wishlist.reduce((s, x) => s + x.amount, 0))}</span>`);
+  // 9) trend: az utolsó 6 hónap bevétele és kiadása
+  const tm = months.filter(x => x <= (m > cur ? m : cur)).slice(-6);
+  if (tm.length >= 2) {
+    const inc = {}, exp = {};
+    expenseItems.forEach(it => {
+      const k = effMonth(it); if (!tm.includes(k)) return;
+      if ((it.type || "expense") === "income") inc[k] = (inc[k] || 0) + Number(it.amount);
+      else if (["need", "want"].includes(itemBucket(it))) exp[k] = (exp[k] || 0) + Number(it.amount);
+    });
+    const max = Math.max(1, ...tm.map(k => Math.max(inc[k] || 0, exp[k] || 0)));
+    const cols = tm.map(k => `<div class="dt-tcol ${k === m ? "sel" : ""}"><div class="dt-tpair"><div class="dt-tbar" style="height:${Math.max((inc[k] || 0) / max * 100, 2)}%;background:var(--income)" title="Bevétel: ${formatFt(inc[k] || 0)}"></div><div class="dt-tbar" style="height:${Math.max((exp[k] || 0) / max * 100, 2)}%;background:#94a3a0" title="Kiadás: ${formatFt(exp[k] || 0)}"></div></div><small>${escapeHtml(monthLabelShort(k).replace(/^\d{4}\.\s*/, ""))}</small></div>`).join("");
+    tile("insights", "wide", `<span class="dt-lbl"><i class="ph-fill ph-chart-bar"></i> Trend</span><div class="dt-keys"><span><i style="background:var(--income)"></i>Bevétel</span><span><i style="background:#94a3a0"></i>Kiadás</span></div><div class="dt-trend">${cols}</div>`);
+  }
+  document.getElementById("dashGrid").innerHTML = tiles.join("");
+}
+document.getElementById("dashBtn").addEventListener("click", openDash);
+document.getElementById("dashClose").addEventListener("click", closeDash);
+document.querySelectorAll("[data-dash-step]").forEach(b => b.addEventListener("click", () => {
+  const months = dashMonths(), i = months.indexOf(dashMonth) + Number(b.dataset.dashStep);
+  if (i >= 0 && i < months.length) { dashMonth = months[i]; renderDash(); }
+}));
+document.getElementById("dashGrid").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-dash-go]");
+  if (!t) return;
+  const m = dashMonth;
+  closeDash();
+  document.querySelector('.tab[data-panel="list"]').click(); // a fül-kattintás az aktuális hónapra áll…
+  selectedMonth = m; setOvTab(t.dataset.dashGo); renderList(); // …ezért utána állítjuk a dashboard hónapjára
+  window.scrollTo({ top: 0 });
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.getElementById("dashView").hidden) closeDash(); });
 
 /* ---------- Áttekintés alfülek: Hónap / Tételek / Elemzés ---------- */
 let ovTab = "month";
