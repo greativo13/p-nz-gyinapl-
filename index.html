@@ -124,6 +124,9 @@
   .pk-row .mgr-name { flex: 1 1 100%; min-width: 0; }
   .pk-row .icon-btn.del { margin-left: auto; }
   .pk-bal input.pk-pct[type="number"] { width: 64px; }
+  #recurMgr .mgr-row { flex-wrap: wrap; }
+  #recurMgr .mgr-name { flex: 1 1 55%; min-width: 0; }
+  .recur-pocket { width: auto; max-width: 160px; margin: 0; padding: 6px 8px; font-size: 13px; border-radius: 10px; }
   .pk-total { font-size: 13px; color: var(--chip-text); text-align: right; padding: 4px 2px 10px; }
   #pocketKind { margin-bottom: 12px; }
   .pk-bal input[type="number"] { width: 110px; margin: 0; padding: 8px 10px; font-size: 15px; border-radius: 10px; }
@@ -1740,6 +1743,7 @@ function setRecurring(it, on) {
     if (it.note) t.note = it.note;
     if (it.day) t.day = it.day;
     if (it.forMonth && (it.type || "expense") === "income") t.shiftNext = true;
+    if (it.pocket && (it.type || "expense") === "expense") t.pocket = it.pocket; // melyik zsebből megy (pl. rezsi a Tervezhetőből)
     recurring.push(t);
   }
   saveRecurring();
@@ -1823,7 +1827,6 @@ function submitManual() {
       pendingWishId = null;
     }
     const fixedEl = document.getElementById("mFixed");
-    if (fixedEl.checked) setRecurring(added, true);
     // széfből fizetve: egy ugyanakkora "Széfből" bevétel kioltja, így a havi egyenleg nem borul fel
     const vaultEl = document.getElementById("mVault");
     const fromVault = type === "expense" && vaultEl.checked;
@@ -1834,6 +1837,7 @@ function submitManual() {
       addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pockets.some(x => x.id === pk) ? pk : undefined });
     }
     vaultEl.checked = false; fillVaultPockets();
+    if (fixedEl.checked) setRecurring(added, true); // a zseb is a sablonba kerül
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · széfből (kiegyenlítve)" : ""}`, "success");
     if (dupPrev) {
       showMsg("manualMsg", `✅ Hozzáadva. ℹ️ ${added.name} ebben a hónapban már szerepelt (${itemDateLabel(dupPrev)}). Ha ez már a következő havi számla, a Tételek fülön átállíthatod a hónapját.`, "info");
@@ -2179,7 +2183,7 @@ function monthBalance(month) {
 /* szabad pénz = egyenleg − még fel nem vitt fix kiadások − a kör tervezett félretételei */
 function freeMoney(month) {
   let f = monthBalance(month);
-  if (month >= currentMonth()) f -= pendingRecurring(month).filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
+  if (month >= currentMonth()) f -= pendingRecurring(month).filter(t => t.type !== "income" && !t.pocket).reduce((s, t) => s + Number(t.amount), 0); // zsebből menő fix tétel nem a fő számlát terheli
   if (month === planCycle()) f -= planCycleTotal(month) + paydayPendingTracked(month);
   return f;
 }
@@ -2357,7 +2361,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v95"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v96"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2644,7 +2648,7 @@ function openRecurModal(month) {
     const label = isInc ? "Bevétel" + (t.sub ? " › " + t.sub : "") : catName(t.color) + (t.sub ? " › " + t.sub : "");
     const row = document.createElement("div");
     row.className = "recur-row";
-    row.innerHTML = `<span class="recur-info"><span class="recur-name">${escapeHtml(t.name)}</span><span class="recur-cat">${escapeHtml(t.sub || label)}${t.day ? " · " + t.day + "." : ""}</span></span>
+    row.innerHTML = `<span class="recur-info"><span class="recur-name">${escapeHtml(t.name)}</span><span class="recur-cat">${escapeHtml(t.sub || label)}${t.day ? " · " + t.day + "." : ""}${t.pocket && pockets.some(x => x.id === t.pocket) ? " · " + escapeHtml(pockets.find(x => x.id === t.pocket).name) + " zsebből" : ""}</span></span>
       <input type="number" class="recur-amt" value="${Number(t.amount)}" data-ra="${idx}" inputmode="numeric" aria-label="Összeg">
       <button type="button" class="fx-add" data-ri="${idx}"><i class="ph-fill ph-plus"></i> Hozzáad</button>`;
     box.appendChild(row);
@@ -2665,6 +2669,13 @@ function doRecurAdd(btn) {
   const shift = t.shiftNext && t.type === "income"; // hó végi fizetés: az előző hónap végén érkezik, erre a hónapra számít
   const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
   if (!res.ok) { toast("⚠️ " + res.reason); return; }
+  const pk = t.type === "expense" && t.pocket && pockets.find(x => x.id === t.pocket && !x.remind);
+  if (pk) { // zsebből fizetett fix tétel: ugyanúgy, mint a "széfből fizettem" jelölő
+    const added = expenseItems[expenseItems.length - 1];
+    added.pocket = pk.id;
+    if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
+    addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pk.id });
+  }
   btn.closest(".recur-row").remove();
   toast(`✅ ${t.name} hozzáadva (${monthLabelShort(month)})`);
   renderList();
@@ -3200,6 +3211,7 @@ function renderPocketsManager() {
     if (i < 0 || !confirm(`Törlöd a(z) „${pockets[i].name}” zsebet?\n\nA tételeid megmaradnak.`)) return;
     pockets.splice(i, 1); savePockets(); renderPocketsManager(); renderList(); fillVaultPockets();
   }));
+  renderRecurringManager(); // a fix tételek zseb-választója a zsebekhez igazodik
   document.getElementById("btnPocketPreset").hidden = ["Tervezhető", "Utazás", "Vészalap", "Vágyak"].every(n => pockets.some(p => normName(p.name) === normName(n)));
 }
 /* a zsebhez legyen ilyen alkategória egy megtakarítás-kategóriában (a befizetésekhez) */
@@ -3905,7 +3917,7 @@ function renderRecurringManager() {
   const box = document.getElementById("recurMgr");
   const expTotal = recurring.filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
   box.innerHTML = recurring.length
-    ? recurring.map((t, i) => `<div class="mgr-row"><span class="mgr-name">${escapeHtml(t.name)}<small>${escapeHtml(t.type === "income" ? "Bevétel" + (t.sub ? " › " + t.sub : "") : catName(t.color) + (t.sub ? " › " + t.sub : ""))}${t.day ? " · minden hó " + t.day + "." : ""}</small></span><span class="mgr-amt">${formatFt(t.amount)}</span><button class="icon-btn del" data-del-recur="${i}" title="Levétel a fix tételek közül" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
+    ? recurring.map((t, i) => `<div class="mgr-row"><span class="mgr-name">${escapeHtml(t.name)}<small>${escapeHtml(t.type === "income" ? "Bevétel" + (t.sub ? " › " + t.sub : "") : catName(t.color) + (t.sub ? " › " + t.sub : ""))}${t.day ? " · minden hó " + t.day + "." : ""}</small></span><span class="mgr-amt">${formatFt(t.amount)}</span>${recurPocketSelect(t, i)}<button class="icon-btn del" data-del-recur="${i}" title="Levétel a fix tételek közül" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
       + `<div class="mgr-total">Fix kiadás havonta: <b>${formatFt(expTotal)}</b></div>`
     : `<div class="mgr-empty">Még nincs fix tételed.</div>`;
   box.querySelectorAll("[data-del-recur]").forEach(b => b.addEventListener("click", () => {
@@ -3913,6 +3925,20 @@ function renderRecurringManager() {
     if (!t || !confirm(`Leveszed a fix tételek közül: „${t.name}"?\n\nA már felvitt tételek megmaradnak.`)) return;
     recurring.splice(i, 1); saveRecurring(); renderRecurringManager();
   }));
+  box.querySelectorAll("[data-recur-pocket]").forEach(sel => sel.addEventListener("change", () => {
+    const t = recurring[Number(sel.dataset.recurPocket)];
+    if (!t) return;
+    if (sel.value) t.pocket = sel.value; else delete t.pocket;
+    saveRecurring(); renderList();
+    toast(sel.value ? `✅ ${t.name}: a ${pockets.find(x => x.id === sel.value).name} zsebből megy` : `✅ ${t.name}: a fő számláról megy`);
+  }));
+}
+/* fix kiadásnál: melyik zsebből megy (csak ha van követett zseb) */
+function recurPocketSelect(t, i) {
+  const tracked = pockets.filter(p => !p.remind);
+  if (t.type === "income" || !tracked.length) return "";
+  return `<select class="recur-pocket" data-recur-pocket="${i}" aria-label="Honnan megy">
+    <option value="">Fő számla</option>${tracked.map(p => `<option value="${p.id}" ${t.pocket === p.id ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}</select>`;
 }
 function renderIncomeCatsManager() {
   const box = document.getElementById("incCatList");
