@@ -116,6 +116,14 @@
   }
   .theme-toggle:active { transform: scale(0.94); }
   .head-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .vault-pocket { margin: -4px 0 10px 30px; }
+  .vault-pocket label { font-size: 12.5px; margin-bottom: 4px; }
+  .vault-pocket select { margin-bottom: 4px; }
+  .pk-row { flex-wrap: wrap; }
+  .pk-bal { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .pk-row .mgr-name { flex: 1; min-width: 0; }
+  .pk-bal input[type="number"] { width: 110px; margin: 0; padding: 8px 10px; font-size: 15px; border-radius: 10px; }
+  .dtile .goal-row { width: 100%; margin-top: 6px; }
   /* dashboard */
   .dash { position: fixed; inset: 0; z-index: 60; background: var(--page); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom)); }
   .dash-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 12px 12px 10px; background: var(--page); max-width: 480px; margin: 0 auto; }
@@ -847,6 +855,7 @@
         <label for="mNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
         <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
+        <div id="mVaultPocketWrap" class="vault-pocket" hidden><label for="mVaultPocket">Melyik zsebből?</label><select id="mVaultPocket"></select></div>
         <label class="view-toggle" id="mVaultWrap"><input type="checkbox" id="mVault"> <i class="ph-fill ph-vault"></i> A széfből fizettem <span class="lbl-hint">(nem csökkenti a havi egyenleget)</span></label>
 
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
@@ -914,6 +923,21 @@
           <input type="month" id="planDue" aria-label="Mikorra kell">
         </div>
         <button class="btn secondary" id="btnAddPlan"><i class="ph-fill ph-plus"></i> Tervezett kiadás hozzáadása</button>
+      </div>
+        </div>
+      </details>
+      <details class="set-sec" data-sec="pockets">
+        <summary><i class="ph-fill ph-vault"></i><span class="set-title">Zsebek<small>Vésztartalék, utazás, rezsialap – egyenleg és cél</small></span><span class="set-count" data-count="pockets"></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <div class="set-body">
+      <div class="card">
+        <p class="hint" style="margin:0 0 10px;">Add meg a zseb mostani egyenlegét (ahogy a Revolutban látod). Innentől az app követi: <b>befizetés</b> = Megtakarítás alatti tétel a zseb nevével alkategóriaként; <b>kivét</b> = „A széfből fizettem” ennél a zsebnél. Ha eltér, írd át az egyenleget.</p>
+        <div id="pocketList" class="mgr-list"></div>
+        <input type="text" id="pocketName" placeholder="Zseb neve (pl. Vésztartalék)" autocomplete="off" maxlength="30">
+        <div class="mgr-form">
+          <input type="number" id="pocketBal" placeholder="Most (Ft)" inputmode="numeric">
+          <input type="number" id="pocketTarget" placeholder="Cél (Ft)" inputmode="numeric">
+        </div>
+        <button class="btn secondary" id="btnAddPocket"><i class="ph-fill ph-plus"></i> Zseb hozzáadása</button>
       </div>
         </div>
       </details>
@@ -1415,6 +1439,7 @@ function sanitizeItems(arr) {
     const note = String(it.note == null ? "" : it.note).trim().slice(0, 120);
     if (note) item.note = note;
     if (type === "income" && typeof it.forMonth === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(it.forMonth) && it.forMonth !== item.month) item.forMonth = it.forMonth;
+    if (typeof it.pocket === "string" && /^[a-z0-9]{1,24}$/.test(it.pocket)) item.pocket = it.pocket; // melyik zsebből (széfes kivét)
     out.push(item);
   });
   return out;
@@ -1751,6 +1776,7 @@ function addEntry(name, amount, color, month, type, sub, bucket, force, extra) {
   const note = String(extra.note || "").trim().slice(0, 120);
   if (note) item.note = note;
   if (type === "income" && extra.forMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(extra.forMonth) && extra.forMonth !== month) item.forMonth = extra.forMonth;
+  if (typeof extra.pocket === "string" && /^[a-z0-9]{1,24}$/.test(extra.pocket)) item.pocket = extra.pocket;
   expenseItems.push(item);
   saveItems();
   return { ok: true };
@@ -1794,9 +1820,10 @@ function submitManual() {
     const fromVault = type === "expense" && vaultEl.checked;
     if (fromVault) {
       if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
-      addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day });
+      const pk = document.getElementById("mVaultPocket").value;
+      addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pockets.some(x => x.id === pk) ? pk : undefined });
     }
-    vaultEl.checked = false;
+    vaultEl.checked = false; fillVaultPockets();
     showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · széfből (kiegyenlítve)" : ""}`, "success");
     if (dupPrev) {
       showMsg("manualMsg", `✅ Hozzáadva. ℹ️ ${added.name} ebben a hónapban már szerepelt (${itemDateLabel(dupPrev)}). Ha ez már a következő havi számla, a Tételek fülön átállíthatod a hónapját.`, "info");
@@ -2200,7 +2227,7 @@ function wirePlansActions(area) {
 }
 /* Beállítások: a lenyitható szakaszok fejlécén a darabszám, és melyik szakasz volt nyitva */
 function updateSetCounts() {
-  const n = { plans: plans.length, recur: recurring.length, goals: goals.length, cats: Object.keys(allCategories()).length };
+  const n = { pockets: pockets.length, plans: plans.length, recur: recurring.length, goals: goals.length, cats: Object.keys(allCategories()).length };
   document.querySelectorAll("[data-count]").forEach(el => { const v = n[el.dataset.count]; el.textContent = v ? String(v) : ""; el.hidden = !v; });
   // a "Nagyobb dolgok" széf mellett ezek csak akkor látszanak, ha van bennük valami (hogy törölni lehessen)
   ["plans", "goals"].forEach(k => { const d = document.querySelector(`.set-sec[data-sec="${k}"]`); if (d) d.hidden = !n[k]; });
@@ -2320,7 +2347,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v93"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v94"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -3018,6 +3045,118 @@ function renderSubsCard() {
     <p class="hint" style="margin:10px 0 0">Az „elmaradt?” tételek nincsenek benne az összegben: vagy lemondtad, vagy még nem írtad be. A ✕ elrejti, ami nem előfizetés.</p></div>`;
 }
 
+/* ---------- Zsebek (vésztartalék, utazás, rezsialap …) ----------
+   Egyenleg = a megadott egyenleg (base) + a zseb tételeinek változása azóta.
+   A zseb tételei: befizetés = Megtakarítás-tétel a zseb nevével alkategóriaként; kivét = ehhez a zsebhez tartozó "Széfből" bevétel.
+   Megadáskor eltároljuk a tételek akkori nettó összegét (baseNet), így az addigiakat nem számoljuk kétszer – akkor sem, ha aznap is volt befizetés. */
+let pockets = [];
+function sanitizePockets(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [], ids = new Set();
+  arr.forEach(p => {
+    if (!p || typeof p.name !== "string" || !p.name.trim()) return;
+    let id = typeof p.id === "string" && /^[a-z0-9]{1,24}$/.test(p.id) ? p.id : "";
+    while (!id || ids.has(id)) id = Math.random().toString(36).slice(2, 12);
+    ids.add(id);
+    const base = Math.round(Number(p.base));
+    const bn = Math.round(Number(p.baseNet));
+    const x = { id, name: p.name.trim().slice(0, 30), base: Number.isFinite(base) && Math.abs(base) < 1e11 ? base : 0,
+      baseNet: Number.isFinite(bn) && Math.abs(bn) < 1e12 ? bn : 0 };
+    const t = Math.round(Number(p.target));
+    if (t > 0 && t < 1e11) x.target = t;
+    out.push(x);
+  });
+  return out.slice(0, 12);
+}
+try { pockets = sanitizePockets(JSON.parse(localStorage.getItem("pockets") || "[]")); } catch { pockets = []; }
+function savePockets() { try { localStorage.setItem("pockets", JSON.stringify(pockets)); } catch {} }
+function pocketDeposit(p, it) { return (it.type || "expense") !== "income" && itemBucket(it) === "saving" && normName(it.sub || "") === normName(p.name); }
+function pocketNet(p) {
+  let n = 0;
+  expenseItems.forEach(it => {
+    if (pocketDeposit(p, it)) n += Number(it.amount);
+    else if ((it.type || "expense") === "income" && it.pocket === p.id) n -= Number(it.amount);
+  });
+  return n;
+}
+function pocketBalance(p) { return p.base + pocketNet(p) - p.baseNet; }
+/* átlagos havi befizetés az utolsó 3 lezárt hónapban (a cél eléréséhez becsült időhöz) */
+function pocketMonthlyIn(p) {
+  const cur = currentMonth(), from = addMonthsTo(cur, -3);
+  const sum = expenseItems.filter(it => it.month && it.month >= from && it.month < cur && pocketDeposit(p, it)).reduce((s, it) => s + Number(it.amount), 0);
+  return sum / 3;
+}
+function pocketRowHtml(p) {
+  const bal = pocketBalance(p);
+  let extra = "";
+  if (p.target) {
+    const pct = Math.max(0, Math.min(100, Math.round(bal / p.target * 100)));
+    const left = p.target - bal;
+    let eta = "";
+    if (left > 0) { const avg = pocketMonthlyIn(p); eta = avg > 0 ? ` · a mostani ütemmel kb. ${Math.ceil(left / avg)} hónap` : ""; }
+    extra = `<div class="goal-track"><div class="goal-fill ${left <= 0 ? "done" : ""}" style="width:${pct}%"></div></div>
+      <div class="goal-sub">${left <= 0 ? "Elérted a célt! 🎉" : `${pct}% · még ${formatFt(left)}${eta}`}</div>`;
+  }
+  return `<div class="goal-row"><div class="goal-head"><span class="goal-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}</span><span class="goal-amt"><b>${formatFt(bal)}</b>${p.target ? " / " + formatFt(p.target) : ""}</span></div>${extra}</div>`;
+}
+function renderPocketsCard(month) {
+  if (!pockets.length || month !== currentMonth()) return "";
+  return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph-fill ph-vault"></i> Zsebek</h2>${pockets.map(pocketRowHtml).join("")}</div>`;
+}
+function renderPocketsManager() {
+  updateSetCounts();
+  const list = document.getElementById("pocketList");
+  list.innerHTML = pockets.length ? pockets.map(p => `<div class="mgr-row pk-row"><span class="mgr-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}<small>${p.target ? "cél: " + formatFt(p.target) : "cél nélkül"}</small></span>
+      <label class="pk-bal"><span>Most</span><input type="number" inputmode="numeric" value="${pocketBalance(p)}" data-pk-bal="${p.id}" aria-label="Jelenlegi egyenleg"></label>
+      <button class="icon-btn del" data-del-pocket="${p.id}" title="Törlés" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
+    : `<div class="mgr-empty">Még nincs zsebed.</div>`;
+  // egyenleg pontosítása: az új érték mától az induló egyenleg
+  list.querySelectorAll("[data-pk-bal]").forEach(inp => inp.addEventListener("change", () => {
+    const p = pockets.find(x => x.id === inp.dataset.pkBal);
+    const v = Math.round(Number(inp.value));
+    if (!p || !Number.isFinite(v)) return;
+    p.base = v; p.baseNet = pocketNet(p);
+    savePockets(); renderList(); showMsg("catMsg", `✅ ${p.name}: egyenleg ${formatFt(v)}`, "success");
+  }));
+  list.querySelectorAll("[data-del-pocket]").forEach(b => b.addEventListener("click", () => {
+    const i = pockets.findIndex(x => x.id === b.dataset.delPocket);
+    if (i < 0 || !confirm(`Törlöd a(z) „${pockets[i].name}” zsebet?\n\nA tételeid megmaradnak.`)) return;
+    pockets.splice(i, 1); savePockets(); renderPocketsManager(); renderList(); fillVaultPockets();
+  }));
+}
+function addPocket() {
+  const name = document.getElementById("pocketName").value.trim();
+  const base = Math.round(Number(document.getElementById("pocketBal").value || 0));
+  const target = Math.round(Number(document.getElementById("pocketTarget").value || 0));
+  if (!name) return showMsg("catMsg", "⚠️ Add meg a zseb nevét.", "error");
+  if (pockets.some(p => normName(p.name) === normName(name))) return showMsg("catMsg", "⚠️ Ilyen nevű zseb már van.", "error");
+  if (pockets.length >= 12) return showMsg("catMsg", "⚠️ Legfeljebb 12 zseb lehet.", "error");
+  const np = sanitizePockets([{ name, base, target: target > 0 ? target : undefined }])[0];
+  np.baseNet = pocketNet(np); // a már meglévő (pl. régebbi Vésztartalék) tételek benne vannak a megadott egyenlegben
+  pockets.push(np);
+  savePockets();
+  // a befizetésekhez legyen ilyen alkategória egy megtakarítás-kategóriában
+  const sk = savingCategoryKeys();
+  if (sk.length && !sk.some(k => catSubs(k).some(x => normName(x) === normName(name)))) {
+    const c = allCategories()[sk[0]];
+    customCategories[sk[0]] = Object.assign({}, c, { subs: (c.subs || []).concat([name]) });
+    saveCategories(); buildManualPicker(getPickerValue("manualColors") || "green");
+  }
+  ["pocketName", "pocketBal", "pocketTarget"].forEach(id => document.getElementById(id).value = "");
+  renderPocketsManager(); renderList(); fillVaultPockets();
+  showMsg("catMsg", `✅ ${name} zseb felvéve. Befizetés: Megtakarítás › ${name}.`, "success");
+}
+document.getElementById("btnAddPocket").addEventListener("click", addPocket);
+/* "A széfből fizettem" mellett: melyik zsebből */
+function fillVaultPockets() {
+  const sel = document.getElementById("mVaultPocket"), cur = sel.value;
+  sel.innerHTML = pockets.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("") + `<option value="">Egyik sem</option>`;
+  if (pockets.some(p => p.id === cur)) sel.value = cur;
+  document.getElementById("mVaultPocketWrap").hidden = !(pockets.length && document.getElementById("mVault").checked);
+}
+document.getElementById("mVault").addEventListener("change", fillVaultPockets);
+fillVaultPockets();
+
 /* ---------- Dashboard: egy képernyős, csempés áttekintés (a fejléc gombjáról) ---------- */
 let dashMonth = null;
 function dashMonths() { return [...new Set([currentMonth(), planCycle(), ...expenseItems.map(effMonth).filter(Boolean)])].sort(); }
@@ -3105,7 +3244,9 @@ function renderDash() {
     const w = weekSpend();
     tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-calendar-check"></i> Ezen a héten</span><span class="dt-big">${formatFt(w.sum)}</span><span class="dt-sub">kiadás hétfő óta</span>`);
   }
-  // 8) kívánságlista
+  // 8) zsebek (vésztartalék, utazás …)
+  if (pockets.length) tile("month", "wide", `<span class="dt-lbl"><i class="ph-fill ph-vault"></i> Zsebek</span>${pockets.map(pocketRowHtml).join("")}`);
+  // kívánságlista
   if (wishlist.length) tile("wish", "wide", `<span class="dt-lbl"><i class="ph-fill ph-heart"></i> Kívánságlista</span><span class="dt-big">${wishlist.length} dolog</span><span class="dt-sub">összesen ${formatFt(wishlist.reduce((s, x) => s + x.amount, 0))}</span>`);
   // 9) trend: az utolsó 6 hónap bevétele és kiadása
   const tm = months.filter(x => x <= (m > cur ? m : cur)).slice(-6);
@@ -3301,7 +3442,7 @@ function renderList() {
       </div>
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
-    </div>` + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard();
+    </div>` + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard();
   insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
@@ -3546,7 +3687,7 @@ function renderCategories() {
   if (tCoach) tCoach.checked = showCoach;
   const tMentor = document.getElementById("toggleMentor");
   if (tMentor) tMentor.checked = showMentor;
-  renderGoalsManager(); renderPlansManager(); renderRecurringManager(); renderIncomeCatsManager();
+  renderGoalsManager(); renderPlansManager(); renderPocketsManager(); renderRecurringManager(); renderIncomeCatsManager();
   const kf = document.getElementById("geminiKey");
   if (kf) { kf.value = geminiKey; updateKeyStatus(); }
   // egyenleg-beállítások: csak akkor mutatjuk, ha van ilyen bucket-ű kategória
@@ -4606,7 +4747,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, subsHidden, fixDismissed, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, pockets, subsHidden, fixDismissed, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -4665,6 +4806,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
       if (Array.isArray(st.plans)) { plans = sanitizePlans(st.plans); savePlans(); }
+      if (Array.isArray(st.pockets)) { pockets = sanitizePockets(st.pockets); savePockets(); }
       if (Array.isArray(st.fixDismissed)) { fixDismissed = st.fixDismissed.filter(v => typeof v === "string" && v.length <= 60).slice(0, 200); saveFixDismissed(); }
       if (Array.isArray(st.subsHidden)) { subsHidden = st.subsHidden.filter(x => typeof x === "string" && /^[a-z0-9]{1,30}$/.test(x)).slice(0, 100); saveSubsHidden(); }
       if (st.wishlist && typeof st.wishlist === "object") { wishlist = sanitizeWishlist(st.wishlist.list); wishSaved = sanitizeWishSaved(st.wishlist.saved); saveWishlist(); }
