@@ -121,7 +121,11 @@
   .vault-pocket select { margin-bottom: 4px; }
   .pk-row { flex-wrap: wrap; }
   .pk-bal { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
-  .pk-row .mgr-name { flex: 1; min-width: 0; }
+  .pk-row .mgr-name { flex: 1 1 100%; min-width: 0; }
+  .pk-row .icon-btn.del { margin-left: auto; }
+  .pk-bal input.pk-pct[type="number"] { width: 64px; }
+  .pk-total { font-size: 13px; color: var(--chip-text); text-align: right; padding: 4px 2px 10px; }
+  #pocketKind { margin-bottom: 12px; }
   .pk-bal input[type="number"] { width: 110px; margin: 0; padding: 8px 10px; font-size: 15px; border-radius: 10px; }
   .dtile .goal-row { width: 100%; margin-top: 6px; }
   /* dashboard */
@@ -930,14 +934,19 @@
         <summary><i class="ph-fill ph-vault"></i><span class="set-title">Zsebek<small>Vésztartalék, utazás, rezsialap – egyenleg és cél</small></span><span class="set-count" data-count="pockets"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card">
-        <p class="hint" style="margin:0 0 10px;">Add meg a zseb mostani egyenlegét (ahogy a Revolutban látod). Innentől az app követi: <b>befizetés</b> = Megtakarítás alatti tétel a zseb nevével alkategóriaként; <b>kivét</b> = „A széfből fizettem” ennél a zsebnél. Ha eltér, írd át az egyenleget.</p>
+        <p class="hint" style="margin:0 0 10px;">Minden zsebnek megadhatod, a fizetés hány %-a megy bele – fizetésnapon az app kiszámolja az összegeket. A „Most” mezőbe a zseb mostani egyenlegét írd (ahogy a Revolutban látod); ha eltér, írd át. A „Csak emlékeztető” zsebnél (pl. Vágyak) az app nem követi az egyenleget.</p>
         <div id="pocketList" class="mgr-list"></div>
         <input type="text" id="pocketName" placeholder="Zseb neve (pl. Vésztartalék)" autocomplete="off" maxlength="30">
         <div class="mgr-form">
           <input type="number" id="pocketBal" placeholder="Most (Ft)" inputmode="numeric">
           <input type="number" id="pocketTarget" placeholder="Cél (Ft)" inputmode="numeric">
         </div>
+        <div class="mgr-form">
+          <input type="number" id="pocketPct" placeholder="% a fizetésből" inputmode="decimal" step="0.5">
+          <select id="pocketKind" aria-label="Besorolás"><option value="saving">Megtakarítás</option><option value="need">Szükséglet</option><option value="want">Vágy</option><option value="remind">Csak emlékeztető</option></select>
+        </div>
         <button class="btn secondary" id="btnAddPocket"><i class="ph-fill ph-plus"></i> Zseb hozzáadása</button>
+        <button class="btn" id="btnPocketPreset"><i class="ph-fill ph-magic-wand"></i> Megbeszélt felosztás betöltése</button>
       </div>
         </div>
       </details>
@@ -1821,6 +1830,7 @@ function submitManual() {
     if (fromVault) {
       if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
       const pk = document.getElementById("mVaultPocket").value;
+      if (pockets.some(x => x.id === pk)) added.pocket = pk; // zsebből fizetett kiadás: nem a fő számla havi költése
       addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pockets.some(x => x.id === pk) ? pk : undefined });
     }
     vaultEl.checked = false; fillVaultPockets();
@@ -2170,13 +2180,13 @@ function monthBalance(month) {
 function freeMoney(month) {
   let f = monthBalance(month);
   if (month >= currentMonth()) f -= pendingRecurring(month).filter(t => t.type !== "income").reduce((s, t) => s + Number(t.amount), 0);
-  if (month === planCycle()) f -= planCycleTotal(month);
+  if (month === planCycle()) f -= planCycleTotal(month) + paydayPendingTracked(month);
   return f;
 }
 function renderFreeMoney(month) {
   const cycle = planCycle();
   if (month !== currentMonth() && month !== cycle) return "";
-  if (!plans.length && !recurring.length) return ""; // tervek nélkül ugyanaz, mint az egyenleg
+  if (!plans.length && !recurring.length && !pockets.some(p => p.pct)) return ""; // tervek nélkül ugyanaz, mint az egyenleg
   const f = freeMoney(month);
   const days = month === currentMonth() ? daysInMonth(month) - new Date().getDate() + 1 : daysInMonth(month);
   const daily = f > 0 ? ` · naponta kb. <b>${formatFt(Math.floor(f / days / 100) * 100)}</b>` : "";
@@ -2347,7 +2357,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v94"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v95"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2986,6 +2996,7 @@ function wireSummaryActions(area) {
   wireMentorActions(area);
   wirePlansActions(area);
   wireFixSuggest(area);
+  wirePayday(area);
   area.querySelectorAll("[data-goto-month]").forEach(b => b.addEventListener("click", () => { selectedMonth = b.dataset.gotoMonth; renderList(); window.scrollTo({ top: 0 }); }));
   area.querySelectorAll("[data-sub-hide]").forEach(b => b.addEventListener("click", () => {
     if (!subsHidden.includes(b.dataset.subHide)) subsHidden.push(b.dataset.subHide);
@@ -3064,13 +3075,20 @@ function sanitizePockets(arr) {
       baseNet: Number.isFinite(bn) && Math.abs(bn) < 1e12 ? bn : 0 };
     const t = Math.round(Number(p.target));
     if (t > 0 && t < 1e11) x.target = t;
+    const pct = Math.round(Number(p.pct) * 10) / 10;
+    if (pct > 0 && pct <= 100) x.pct = pct;                       // a fizetés hány %-a megy ide
+    x.bucket = ["need", "want", "saving"].includes(p.bucket) ? p.bucket : "saving"; // a 60-30-10-ben hova számít
+    if (p.remind === true) x.remind = true;                       // csak emlékeztető (pl. Vágyak): nem követjük az egyenlegét
+    const done = {};
+    if (p.done && typeof p.done === "object") Object.keys(p.done).forEach(k => { const v = Math.round(Number(p.done[k])); if (/^\d{4}-(0[1-9]|1[0-2])$/.test(k) && v >= 0 && v < 1e11) done[k] = v; });
+    x.done = done;                                                // keret-hónap → szétosztott összeg
     out.push(x);
   });
   return out.slice(0, 12);
 }
 try { pockets = sanitizePockets(JSON.parse(localStorage.getItem("pockets") || "[]")); } catch { pockets = []; }
 function savePockets() { try { localStorage.setItem("pockets", JSON.stringify(pockets)); } catch {} }
-function pocketDeposit(p, it) { return (it.type || "expense") !== "income" && itemBucket(it) === "saving" && normName(it.sub || "") === normName(p.name); }
+function pocketDeposit(p, it) { return !p.remind && (it.type || "expense") !== "income" && catBucket(it.color) === "saving" && normName(it.sub || "") === normName(p.name); }
 function pocketNet(p) {
   let n = 0;
   expenseItems.forEach(it => {
@@ -3086,7 +3104,9 @@ function pocketMonthlyIn(p) {
   const sum = expenseItems.filter(it => it.month && it.month >= from && it.month < cur && pocketDeposit(p, it)).reduce((s, it) => s + Number(it.amount), 0);
   return sum / 3;
 }
+const POCKET_BUCKET_LBL = { need: "Szükséglet", want: "Vágy", saving: "Megtakarítás" };
 function pocketRowHtml(p) {
+  if (p.remind) return `<div class="goal-row"><div class="goal-head"><span class="goal-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}</span><span class="goal-amt">${p.pct ? p.pct + "% a fizetésből" : ""}</span></div><div class="goal-sub">Csak átutalod, a költéseket rendesen írod be.</div></div>`;
   const bal = pocketBalance(p);
   let extra = "";
   if (p.target) {
@@ -3103,13 +3123,63 @@ function renderPocketsCard(month) {
   if (!pockets.length || month !== currentMonth()) return "";
   return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph-fill ph-vault"></i> Zsebek</h2>${pockets.map(pocketRowHtml).join("")}</div>`;
 }
+
+/* ---------- Fizetésnapi szétosztás ----------
+   A legutóbb beírt fizetés keret-hónapjára (planCycle) kiszámolja, a fizetés hány %-a megy az egyes zsebekbe.
+   "Kész": követett zsebnél Megtakarítás-tételt rögzít (a zseb besorolásával, hogy a 60-30-10 a tervet mutassa),
+   csak-emlékeztető zsebnél (Vágyak) csak kipipálja. */
+function cycleSalary(cycle) { return expenseItems.filter(it => isSalary(it) && effMonth(it) === cycle).reduce((s, it) => s + Number(it.amount), 0); }
+function pocketShare(p, salary) { return Math.round(salary * (p.pct || 0) / 100 / 100) * 100; }
+function paydayPending(cycle) {
+  const sal = cycleSalary(cycle);
+  if (!sal) return [];
+  return pockets.filter(p => p.pct && p.done[cycle] === undefined).map(p => ({ p, amt: pocketShare(p, sal) })).filter(x => x.amt > 0);
+}
+/* a még szét nem osztott, követett zsebek összege – a szabad pénzből ez már nem költhető */
+function paydayPendingTracked(cycle) { return paydayPending(cycle).filter(x => !x.p.remind).reduce((s, x) => s + x.amt, 0); }
+function renderPaydayCard(month) {
+  const cycle = planCycle();
+  if (!pockets.some(p => p.pct) || (month !== cycle && !(month === currentMonth() && cycle > month))) return "";
+  const pend = paydayPending(cycle);
+  if (!pend.length) return "";
+  const sal = cycleSalary(cycle);
+  const rows = pend.map(({ p, amt }) => `<div class="fx-row"><span class="fx-info"><b>${escapeHtml(p.name)}</b><small>${p.pct}% · ${p.remind ? "csak átutalás" : POCKET_BUCKET_LBL[p.bucket]}</small></span><span class="fx-amt">${formatFt(amt)}</span><button type="button" class="fx-add" data-pd="${p.id}"><i class="ph-fill ph-check"></i> Kész</button></div>`).join("");
+  return `<div class="card fx-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-arrows-split"></i> Fizetésnapi szétosztás</h2>
+    <p class="hint" style="margin:0 0 8px">${escapeHtml(monthNameLong(cycle))}i fizetés: ${formatFt(sal)}. Utald át a zsebekbe, és nyomd meg a „Kész”-t.</p>${rows}
+    <button type="button" class="btn secondary" data-pd-all style="margin:10px 0 0"><i class="ph-fill ph-checks"></i> Mind kész</button></div>`;
+}
+function paydayDone(p, cycle) {
+  const amt = pocketShare(p, cycleSalary(cycle));
+  if (!p.remind && amt > 0) {
+    const sk = savingCategoryKeys();
+    const key = sk.find(k => catSubs(k).some(x => normName(x) === normName(p.name))) || sk[0];
+    if (key) addEntry(p.name + " – félretétel", amt, key, currentMonth(), "expense", catSubs(key).find(x => normName(x) === normName(p.name)) || p.name, p.bucket, true, { day: new Date().getDate() });
+  }
+  p.done[cycle] = amt;
+}
+function wirePayday(area) {
+  area.querySelectorAll("[data-pd]").forEach(b => b.addEventListener("click", () => {
+    const p = pockets.find(x => x.id === b.dataset.pd);
+    if (!p) return;
+    paydayDone(p, planCycle()); savePockets(); renderList(); toast(`✅ ${p.name}: kész`);
+  }));
+  area.querySelectorAll("[data-pd-all]").forEach(b => b.addEventListener("click", () => {
+    const cycle = planCycle();
+    paydayPending(cycle).forEach(({ p }) => paydayDone(p, cycle));
+    savePockets(); renderList(); toast("✅ Szétosztás kész");
+  }));
+}
+
 function renderPocketsManager() {
   updateSetCounts();
   const list = document.getElementById("pocketList");
-  list.innerHTML = pockets.length ? pockets.map(p => `<div class="mgr-row pk-row"><span class="mgr-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}<small>${p.target ? "cél: " + formatFt(p.target) : "cél nélkül"}</small></span>
-      <label class="pk-bal"><span>Most</span><input type="number" inputmode="numeric" value="${pocketBalance(p)}" data-pk-bal="${p.id}" aria-label="Jelenlegi egyenleg"></label>
+  const total = pockets.reduce((s, p) => s + (p.pct || 0), 0);
+  list.innerHTML = (pockets.length ? pockets.map(p => `<div class="mgr-row pk-row"><span class="mgr-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}<small>${p.remind ? "csak emlékeztető" : POCKET_BUCKET_LBL[p.bucket]}${p.target ? " · cél: " + formatFt(p.target) : ""}</small></span>
+      <label class="pk-bal"><span>%</span><input type="number" inputmode="decimal" step="0.5" value="${p.pct || ""}" data-pk-pct="${p.id}" aria-label="A fizetés hány százaléka" class="pk-pct"></label>
+      ${p.remind ? "" : `<label class="pk-bal"><span>Most</span><input type="number" inputmode="numeric" value="${pocketBalance(p)}" data-pk-bal="${p.id}" aria-label="Jelenlegi egyenleg"></label>`}
       <button class="icon-btn del" data-del-pocket="${p.id}" title="Törlés" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
-    : `<div class="mgr-empty">Még nincs zsebed.</div>`;
+    : `<div class="mgr-empty">Még nincs zsebed.</div>`)
+    + (total ? `<div class="pk-total">A fizetésből zsebekbe: <b>${Math.round(total * 10) / 10}%</b></div>` : "");
   // egyenleg pontosítása: az új érték mától az induló egyenleg
   list.querySelectorAll("[data-pk-bal]").forEach(inp => inp.addEventListener("change", () => {
     const p = pockets.find(x => x.id === inp.dataset.pkBal);
@@ -3118,41 +3188,75 @@ function renderPocketsManager() {
     p.base = v; p.baseNet = pocketNet(p);
     savePockets(); renderList(); showMsg("catMsg", `✅ ${p.name}: egyenleg ${formatFt(v)}`, "success");
   }));
+  list.querySelectorAll("[data-pk-pct]").forEach(inp => inp.addEventListener("change", () => {
+    const p = pockets.find(x => x.id === inp.dataset.pkPct);
+    if (!p) return;
+    const v = Math.round(Number(inp.value) * 10) / 10;
+    if (v > 0 && v <= 100) p.pct = v; else delete p.pct;
+    savePockets(); renderPocketsManager(); renderList();
+  }));
   list.querySelectorAll("[data-del-pocket]").forEach(b => b.addEventListener("click", () => {
     const i = pockets.findIndex(x => x.id === b.dataset.delPocket);
     if (i < 0 || !confirm(`Törlöd a(z) „${pockets[i].name}” zsebet?\n\nA tételeid megmaradnak.`)) return;
     pockets.splice(i, 1); savePockets(); renderPocketsManager(); renderList(); fillVaultPockets();
   }));
+  document.getElementById("btnPocketPreset").hidden = ["Tervezhető", "Utazás", "Vészalap", "Vágyak"].every(n => pockets.some(p => normName(p.name) === normName(n)));
+}
+/* a zsebhez legyen ilyen alkategória egy megtakarítás-kategóriában (a befizetésekhez) */
+function ensurePocketSub(name) {
+  const sk = savingCategoryKeys();
+  if (!sk.length || sk.some(k => catSubs(k).some(x => normName(x) === normName(name)))) return;
+  const c = allCategories()[sk[0]];
+  customCategories[sk[0]] = Object.assign({}, c, { subs: (c.subs || []).concat([name]) });
+  saveCategories(); buildManualPicker(getPickerValue("manualColors") || "green");
+}
+function newPocket(o) {
+  const np = sanitizePockets([o])[0];
+  np.baseNet = pocketNet(np); // a már meglévő tételek benne vannak a megadott egyenlegben
+  pockets.push(np);
+  if (!np.remind) ensurePocketSub(np.name);
+  return np;
 }
 function addPocket() {
   const name = document.getElementById("pocketName").value.trim();
   const base = Math.round(Number(document.getElementById("pocketBal").value || 0));
   const target = Math.round(Number(document.getElementById("pocketTarget").value || 0));
+  const pct = Number(document.getElementById("pocketPct").value || 0);
+  const kind = document.getElementById("pocketKind").value;
   if (!name) return showMsg("catMsg", "⚠️ Add meg a zseb nevét.", "error");
   if (pockets.some(p => normName(p.name) === normName(name))) return showMsg("catMsg", "⚠️ Ilyen nevű zseb már van.", "error");
   if (pockets.length >= 12) return showMsg("catMsg", "⚠️ Legfeljebb 12 zseb lehet.", "error");
-  const np = sanitizePockets([{ name, base, target: target > 0 ? target : undefined }])[0];
-  np.baseNet = pocketNet(np); // a már meglévő (pl. régebbi Vésztartalék) tételek benne vannak a megadott egyenlegben
-  pockets.push(np);
+  newPocket({ name, base, target: target > 0 ? target : undefined, pct, bucket: kind === "remind" ? "want" : kind, remind: kind === "remind" });
   savePockets();
-  // a befizetésekhez legyen ilyen alkategória egy megtakarítás-kategóriában
-  const sk = savingCategoryKeys();
-  if (sk.length && !sk.some(k => catSubs(k).some(x => normName(x) === normName(name)))) {
-    const c = allCategories()[sk[0]];
-    customCategories[sk[0]] = Object.assign({}, c, { subs: (c.subs || []).concat([name]) });
-    saveCategories(); buildManualPicker(getPickerValue("manualColors") || "green");
-  }
-  ["pocketName", "pocketBal", "pocketTarget"].forEach(id => document.getElementById(id).value = "");
+  ["pocketName", "pocketBal", "pocketTarget", "pocketPct"].forEach(id => document.getElementById(id).value = "");
   renderPocketsManager(); renderList(); fillVaultPockets();
-  showMsg("catMsg", `✅ ${name} zseb felvéve. Befizetés: Megtakarítás › ${name}.`, "success");
+  showMsg("catMsg", `✅ ${name} zseb felvéve.`, "success");
 }
+/* a megbeszélt felosztás: Tervezhető 5% (szükséglet), Utazás 7% (vágy), Vészalap 10% (megtakarítás), Vágyak 18% (csak átutalás) */
+function addPocketPreset() {
+  const preset = [
+    { name: "Tervezhető", pct: 5, bucket: "need" },
+    { name: "Utazás", pct: 7, bucket: "want" },
+    { name: "Vészalap", pct: 10, bucket: "saving", target: 300000 },
+    { name: "Vágyak", pct: 18, bucket: "want", remind: true }
+  ];
+  let added = 0;
+  preset.forEach(o => {
+    const ex = pockets.find(p => normName(p.name) === normName(o.name));
+    if (ex) { ex.pct = o.pct; ex.bucket = o.bucket; if (o.remind) ex.remind = true; return; } // meglévőnél csak a %-ot és a besorolást állítjuk
+    if (pockets.length < 12) { newPocket(o); added++; }
+  });
+  savePockets(); renderPocketsManager(); renderList(); fillVaultPockets();
+  showMsg("catMsg", `✅ Felosztás betöltve${added ? ` (${added} új zseb)` : ""}. Írd be a „Most” mezőkbe a zsebek mostani egyenlegét.`, "success");
+}
+document.getElementById("btnPocketPreset").addEventListener("click", addPocketPreset);
 document.getElementById("btnAddPocket").addEventListener("click", addPocket);
 /* "A széfből fizettem" mellett: melyik zsebből */
 function fillVaultPockets() {
   const sel = document.getElementById("mVaultPocket"), cur = sel.value;
-  sel.innerHTML = pockets.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("") + `<option value="">Egyik sem</option>`;
+  sel.innerHTML = pockets.filter(p => !p.remind).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("") + `<option value="">Egyik sem</option>`;
   if (pockets.some(p => p.id === cur)) sel.value = cur;
-  document.getElementById("mVaultPocketWrap").hidden = !(pockets.length && document.getElementById("mVault").checked);
+  document.getElementById("mVaultPocketWrap").hidden = !(pockets.some(p => !p.remind) && document.getElementById("mVault").checked);
 }
 document.getElementById("mVault").addEventListener("change", fillVaultPockets);
 fillVaultPockets();
@@ -3179,7 +3283,7 @@ function renderDash() {
   let income = 0, needs = 0, wants = 0, savings = 0;
   const totals = {};
   expenseItems.forEach(it => {
-    if (effMonth(it) !== m) return;
+    if (effMonth(it) !== m || it.pocket) return; // zsebből fizetett párok kimaradnak
     const a = Number(it.amount);
     if ((it.type || "expense") === "income") { income += a; return; }
     const b = itemBucket(it);
@@ -3328,7 +3432,7 @@ function renderList() {
     document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
     insightArea.innerHTML = renderMentorCard() || `<div class="empty"><span class="big"><i class="ph-fill ph-chart-line-up"></i></span>Ehhez a hónaphoz még nincs mit elemezni.</div>`;
     wireSummaryActions(insightArea);
-    summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
+    summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderPaydayCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `<div class="empty"><span class="big"><i class="ph-fill ph-calendar-blank"></i></span>Nincs tétel ${selectedMonth === "all" ? "" : escapeHtml(monthLabel(selectedMonth)) + " hónapban"}.<br>Koppints a <i class="ph-fill ph-plus"></i> gombra, vagy válts hónapot fent.</div>`;
     wireSummaryActions(summaryArea);
     listArea.innerHTML = "";
     document.getElementById("btnClearAll").style.display = "block";
@@ -3341,6 +3445,7 @@ function renderList() {
   const totals = {};
   const subTotals = {};
   monthView.forEach(it => {
+    if (it.pocket) return; // zsebből fizetett kiadás + a hozzá tartozó "Széfből" bevétel: kioltják egymást, a havi képet nem torzítják
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
     const bucket = itemBucket(it);
@@ -3424,7 +3529,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderPaydayCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -3969,7 +4074,7 @@ function reflectionDue() {
 function monthSummary(m) {
   let inc = 0, spend = 0, sav = 0; const byCat = {};
   expenseItems.forEach(it => {
-    if (effMonth(it) !== m) return;
+    if (effMonth(it) !== m || it.pocket) return; // zsebből fizetett párok kimaradnak
     const a = Number(it.amount);
     if ((it.type || "expense") === "income") { inc += a; return; }
     const b = itemBucket(it);
