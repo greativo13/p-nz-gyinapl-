@@ -862,8 +862,8 @@
         <label for="mNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
         <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
+        <label class="view-toggle" id="mVaultWrap"><input type="checkbox" id="mVault"> <i class="ph-fill ph-vault"></i> A zsebből fizettem <span class="lbl-hint">(nem csökkenti a havi egyenleget)</span></label>
         <div id="mVaultPocketWrap" class="vault-pocket" hidden><label for="mVaultPocket">Melyik zsebből?</label><select id="mVaultPocket"></select></div>
-        <label class="view-toggle" id="mVaultWrap"><input type="checkbox" id="mVault"> <i class="ph-fill ph-vault"></i> A széfből fizettem <span class="lbl-hint">(nem csökkenti a havi egyenleget)</span></label>
 
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
@@ -1451,7 +1451,7 @@ function sanitizeItems(arr) {
     const note = String(it.note == null ? "" : it.note).trim().slice(0, 120);
     if (note) item.note = note;
     if (type === "income" && typeof it.forMonth === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(it.forMonth) && it.forMonth !== item.month) item.forMonth = it.forMonth;
-    if (typeof it.pocket === "string" && /^[a-z0-9]{1,24}$/.test(it.pocket)) item.pocket = it.pocket; // melyik zsebből (széfes kivét)
+    if (typeof it.pocket === "string" && /^[a-z0-9]{1,24}$/.test(it.pocket)) item.pocket = it.pocket; // melyik zsebből (zsebes kivét)
     out.push(item);
   });
   return out;
@@ -1827,18 +1827,18 @@ function submitManual() {
       pendingWishId = null;
     }
     const fixedEl = document.getElementById("mFixed");
-    // széfből fizetve: egy ugyanakkora "Széfből" bevétel kioltja, így a havi egyenleg nem borul fel
+    // zsebből fizetve: egy ugyanakkora "Zsebből" bevétel kioltja, így a havi egyenleg nem borul fel
     const vaultEl = document.getElementById("mVault");
     const fromVault = type === "expense" && vaultEl.checked;
     if (fromVault) {
-      if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
+      ensureVaultIncomeCat();
       const pk = document.getElementById("mVaultPocket").value;
       if (pockets.some(x => x.id === pk)) added.pocket = pk; // zsebből fizetett kiadás: nem a fő számla havi költése
-      addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pockets.some(x => x.id === pk) ? pk : undefined });
+      addEntry(VAULT_SUB + " – " + added.name, added.amount, null, added.month, "income", VAULT_SUB, null, true, { day: added.day, pocket: pockets.some(x => x.id === pk) ? pk : undefined });
     }
     vaultEl.checked = false; fillVaultPockets();
     if (fixedEl.checked) setRecurring(added, true); // a zseb is a sablonba kerül
-    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · széfből (kiegyenlítve)" : ""}`, "success");
+    showMsg("manualMsg", `✅ ${t} hozzáadva: ${nameEl.value.trim()} – ${formatFt(amountEl.value)} · ${itemDateLabel(added)}${added.forMonth ? " · " + monthNameLong(added.forMonth) + "i keretbe" : ""}${fixedEl.checked ? " · fix havi tétel" : ""}${fromVault ? " · zsebből (kiegyenlítve)" : ""}`, "success");
     if (dupPrev) {
       showMsg("manualMsg", `✅ Hozzáadva. ℹ️ ${added.name} ebben a hónapban már szerepelt (${itemDateLabel(dupPrev)}). Ha ez már a következő havi számla, a Tételek fülön átállíthatod a hónapját.`, "info");
     }
@@ -2220,7 +2220,7 @@ function renderPlansCard(month) {
   }).join("");
   const title = todo ? `Fizetésnapi teendők` : `Tervezett kiadások`;
   const sub = todo
-    ? `${escapeHtml(monthNameLong(cycle))}i keret · tedd félre (pl. Revolut-széfbe), és pipáld ki`
+    ? `${escapeHtml(monthNameLong(cycle))}i keret · tedd félre (pl. Revolut-zsebbe), és pipáld ki`
     : (total ? `${escapeHtml(monthNameLong(cycle))}i félretételek kész ✓` : (upcoming ? `A következő fizetéskor kb. ${formatFt(upcoming)} kell félretenni.` : "Minden megvan ✓"));
   return `<div class="card plans-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-calendar-star"></i> ${title}</h2><p class="hint" style="margin:0 0 10px">${sub}</p>${rows}${total ? `<div class="plan-total">Ebben a körben összesen: <b>${formatFt(total)}</b></div>` : ""}</div>`;
 }
@@ -2243,7 +2243,7 @@ function wirePlansActions(area) {
 function updateSetCounts() {
   const n = { pockets: pockets.length, plans: plans.length, recur: recurring.length, goals: goals.length, cats: Object.keys(allCategories()).length };
   document.querySelectorAll("[data-count]").forEach(el => { const v = n[el.dataset.count]; el.textContent = v ? String(v) : ""; el.hidden = !v; });
-  // a "Nagyobb dolgok" széf mellett ezek csak akkor látszanak, ha van bennük valami (hogy törölni lehessen)
+  // a zsebek mellett ezek csak akkor látszanak, ha van bennük valami (hogy törölni lehessen)
   ["plans", "goals"].forEach(k => { const d = document.querySelector(`.set-sec[data-sec="${k}"]`); if (d) d.hidden = !n[k]; });
 }
 (function wireSettingSections() {
@@ -2361,7 +2361,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v96"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v97"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2670,11 +2670,11 @@ function doRecurAdd(btn) {
   const res = addEntry(t.name, amount, t.color, shift ? prevMonthOf(month) : month, t.type, t.sub || "", t.bucket, true, { day: t.day, note: t.note, forMonth: shift ? month : undefined });
   if (!res.ok) { toast("⚠️ " + res.reason); return; }
   const pk = t.type === "expense" && t.pocket && pockets.find(x => x.id === t.pocket && !x.remind);
-  if (pk) { // zsebből fizetett fix tétel: ugyanúgy, mint a "széfből fizettem" jelölő
+  if (pk) { // zsebből fizetett fix tétel: ugyanúgy, mint a "zsebből fizettem" jelölő
     const added = expenseItems[expenseItems.length - 1];
     added.pocket = pk.id;
-    if (!incomeCats.includes("Széfből")) { incomeCats.push("Széfből"); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); }
-    addEntry("Széfből – " + added.name, added.amount, null, added.month, "income", "Széfből", null, true, { day: added.day, pocket: pk.id });
+    ensureVaultIncomeCat();
+    addEntry(VAULT_SUB + " – " + added.name, added.amount, null, added.month, "income", VAULT_SUB, null, true, { day: added.day, pocket: pk.id });
   }
   btn.closest(".recur-row").remove();
   toast(`✅ ${t.name} hozzáadva (${monthLabelShort(month)})`);
@@ -2895,14 +2895,16 @@ function renderFixSuggestCard(month) {
   if (month !== currentMonth()) return "";
   const s = fixSuggestions();
   if (!s.length) return "";
-  const rows = s.map(p => {
+  const rows = s.map((p, i) => {
     const it = p.last;
-    return `<div class="fx-row"><span class="fx-info"><b>${escapeHtml(it.name)}</b><small>${escapeHtml(it.sub || catName(it.color))}${it.day ? " · " + it.day + "." : ""}</small></span><span class="fx-amt">${formatFt(it.amount)}</span><button type="button" class="fx-add" data-fx-add="${escapeHtml(p.key)}"><i class="ph-fill ph-plus"></i> Hozzáad</button><button type="button" class="sub-x" data-fx-no="${escapeHtml(p.key)}" title="Nem fix" aria-label="Nem fix"><i class="ph ph-x"></i></button></div>`;
+    return `<div class="fx-row"${i >= 3 && !fxExpanded ? " hidden" : ""}><span class="fx-info"><b>${escapeHtml(it.name)}</b><small>${escapeHtml(it.sub || catName(it.color))}${it.day ? " · " + it.day + "." : ""}</small></span><span class="fx-amt">${formatFt(it.amount)}</span><button type="button" class="fx-add" data-fx-add="${escapeHtml(p.key)}"><i class="ph-fill ph-plus"></i> Hozzáad</button><button type="button" class="sub-x" data-fx-no="${escapeHtml(p.key)}" title="Nem fix" aria-label="Nem fix"><i class="ph ph-x"></i></button></div>`;
   }).join("");
   return `<div class="card fx-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-arrows-clockwise"></i> Ezek havonta ismétlődnek</h2>
-    <p class="hint" style="margin:0 0 8px">Amelyik fix, add hozzá – így a szabad pénz pontosabb lesz. Ami már nem jön (pl. lejárt törlesztő), azt a ✕ elrejti.</p>${rows}</div>`;
+    <p class="hint" style="margin:0 0 8px">Amelyik fix, add hozzá – így a szabad pénz pontosabb lesz. Ami már nem jön (pl. lejárt törlesztő), azt a ✕ elrejti.</p>${rows}${s.length > 3 && !fxExpanded ? `<button type="button" class="btn secondary" data-fx-more style="margin:8px 0 0">Még ${s.length - 3} javaslat</button>` : ""}</div>`;
 }
+let fxExpanded = false; // a javaslatlista ki van-e nyitva (alapból csak az első 3 látszik)
 function wireFixSuggest(area) {
+  area.querySelectorAll("[data-fx-more]").forEach(b => b.addEventListener("click", () => { fxExpanded = true; renderList(); }));
   area.querySelectorAll("[data-fx-no]").forEach(b => b.addEventListener("click", (e) => {
     e.preventDefault();
     if (!fixDismissed.includes(b.dataset.fxNo)) fixDismissed.push(b.dataset.fxNo);
@@ -3069,7 +3071,7 @@ function renderSubsCard() {
 
 /* ---------- Zsebek (vésztartalék, utazás, rezsialap …) ----------
    Egyenleg = a megadott egyenleg (base) + a zseb tételeinek változása azóta.
-   A zseb tételei: befizetés = Megtakarítás-tétel a zseb nevével alkategóriaként; kivét = ehhez a zsebhez tartozó "Széfből" bevétel.
+   A zseb tételei: befizetés = Megtakarítás-tétel a zseb nevével alkategóriaként; kivét = ehhez a zsebhez tartozó "Zsebből" bevétel.
    Megadáskor eltároljuk a tételek akkori nettó összegét (baseNet), így az addigiakat nem számoljuk kétszer – akkor sem, ha aznap is volt befizetés. */
 let pockets = [];
 function sanitizePockets(arr) {
@@ -3263,7 +3265,7 @@ function addPocketPreset() {
 }
 document.getElementById("btnPocketPreset").addEventListener("click", addPocketPreset);
 document.getElementById("btnAddPocket").addEventListener("click", addPocket);
-/* "A széfből fizettem" mellett: melyik zsebből */
+/* "A zsebből fizettem" mellett: melyik zsebből */
 function fillVaultPockets() {
   const sel = document.getElementById("mVaultPocket"), cur = sel.value;
   sel.innerHTML = pockets.filter(p => !p.remind).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("") + `<option value="">Egyik sem</option>`;
@@ -3457,7 +3459,7 @@ function renderList() {
   const totals = {};
   const subTotals = {};
   monthView.forEach(it => {
-    if (it.pocket) return; // zsebből fizetett kiadás + a hozzá tartozó "Széfből" bevétel: kioltják egymást, a havi képet nem torzítják
+    if (it.pocket) return; // zsebből fizetett kiadás + a hozzá tartozó "Zsebből" bevétel: kioltják egymást, a havi képet nem torzítják
     const amt = Number(it.amount);
     if ((it.type || "expense") === "income") { income += amt; return; }
     const bucket = itemBucket(it);
@@ -3481,7 +3483,7 @@ function renderList() {
     let acc = 0;
     const stops = entries.map(e => { const s = acc / spend * 100; acc += e.sum; return `${catHex(e.key)} ${s}% ${acc / spend * 100}%`; }).join(", ");
     const top = entries[0];
-    donutHtml = `<div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(top.sum / spend * 100)}%</b><span>${escapeHtml(catName(top.key))}</span></div></div>`;
+    donutHtml = `<div class="donut" style="background:conic-gradient(${stops})"><div class="donut-center"><b>${Math.round(top.sum / spend * 100)}%</b></div></div>`;
   }
 
   /* havi összehasonlítás (kiadás vs előző hónap) */
@@ -3541,7 +3543,7 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + renderPaydayCard(selectedMonth) + renderReportCard() + renderRecurringCard(selectedMonth) + renderFixSuggestCard(selectedMonth) + renderPlansCard(selectedMonth) + renderBackupCard() + `
+  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + `
     <div class="card">
       <div class="hero-top">
         <div>
@@ -3559,7 +3561,7 @@ function renderList() {
       </div>
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
-    </div>` + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard();
+    </div>` + renderPaydayCard(selectedMonth) + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard() + renderFixSuggestCard(selectedMonth) + renderReportCard() + renderBackupCard();
   insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
@@ -3661,17 +3663,20 @@ document.getElementById("searchInput").addEventListener("input", (e) => { search
 document.getElementById("sortSelect").addEventListener("change", (e) => { sortMode = e.target.value; renderList(); });
 document.getElementById("monthFilter").addEventListener("change", (e) => { selectedMonth = e.target.value; renderList(); });
 
-/* "A széfből fizettem": a kiadás és a hozzá felvett "Széfből – …" bevétel párt alkot */
+/* "A zsebből fizettem": a kiadás és a hozzá felvett "Zsebből – …" bevétel párt alkot.
+   (A régebbi tételek "Széfből" néven készültek – azokat is felismerjük.) */
+const VAULT_SUB = "Zsebből", VAULT_SUBS = ["Zsebből", "Széfből"];
+function ensureVaultIncomeCat() { if (!incomeCats.includes(VAULT_SUB)) { incomeCats.push(VAULT_SUB); saveIncomeCats(); renderIncPicker("manualIncWrap", "manualIncs", ""); } }
 function findVaultPair(it) {
   if (!it || (it.type || "expense") !== "expense") return -1;
-  return expenseItems.findIndex(x => (x.type || "expense") === "income" && x.sub === "Széfből" && x.name === "Széfből – " + it.name
+  return expenseItems.findIndex(x => (x.type || "expense") === "income" && VAULT_SUBS.includes(x.sub) && x.name === x.sub + " – " + it.name
     && Number(x.amount) === Number(it.amount) && (x.month || "") === (it.month || "") && (x.day || 0) === (it.day || 0));
 }
 function deleteExpense(i) {
   const it = expenseItems[i];
   if (!it) return;
   const pi = findVaultPair(it);
-  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\nA hozzá tartozó „Széfből” bevétel is törlődik." : ""}`)) {
+  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\nA hozzá tartozó „Zsebből” bevétel is törlődik." : ""}`)) {
     [i, pi].filter(x => x >= 0).sort((a, b) => b - a).forEach(x => expenseItems.splice(x, 1)); // a nagyobb indexet előbb
     saveItems();
     renderList();
@@ -3752,10 +3757,10 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (note) item.note = note;
   if (type === "income" && document.getElementById("editShift").checked) item.forMonth = nextMonthOf(month);
   const old = expenseItems[editIndex];
-  const pairIdx = findVaultPair(old); // széfes pár: a bevétel kövesse a kiadás változását
+  const pairIdx = findVaultPair(old); // zsebes pár: a bevétel kövesse a kiadás változását
   if (pairIdx >= 0 && type === "expense") {
     const pr = expenseItems[pairIdx];
-    pr.name = "Széfből – " + name; pr.amount = amount; pr.month = month;
+    pr.name = pr.sub + " – " + name; pr.amount = amount; pr.month = month;
     if (item.day) pr.day = item.day; else delete pr.day;
   }
   const wasFixed = isRecurring(old), wantFixed = document.getElementById("editFixed").checked;
