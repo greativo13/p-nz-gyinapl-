@@ -716,6 +716,12 @@
   .sub-move p { font-size: 13.5px; margin: 0 0 8px; color: var(--text); }
   .sub-move select { margin-bottom: 10px; }
   .sub-move .btn { font-size: 14px; min-height: 42px; margin-bottom: 0; }
+  body.simple .adv-only, body:not(.simple) .simple-only { display: none !important; }
+  body.simple #panel-list .ov-month, body.simple #panel-list .ov-items { display: block !important; } /* egyszerű mód: egy képernyő, alfülek nélkül */
+  body.simple #panel-list .ov-wish, body.simple #panel-list .ov-insights { display: none !important; }
+  .items-head { margin: 22px 4px 10px; }
+  body.simple .pk-row .mgr-name { flex: 1 1 auto; }
+  .adv-switch { margin: 18px 4px 4px; }
   .more-opts { border: 1px solid var(--border); border-radius: 14px; margin: 4px 0 14px; background: var(--input-bg); }
   .more-opts > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
   .more-opts > summary::-webkit-details-marker { display: none; }
@@ -807,7 +813,7 @@
         <p>Kövesd a bevételeid és kiadásaid</p>
       </div>
       <div class="head-btns">
-        <button class="theme-toggle" id="dashBtn" aria-label="Dashboard nézet" title="Dashboard"><i class="ph-fill ph-squares-four"></i></button>
+        <button class="theme-toggle adv-only" id="dashBtn" aria-label="Dashboard nézet" title="Dashboard"><i class="ph-fill ph-squares-four"></i></button>
         <button class="theme-toggle" id="themeToggle" aria-label="Sötét/világos mód">🌙</button>
       </div>
     </div>
@@ -871,7 +877,7 @@
           </div>
         </div>
 
-        <details class="more-opts" id="mMore">
+        <details class="more-opts adv-only" id="mMore">
           <summary><span class="mo-title">További beállítások<small id="mMoreHint">besorolás, megjegyzés, fix tétel, zsebből</small></span><i class="ph ph-caret-down set-caret"></i></summary>
           <div class="mo-body">
           <div id="manualBucketWrap">
@@ -894,7 +900,7 @@
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
       </div>
-      <button class="btn secondary" id="btnCopyPrev"><i class="ph-fill ph-copy"></i> Előző havi tételek másolása</button>
+      <button class="btn secondary adv-only" id="btnCopyPrev"><i class="ph-fill ph-copy"></i> Előző havi tételek másolása</button>
     </section>
 
     <!-- ============ LISTA ============ -->
@@ -903,7 +909,7 @@
         <span class="tb-ic" aria-hidden="true"><i class="ph-fill ph-calendar-blank"></i></span>
         <select id="monthFilter" aria-label="Hónap választása"></select>
       </div>
-      <div class="ov-tabs" id="ovTabs" role="tablist" hidden>
+      <div class="ov-tabs adv-only" id="ovTabs" role="tablist" hidden>
         <button type="button" role="tab" data-ov="month"><i class="ph-fill ph-house"></i> Hónap</button>
         <button type="button" role="tab" data-ov="items"><i class="ph-fill ph-list-bullets"></i> Tételek</button>
         <button type="button" role="tab" data-ov="wish"><i class="ph-fill ph-heart"></i> Kívánság</button>
@@ -924,6 +930,7 @@
       </div>
 
       <div class="ov-items">
+      <h2 class="simple-only items-head"><i class="ph-fill ph-list-bullets"></i> Tételek</h2>
       <div class="list-controls" id="listControls" style="display:none">
         <div class="search-wrap"><i class="ph-fill ph-magnifying-glass"></i><input type="search" id="searchInput" placeholder="Keresés..."></div>
         <select id="sortSelect">
@@ -935,8 +942,8 @@
       </div>
 
       <div id="expenseListArea"></div>
-      <hr class="divider" id="clearDivider" style="display:none">
-      <button class="btn danger" id="btnClearAll" style="display:none"><i class="ph-fill ph-trash"></i> Az összes adat törlése</button>
+      <hr class="divider adv-only" id="clearDivider" style="display:none">
+      <button class="btn danger adv-only" id="btnClearAll" style="display:none"><i class="ph-fill ph-trash"></i> Az összes adat törlése</button>
       </div>
     </section>
 
@@ -946,7 +953,13 @@
       <div class="msg" id="catMsg"></div>
       <details class="set-sec" data-sec="help">
         <summary><i class="ph-fill ph-question"></i><span class="set-title">Hogyan működik?<small>Rövid súgó – ha elakadsz, itt megnézheted</small></span><i class="ph ph-caret-down set-caret"></i></summary>
-        <div class="set-body help-body">
+        <div class="set-body help-body simple-only">
+          <div class="help-step"><b>1. Költöttél?</b><p>Lent a <b>+</b> gomb: név, összeg, kategória (és ha kell, alkategória) → Hozzáadás. Ha korábban már volt ilyen tétel, az app felajánlja, és kitölti helyetted. Képernyőképből is beolvashatsz.</p></div>
+          <div class="help-step"><b>2. Fizetésnap</b><p>Írd be a fizetést (Bevétel › Fizetés). A főoldalon megjelenik, mennyit tegyél az egyes zsebekbe. Utald át a Revolutban, és nyomd meg a „Kész”-t.</p></div>
+          <div class="help-step"><b>3. Hol tartasz?</b><p>A főoldalon: mennyi jött be, mennyi ment el, mennyi maradt – és mire, kategóriánként. Egy kategóriára koppintva látod az alkategóriákat.</p></div>
+          <div class="help-step"><b>Több funkció kellene?</b><p>A Beállítások alján a <b>Haladó mód</b> mindent visszakapcsol (zsebek egyenlege, fix tételek, dashboard, elemzés…). Az adataid megvannak.</p></div>
+        </div>
+        <div class="set-body help-body adv-only">
           <div class="help-step"><b>1. Napi beírás</b><p>Koppints a lenti <b>+</b> gombra, írd be a nevet és az összeget. Ha korábban már volt ilyen tétel, az app felajánlja – egy koppintással kitölti a kategóriát is. A ritkább mezők a „További beállítások” alatt vannak.</p></div>
           <div class="help-step"><b>2. Fizetésnap</b><p>Írd be a fizetést (Bevétel › Fizetés). A Hónap fülön megjelenik a <b>Fizetésnapi szétosztás</b>: mennyit tegyél az egyes zsebekbe. Utald át a Revolutban, és nyomd meg a „Kész”-t.</p></div>
           <div class="help-step"><b>3. Zsebek</b><p>Tervezhető (5%), Utazás (7%), Vészalap (10%), Vágyak (18%). A Zsebek kártyán látod, mennyi van bennük. Ha eltér a Revolutétól, a Beállítások › Zsebek „Most” mezőjében átírhatod.</p></div>
@@ -958,26 +971,27 @@
       </details>
       <div class="set-group">Pénz</div>
       <details class="set-sec" data-sec="pockets">
-        <summary><i class="ph-fill ph-vault"></i><span class="set-title">Zsebek<small>Vésztartalék, utazás, rezsialap – egyenleg és cél</small></span><span class="set-count" data-count="pockets"></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <summary><i class="ph-fill ph-vault"></i><span class="set-title"><span class="adv-only">Zsebek</span><span class="simple-only">Fizetés felosztása</span><small><span class="adv-only">Vésztartalék, utazás, rezsialap – egyenleg és cél</span><span class="simple-only">Melyik zsebbe a fizetés hány %-a megy</span></small></span><span class="set-count" data-count="pockets"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card">
-        <p class="hint" style="margin:0 0 10px;">Minden zsebnek megadhatod, a fizetés hány %-a megy bele – fizetésnapon az app kiszámolja az összegeket. A „Most” mezőbe a zseb mostani egyenlegét írd (ahogy a Revolutban látod); ha eltér, írd át. A „Csak emlékeztető” zsebnél (pl. Vágyak) az app nem követi az egyenleget.</p>
+        <p class="hint simple-only" style="margin:0 0 10px;">Add meg, a fizetésed hány %-a menjen az egyes zsebekbe. Fizetésnapon az app kiszámolja az összegeket, te átutalod a Revolutban, és kipipálod.</p>
+        <p class="hint adv-only" style="margin:0 0 10px;">Minden zsebnek megadhatod, a fizetés hány %-a megy bele – fizetésnapon az app kiszámolja az összegeket. A „Most” mezőbe a zseb mostani egyenlegét írd (ahogy a Revolutban látod); ha eltér, írd át. A „Csak emlékeztető” zsebnél (pl. Vágyak) az app nem követi az egyenleget.</p>
         <div id="pocketList" class="mgr-list"></div>
         <input type="text" id="pocketName" placeholder="Zseb neve (pl. Vésztartalék)" autocomplete="off" maxlength="30">
-        <div class="mgr-form">
+        <div class="mgr-form adv-only">
           <input type="number" id="pocketBal" placeholder="Most (Ft)" inputmode="numeric">
           <input type="number" id="pocketTarget" placeholder="Cél (Ft)" inputmode="numeric">
         </div>
         <div class="mgr-form">
           <input type="number" id="pocketPct" placeholder="% a fizetésből" inputmode="decimal" step="0.5">
-          <select id="pocketKind" aria-label="Besorolás"><option value="saving">Megtakarítás</option><option value="need">Szükséglet</option><option value="want">Vágy</option><option value="remind">Csak emlékeztető</option></select>
+          <select id="pocketKind" class="adv-only" aria-label="Besorolás"><option value="saving">Megtakarítás</option><option value="need">Szükséglet</option><option value="want">Vágy</option><option value="remind">Csak emlékeztető</option></select>
         </div>
         <button class="btn secondary" id="btnAddPocket"><i class="ph-fill ph-plus"></i> Zseb hozzáadása</button>
         <button class="btn" id="btnPocketPreset"><i class="ph-fill ph-magic-wand"></i> Megbeszélt felosztás betöltése</button>
       </div>
         </div>
       </details>
-      <details class="set-sec" data-sec="recur">
+      <details class="set-sec adv-only" data-sec="recur">
         <summary><i class="ph-fill ph-arrows-clockwise"></i><span class="set-title">Fix havi tételek<small>Lakbér, előfizetések, vészalap…</small></span><span class="set-count" data-count="recur"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card">
@@ -986,7 +1000,7 @@
       </div>
         </div>
       </details>
-      <details class="set-sec" data-sec="plans">
+      <details class="set-sec adv-only" data-sec="plans">
         <summary><i class="ph-fill ph-calendar-star"></i><span class="set-title">Tervezett kiadások<small>Utazás, karácsony, féléves díjak</small></span><span class="set-count" data-count="plans"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card">
@@ -1001,7 +1015,7 @@
       </div>
         </div>
       </details>
-      <details class="set-sec" data-sec="goals">
+      <details class="set-sec adv-only" data-sec="goals">
         <summary><i class="ph-fill ph-piggy-bank"></i><span class="set-title">Megtakarítási célok<small>Mennyit gyűjtöttél össze</small></span><span class="set-count" data-count="goals"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card">
@@ -1063,7 +1077,7 @@
         </div>
       </details>
       <div class="set-group">App</div>
-      <details class="set-sec" data-sec="display">
+      <details class="set-sec adv-only" data-sec="display">
         <summary><i class="ph-fill ph-eye"></i><span class="set-title">Megjelenítés<small>Kapcsold ki, amit nem használsz – az adatok megmaradnak</small></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card data-actions">
@@ -1114,6 +1128,7 @@
         </div>
       </details>
 
+      <label class="view-toggle adv-switch"><input type="checkbox" id="toggleAdvanced"> <i class="ph-fill ph-sliders-horizontal"></i> Haladó mód <span class="lbl-hint">(minden funkció: zseb-egyenlegek, fix tételek, dashboard, elemzés…)</span></label>
       <p class="app-version" id="appVersion"></p>
     </section>
 
@@ -1148,17 +1163,17 @@
         <label>Alkategória (opcionális)</label>
         <div class="sub-picker" id="editSubs"></div>
       </div>
-      <label>Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
-      <div class="type-toggle grid2" id="editBucket">
+      <label class="adv-only">Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
+      <div class="type-toggle grid2 adv-only" id="editBucket">
         <button type="button" class="type-btn" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
         <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
         <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
         <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
       </div>
     </div>
-    <label for="editNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
-    <input type="text" id="editNote" autocomplete="off" maxlength="120">
-    <label class="view-toggle"><input type="checkbox" id="editFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel</label>
+    <label for="editNote" class="adv-only">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
+    <input type="text" class="adv-only" id="editNote" autocomplete="off" maxlength="120">
+    <label class="view-toggle adv-only"><input type="checkbox" id="editFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel</label>
     <div class="btn-row">
       <button class="btn" id="btnSaveEdit"><i class="ph-fill ph-check"></i> Mentés</button>
       <button class="btn secondary" id="btnCancelEdit">Mégse</button>
@@ -2250,6 +2265,7 @@ function renderFreeMoney(month) {
   return `<div class="hero-free ${f < 0 ? "neg" : ""}"><i class="ph-fill ph-wallet"></i><span>Szabad pénz: <b>${formatFt(f)}</b>${daily}<small>fix tételek és tervezett félretételek után</small></span></div>`;
 }
 function renderPlansCard(month) {
+  if (simpleMode) return "";
   if (!plans.length) return "";
   const cycle = planCycle();
   if (month !== cycle && !(month === currentMonth() && cycle > month)) return "";
@@ -2414,7 +2430,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v99"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v100"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2782,6 +2798,7 @@ document.getElementById("copyModal").addEventListener("click", (e) => { if (e.ta
 /* ---------- Pénzügyi coach (beépített, szabály-alapú) ---------- */
 
 function renderBudget(income, needs, wants, savings, leftover) {
+  if (simpleMode) return "";
   if (!show5030) return "";
   const head = `<div class="budget-head"><h2 style="margin:0"><i class="ph-fill ph-target"></i> ${ruleLabel()} szabály</h2><div class="bud-head-btns"><button class="bud-hide" data-edit5030 title="Arány szerkesztése" aria-label="Arány szerkesztése"><i class="ph-fill ph-pencil-simple"></i></button><button class="bud-hide" data-hide5030 title="Elrejtés" aria-label="Elrejtés"><i class="ph-fill ph-x"></i></button></div></div>`;
   if (income <= 0) {
@@ -2945,6 +2962,7 @@ function fixSuggestions() {
   return periodicGroups().filter(p => !have.has(p.key) && !fixDismissed.includes(p.key)).sort((a, b) => Number(b.last.amount) - Number(a.last.amount));
 }
 function renderFixSuggestCard(month) {
+  if (simpleMode) return "";
   if (month !== currentMonth()) return "";
   const s = fixSuggestions();
   if (!s.length) return "";
@@ -2993,6 +3011,7 @@ function renderNextMonthCard(month) {
   return `<div class="card action-card"><div class="ac-ic"><i class="ph-fill ph-calendar-plus"></i></div><div class="ac-body"><b>Megjött a ${escapeHtml(monthNameLong(cycle))}i fizetés</b><span>A ${escapeHtml(monthNameLong(cycle))}i keretedet a következő hónapnál látod.</span></div><button class="btn ac-btn" data-goto-month="${cycle}">Megnézem</button></div>`;
 }
 function renderRecurringCard(month) {
+  if (simpleMode) return "";
   // csak az aktuális (vagy jövőbeli) hónapnál kínáljuk fel – régi hónapok böngészésekor ne zavarjon
   if (!recurring.length || !month || month === "all" || month < currentMonth()) return "";
   const p = pendingRecurring(month);
@@ -3020,6 +3039,7 @@ function goalProgress(g) {
     .reduce((s, it) => s + Number(it.amount), 0);
 }
 function renderGoalsCard() {
+  if (simpleMode) return "";
   if (!goals.length) return "";
   const rows = goals.map(g => {
     const have = goalProgress(g);
@@ -3190,6 +3210,7 @@ function pocketRowHtml(p) {
   return `<div class="goal-row"><div class="goal-head"><span class="goal-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}</span><span class="goal-amt"><b>${formatFt(bal)}</b>${p.target ? " / " + formatFt(p.target) : ""}</span></div>${extra}</div>`;
 }
 function renderPocketsCard(month) {
+  if (simpleMode) return "";
   if (!pockets.length || month !== currentMonth()) return "";
   return `<div class="card"><h2 style="margin-bottom:12px"><i class="ph-fill ph-vault"></i> Zsebek</h2>${pockets.map(pocketRowHtml).join("")}</div>`;
 }
@@ -3213,14 +3234,14 @@ function renderPaydayCard(month) {
   const pend = paydayPending(cycle);
   if (!pend.length) return "";
   const sal = cycleSalary(cycle);
-  const rows = pend.map(({ p, amt }) => `<div class="fx-row"><span class="fx-info"><b>${escapeHtml(p.name)}</b><small>${p.pct}% · ${p.remind ? "csak átutalás" : POCKET_BUCKET_LBL[p.bucket]}</small></span><span class="fx-amt">${formatFt(amt)}</span><button type="button" class="fx-add" data-pd="${p.id}"><i class="ph-fill ph-check"></i> Kész</button></div>`).join("");
+  const rows = pend.map(({ p, amt }) => `<div class="fx-row"><span class="fx-info"><b>${escapeHtml(p.name)}</b><small>${p.pct}%${simpleMode ? "" : " · " + (p.remind ? "csak átutalás" : POCKET_BUCKET_LBL[p.bucket])}</small></span><span class="fx-amt">${formatFt(amt)}</span><button type="button" class="fx-add" data-pd="${p.id}"><i class="ph-fill ph-check"></i> Kész</button></div>`).join("");
   return `<div class="card fx-card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-arrows-split"></i> Fizetésnapi szétosztás</h2>
     <p class="hint" style="margin:0 0 8px">${escapeHtml(monthNameLong(cycle))}i fizetés: ${formatFt(sal)}. Utald át a zsebekbe, és nyomd meg a „Kész”-t.</p>${rows}
     <button type="button" class="btn secondary" data-pd-all style="margin:10px 0 0"><i class="ph-fill ph-checks"></i> Mind kész</button></div>`;
 }
 function paydayDone(p, cycle) {
   const amt = pocketShare(p, cycleSalary(cycle));
-  if (!p.remind && amt > 0) {
+  if (!simpleMode && !p.remind && amt > 0) { // egyszerű módban a "Kész" csak kipipál
     const sk = savingCategoryKeys();
     const key = sk.find(k => catSubs(k).some(x => normName(x) === normName(p.name))) || sk[0];
     // a félretétel a fizetés keret-hónapjához tartozik (hó végi fizetésnél ez már a következő hónap)
@@ -3246,9 +3267,9 @@ function renderPocketsManager() {
   updateSetCounts();
   const list = document.getElementById("pocketList");
   const total = pockets.reduce((s, p) => s + (p.pct || 0), 0);
-  list.innerHTML = (pockets.length ? pockets.map(p => `<div class="mgr-row pk-row"><span class="mgr-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}<small>${p.remind ? "csak emlékeztető" : POCKET_BUCKET_LBL[p.bucket]}${p.target ? " · cél: " + formatFt(p.target) : ""}</small></span>
+  list.innerHTML = (pockets.length ? pockets.map(p => `<div class="mgr-row pk-row"><span class="mgr-name"><i class="ph-fill ph-vault"></i> ${escapeHtml(p.name)}<small>${simpleMode ? "" : (p.remind ? "csak emlékeztető" : POCKET_BUCKET_LBL[p.bucket]) + (p.target ? " · cél: " + formatFt(p.target) : "")}</small></span>
       <label class="pk-bal"><span>%</span><input type="number" inputmode="decimal" step="0.5" value="${p.pct || ""}" data-pk-pct="${p.id}" aria-label="A fizetés hány százaléka" class="pk-pct"></label>
-      ${p.remind ? "" : `<label class="pk-bal"><span>Most</span><input type="number" inputmode="numeric" value="${pocketBalance(p)}" data-pk-bal="${p.id}" aria-label="Jelenlegi egyenleg"></label>`}
+      ${p.remind || simpleMode ? "" : `<label class="pk-bal"><span>Most</span><input type="number" inputmode="numeric" value="${pocketBalance(p)}" data-pk-bal="${p.id}" aria-label="Jelenlegi egyenleg"></label>`}
       <button class="icon-btn del" data-del-pocket="${p.id}" title="Törlés" aria-label="Törlés"><i class="ph-fill ph-trash"></i></button></div>`).join("")
     : `<div class="mgr-empty">Még nincs zsebed.</div>`)
     + (total ? `<div class="pk-total">A fizetésből zsebekbe: <b>${Math.round(total * 10) / 10}%</b></div>` : "");
@@ -3320,7 +3341,7 @@ function addPocketPreset() {
     if (pockets.length < 12) { newPocket(o); added++; }
   });
   savePockets(); renderPocketsManager(); renderList(); fillVaultPockets();
-  showMsg("catMsg", `✅ Felosztás betöltve${added ? ` (${added} új zseb)` : ""}. Írd be a „Most” mezőkbe a zsebek mostani egyenlegét.`, "success");
+  showMsg("catMsg", `✅ Felosztás betöltve${added ? ` (${added} új zseb)` : ""}.${simpleMode ? " A fizetés beírásakor a főoldalon látod, mennyi megy az egyes zsebekbe." : " Írd be a „Most” mezőkbe a zsebek mostani egyenlegét."}`, "success");
 }
 document.getElementById("btnPocketPreset").addEventListener("click", addPocketPreset);
 document.getElementById("btnAddPocket").addEventListener("click", addPocket);
@@ -3333,6 +3354,22 @@ function fillVaultPockets() {
 }
 document.getElementById("mVault").addEventListener("change", fillVaultPockets);
 fillVaultPockets();
+
+/* ---------- Egyszerű mód (alapértelmezett) ----------
+   Csak a lényeg: fizetés felosztása, kategóriák/alkategóriák, tételek, beírás (tanuló + képbeolvasás).
+   Minden más funkció elrejtve – az adatok megmaradnak, a Haladó mód visszahozza. */
+let simpleMode = true;
+try { simpleMode = localStorage.getItem("advanced") !== "1"; } catch {}
+function applyMode() {
+  document.body.classList.toggle("simple", simpleMode);
+  document.getElementById("toggleAdvanced").checked = !simpleMode;
+}
+document.getElementById("toggleAdvanced").addEventListener("change", (e) => {
+  simpleMode = !e.target.checked;
+  try { localStorage.setItem("advanced", simpleMode ? "0" : "1"); } catch {}
+  applyMode(); renderList(); renderPocketsManager();
+  toast(simpleMode ? "Egyszerű mód: csak a lényeg látszik" : "Haladó mód: minden funkció látszik");
+});
 
 /* ---------- Megjelenítés: amit a felhasználó nem használ, elrejthető (az adatok megmaradnak) ---------- */
 let viewPrefs = { wish: true, insights: true, subs: true, fast: true };
@@ -3689,11 +3726,11 @@ function renderList() {
   });
   if (!bd) bd = `<div class="bd-row" style="color:var(--muted)">Nincs kiadás ebben az időszakban.</div>`;
 
-  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + `
+  summaryArea.innerHTML = renderNextMonthCard(selectedMonth) + (simpleMode ? renderPaydayCard(selectedMonth) : "") + `
     <div class="card">
       <div class="hero-top">
         <div>
-          <div class="hero-label">${selectedMonth === "all" ? "Összesített egyenleg" : monthLabelShort(selectedMonth) + " · egyenleg"}</div>
+          <div class="hero-label">${selectedMonth === "all" ? "Összesített egyenleg" : monthLabelShort(selectedMonth) + (simpleMode ? " · maradt" : " · egyenleg")}</div>
           <div class="hero-total ${balance < 0 ? "neg" : ""}">${formatFt(balance)}</div>
           <div class="hero-flows">
             <span class="flow-in"><i class="ph-fill ph-arrow-up"></i> Bevétel ${formatFt(income)}</span>
@@ -3701,13 +3738,13 @@ function renderList() {
             ${savings > 0 ? `<span class="flow-save"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás ${formatFt(savings)}</span>` : ""}
             ${business > 0 ? `<span class="flow-biz"><i class="ph-fill ph-briefcase"></i> Vállalkozás ${formatFt(business)}</span>` : ""}
           </div>
-          ${renderFreeMoney(selectedMonth)}${cmpHtml}${weekHtml}${renderFastLine(selectedMonth)}
+          ${simpleMode ? "" : renderFreeMoney(selectedMonth) + cmpHtml + weekHtml + renderFastLine(selectedMonth)}
         </div>
         ${donutHtml}
       </div>
       <div class="hero-breakdown">${bd}</div>
-      ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
-    </div>` + renderPaydayCard(selectedMonth) + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard() + renderFixSuggestCard(selectedMonth) + renderReportCard() + renderBackupCard();
+      ${selectedMonth !== "all" && !simpleMode ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
+    </div>` + (simpleMode ? "" : renderPaydayCard(selectedMonth)) + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard() + renderFixSuggestCard(selectedMonth) + renderReportCard() + renderBackupCard();
   insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTripsCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
@@ -4783,6 +4820,7 @@ function numFrom(n) { const d = n % 10; const front = d === 0 ? n === 10 : ![3, 
 function reportSeen() { try { return localStorage.getItem("reportSeen") || ""; } catch { return ""; } }
 /* hónapzáró kártya: az előző hónap jelentése, amíg meg nem nézted (a hónap első 20 napjában) */
 function renderReportCard() {
+  if (simpleMode) return "";
   const pm = prevMonthOf(currentMonth());
   if (selectedMonth === "all" || new Date().getDate() > 20 || reportSeen() === pm) return "";
   if (!expenseItems.some(it => effMonth(it) === pm)) return "";
@@ -5203,6 +5241,7 @@ function init() {
   renderIncPicker("manualIncWrap", "manualIncs", "");
   renderWishlist();
   applyViewPrefs();
+  applyMode();
   document.getElementById("mShift").addEventListener("change", () => { shiftTouched = true; });
   document.getElementById("manualIncs").addEventListener("click", autoShift);
   document.getElementById("mDay").addEventListener("input", autoShift);
