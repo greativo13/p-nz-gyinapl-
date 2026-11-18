@@ -2361,7 +2361,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v97"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v98"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2812,7 +2812,7 @@ function renderTrend() {
   const exp = {}, inc = {}, cat = {}, usedCats = new Set();
   expenseItems.forEach(it => {
     const m = effMonth(it);
-    if (!m) return;
+    if (!m || it.pocket) return; // zsebből fizetett párok kioltják egymást
     if ((it.type || "expense") === "income") { inc[m] = (inc[m] || 0) + Number(it.amount); return; }
     if (it.color) usedCats.add(it.color);
     if (trendMode !== "all" && it.color === trendMode) cat[m] = (cat[m] || 0) + Number(it.amount);
@@ -3166,7 +3166,9 @@ function paydayDone(p, cycle) {
   if (!p.remind && amt > 0) {
     const sk = savingCategoryKeys();
     const key = sk.find(k => catSubs(k).some(x => normName(x) === normName(p.name))) || sk[0];
-    if (key) addEntry(p.name + " – félretétel", amt, key, currentMonth(), "expense", catSubs(key).find(x => normName(x) === normName(p.name)) || p.name, p.bucket, true, { day: new Date().getDate() });
+    // a félretétel a fizetés keret-hónapjához tartozik (hó végi fizetésnél ez már a következő hónap)
+    const day = cycle === currentMonth() ? new Date().getDate() : 1;
+    if (key) addEntry(p.name + " – félretétel", amt, key, cycle, "expense", catSubs(key).find(x => normName(x) === normName(p.name)) || p.name, p.bucket, true, { day });
   }
   p.done[cycle] = amt;
 }
@@ -3371,7 +3373,7 @@ function renderDash() {
   if (tm.length >= 2) {
     const inc = {}, exp = {};
     expenseItems.forEach(it => {
-      const k = effMonth(it); if (!tm.includes(k)) return;
+      const k = effMonth(it); if (!tm.includes(k) || it.pocket) return;
       if ((it.type || "expense") === "income") inc[k] = (inc[k] || 0) + Number(it.amount);
       else if (["need", "want"].includes(itemBucket(it))) exp[k] = (exp[k] || 0) + Number(it.amount);
     });
@@ -3672,11 +3674,17 @@ function findVaultPair(it) {
   return expenseItems.findIndex(x => (x.type || "expense") === "income" && VAULT_SUBS.includes(x.sub) && x.name === x.sub + " – " + it.name
     && Number(x.amount) === Number(it.amount) && (x.month || "") === (it.month || "") && (x.day || 0) === (it.day || 0));
 }
+/* a "Zsebből – …" bevételhez tartozó kiadás (fordított irányú párkeresés) */
+function findVaultPairOfIncome(inc) {
+  if (!inc || (inc.type || "expense") !== "income" || !VAULT_SUBS.includes(inc.sub)) return -1;
+  return expenseItems.findIndex(x => (x.type || "expense") === "expense" && inc.name === inc.sub + " – " + x.name
+    && Number(x.amount) === Number(inc.amount) && (x.month || "") === (inc.month || "") && (x.day || 0) === (inc.day || 0));
+}
 function deleteExpense(i) {
   const it = expenseItems[i];
   if (!it) return;
-  const pi = findVaultPair(it);
-  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\nA hozzá tartozó „Zsebből” bevétel is törlődik." : ""}`)) {
+  const pi = (it.type || "expense") === "income" ? findVaultPairOfIncome(it) : findVaultPair(it);
+  if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\n" + ((it.type || "expense") === "income" ? "A hozzá tartozó kiadás is törlődik." : "A hozzá tartozó „Zsebből” bevétel is törlődik.") : ""}`)) {
     [i, pi].filter(x => x >= 0).sort((a, b) => b - a).forEach(x => expenseItems.splice(x, 1)); // a nagyobb indexet előbb
     saveItems();
     renderList();
@@ -3698,6 +3706,8 @@ function copyItemToNextMonth(i) {
 }
 document.getElementById("btnClearAll").addEventListener("click", () => {
   if (confirm("⚠️ Biztosan törlöd az ÖSSZES tételt?\n\nEz nem vonható vissza! (Előtte készíts mentést a Beállítások fülön.)")) {
+    pockets.forEach(p => { p.base = pocketBalance(p); p.baseNet = 0; }); // a zsebek egyenlege maradjon meg
+    savePockets();
     expenseItems = [];
     saveItems();
     renderList();
@@ -3757,6 +3767,7 @@ document.getElementById("btnSaveEdit").addEventListener("click", () => {
   if (note) item.note = note;
   if (type === "income" && document.getElementById("editShift").checked) item.forMonth = nextMonthOf(month);
   const old = expenseItems[editIndex];
+  if (old.pocket && (old.type || "expense") === type) item.pocket = old.pocket; // a zseb-jelölés szerkesztés után is maradjon
   const pairIdx = findVaultPair(old); // zsebes pár: a bevétel kövesse a kiadás változását
   if (pairIdx >= 0 && type === "expense") {
     const pr = expenseItems[pairIdx];
