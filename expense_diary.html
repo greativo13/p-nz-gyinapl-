@@ -716,7 +716,26 @@
   .sub-move p { font-size: 13.5px; margin: 0 0 8px; color: var(--text); }
   .sub-move select { margin-bottom: 10px; }
   .sub-move .btn { font-size: 14px; min-height: 42px; margin-bottom: 0; }
-  .ov-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+  .more-opts { border: 1px solid var(--border); border-radius: 14px; margin: 4px 0 14px; background: var(--input-bg); }
+  .more-opts > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+  .more-opts > summary::-webkit-details-marker { display: none; }
+  .mo-title { flex: 1; display: flex; flex-direction: column; font-size: 14px; font-weight: 700; color: var(--text); }
+  .mo-title small { font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .mo-title small.on { color: var(--green-accent); }
+  .more-opts[open] .set-caret { transform: rotate(180deg); }
+  .mo-body { padding: 0 14px 4px; }
+  .set-group { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 18px 6px 8px; }
+  .help-body { padding: 0 16px 12px; }
+  .help-step { padding: 8px 0; border-top: 1px solid var(--border); }
+  .help-step:first-child { border-top: none; }
+  .help-step b { font-size: 14px; color: var(--text); }
+  .help-step p { font-size: 13px; color: var(--chip-text); line-height: 1.45; margin-top: 3px; }
+  .trip-row { width: 100%; background: none; border-left: none; border-right: none; border-bottom: none; font: inherit; text-align: left; cursor: pointer; color: var(--text); }
+  #undoBar { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 70; display: flex; align-items: center; gap: 14px; background: #1f2622; color: #fff; padding: 10px 12px 10px 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-size: 14px; max-width: calc(100% - 32px); transition: all 0.2s; }
+  #undoBar.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  #undoBar button { border: none; background: var(--green-btn); color: #fff; font: inherit; font-weight: 700; border-radius: 10px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
+  #undoBar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ov-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: var(--chip); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
   .ov-tabs button { border: none; background: none; border-radius: 10px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--chip-text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
   .ov-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
   @media (max-width: 420px) { .ov-tabs button i { display: none; } .ov-tabs button { font-size: 13px; } }
@@ -850,20 +869,27 @@
             <label>Alkategória (opcionális)</label>
             <div class="sub-picker" id="manualSubs"></div>
           </div>
-          <label>Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
+        </div>
+
+        <details class="more-opts" id="mMore">
+          <summary><span class="mo-title">További beállítások<small id="mMoreHint">besorolás, megjegyzés, fix tétel, zsebből</small></span><i class="ph ph-caret-down set-caret"></i></summary>
+          <div class="mo-body">
+          <div id="manualBucketWrap">
+            <label>Besorolás <span class="lbl-hint">(alapból a kategória szerint – itt átállíthatod)</span></label>
           <div class="type-toggle grid2" id="manualBucket">
             <button type="button" class="type-btn" data-bucket="need"><i class="ph-fill ph-house"></i> Szükséglet</button>
             <button type="button" class="type-btn" data-bucket="want"><i class="ph-fill ph-shopping-bag"></i> Vágy</button>
             <button type="button" class="type-btn" data-bucket="saving"><i class="ph-fill ph-piggy-bank"></i> Megtakarítás</button>
             <button type="button" class="type-btn" data-bucket="business"><i class="ph-fill ph-briefcase"></i> Vállalkozás</button>
           </div>
-        </div>
-
+          </div>
         <label for="mNote">Megjegyzés <span class="lbl-hint">(opcionális)</span></label>
-        <input type="text" id="mNote" placeholder="pl. Gézu & Luca szülinap" autocomplete="off" maxlength="120">
+        <input type="text" id="mNote" placeholder="pl. Krakkó, Gézu & Luca szülinap" autocomplete="off" maxlength="120" list="noteOpts"><datalist id="noteOpts"></datalist>
         <label class="view-toggle"><input type="checkbox" id="mFixed"> <i class="ph-fill ph-arrows-clockwise"></i> Fix havi tétel <span class="lbl-hint">(minden hónapban felajánlja)</span></label>
         <label class="view-toggle" id="mVaultWrap"><input type="checkbox" id="mVault"> <i class="ph-fill ph-vault"></i> A zsebből fizettem <span class="lbl-hint">(nem csökkenti a havi egyenleget)</span></label>
         <div id="mVaultPocketWrap" class="vault-pocket" hidden><label for="mVaultPocket">Melyik zsebből?</label><select id="mVaultPocket"></select></div>
+          </div>
+        </details>
 
         <button class="btn" id="btnAddManual"><i class="ph-fill ph-plus"></i> Hozzáadás</button>
         <p class="hint" style="margin:2px 0 0; text-align:center;">Tipp: a mezőkben <b>Enter</b> gyorsan hozzáad. A típus, hónap és kategória megmarad.</p>
@@ -918,21 +944,19 @@
     <section class="panel" id="panel-categories">
       <h2><i class="ph-fill ph-gear-six"></i> Beállítások</h2>
       <div class="msg" id="catMsg"></div>
-      <details class="set-sec" data-sec="plans">
-        <summary><i class="ph-fill ph-calendar-star"></i><span class="set-title">Tervezett kiadások<small>Utazás, karácsony, féléves díjak</small></span><span class="set-count" data-count="plans"></span><i class="ph ph-caret-down set-caret"></i></summary>
-        <div class="set-body">
-      <div class="card">
-        <p class="hint" style="margin:0 0 10px;">Amire előre tudod, hogy pénz kell (utazás, karácsony, féléves díj). Az app kiszámolja, mennyit tegyél félre fizetésenként, és az Áttekintésben kipipálhatod („Fizetésnapi teendők”).</p>
-        <div id="planList" class="mgr-list"></div>
-        <input type="text" id="planName" placeholder="Mire? (pl. Karácsony)" autocomplete="off" maxlength="40">
-        <div class="mgr-form">
-          <input type="number" id="planTarget" placeholder="Összeg (Ft)" inputmode="numeric">
-          <input type="month" id="planDue" aria-label="Mikorra kell">
-        </div>
-        <button class="btn secondary" id="btnAddPlan"><i class="ph-fill ph-plus"></i> Tervezett kiadás hozzáadása</button>
-      </div>
+      <details class="set-sec" data-sec="help">
+        <summary><i class="ph-fill ph-question"></i><span class="set-title">Hogyan működik?<small>Rövid súgó – ha elakadsz, itt megnézheted</small></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <div class="set-body help-body">
+          <div class="help-step"><b>1. Napi beírás</b><p>Koppints a lenti <b>+</b> gombra, írd be a nevet és az összeget. Ha korábban már volt ilyen tétel, az app felajánlja – egy koppintással kitölti a kategóriát is. A ritkább mezők a „További beállítások” alatt vannak.</p></div>
+          <div class="help-step"><b>2. Fizetésnap</b><p>Írd be a fizetést (Bevétel › Fizetés). A Hónap fülön megjelenik a <b>Fizetésnapi szétosztás</b>: mennyit tegyél az egyes zsebekbe. Utald át a Revolutban, és nyomd meg a „Kész”-t.</p></div>
+          <div class="help-step"><b>3. Zsebek</b><p>Tervezhető (5%), Utazás (7%), Vészalap (10%), Vágyak (18%). A Zsebek kártyán látod, mennyi van bennük. Ha eltér a Revolutétól, a Beállítások › Zsebek „Most” mezőjében átírhatod.</p></div>
+          <div class="help-step"><b>4. Zsebből fizetsz?</b><p>Írd be a kiadást, nyisd le a „További beállítások”-at, pipáld be <b>A zsebből fizettem</b>-et, és válaszd ki a zsebet. Így a zseb csökken, a havi számaid nem torzulnak. A Vágyak zsebből költést simán írd be.</p></div>
+          <div class="help-step"><b>5. Fix tételek</b><p>Hónap elején az app szól: „X fix tétel vár felvitelre” – soronként „Hozzáad”. Új fix tételt a „További beállítások” › „Fix havi tétel” pipával veszel fel.</p></div>
+          <div class="help-step"><b>6. Utak, események</b><p>Írj a megjegyzésbe egy közös szót (pl. „Krakkó”), és az Elemzés fülön az app összeadja, mennyibe került.</p></div>
+          <div class="help-step"><b>Gyors áttekintés</b><p>A fejléc négyzetes gombja nyitja a <b>Dashboard</b>-ot: minden fontos szám egy képernyőn.</p></div>
         </div>
       </details>
+      <div class="set-group">Pénz</div>
       <details class="set-sec" data-sec="pockets">
         <summary><i class="ph-fill ph-vault"></i><span class="set-title">Zsebek<small>Vésztartalék, utazás, rezsialap – egyenleg és cél</small></span><span class="set-count" data-count="pockets"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
@@ -962,6 +986,21 @@
       </div>
         </div>
       </details>
+      <details class="set-sec" data-sec="plans">
+        <summary><i class="ph-fill ph-calendar-star"></i><span class="set-title">Tervezett kiadások<small>Utazás, karácsony, féléves díjak</small></span><span class="set-count" data-count="plans"></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <div class="set-body">
+      <div class="card">
+        <p class="hint" style="margin:0 0 10px;">Amire előre tudod, hogy pénz kell (utazás, karácsony, féléves díj). Az app kiszámolja, mennyit tegyél félre fizetésenként, és az Áttekintésben kipipálhatod („Fizetésnapi teendők”).</p>
+        <div id="planList" class="mgr-list"></div>
+        <input type="text" id="planName" placeholder="Mire? (pl. Karácsony)" autocomplete="off" maxlength="40">
+        <div class="mgr-form">
+          <input type="number" id="planTarget" placeholder="Összeg (Ft)" inputmode="numeric">
+          <input type="month" id="planDue" aria-label="Mikorra kell">
+        </div>
+        <button class="btn secondary" id="btnAddPlan"><i class="ph-fill ph-plus"></i> Tervezett kiadás hozzáadása</button>
+      </div>
+        </div>
+      </details>
       <details class="set-sec" data-sec="goals">
         <summary><i class="ph-fill ph-piggy-bank"></i><span class="set-title">Megtakarítási célok<small>Mennyit gyűjtöttél össze</small></span><span class="set-count" data-count="goals"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
@@ -977,6 +1016,7 @@
       </div>
         </div>
       </details>
+      <div class="set-group">Kategóriák</div>
       <details class="set-sec" data-sec="cats">
         <summary><i class="ph-fill ph-tag"></i><span class="set-title">Kategóriák<small>Szerkesztés, alkategóriák, havi keretek</small></span><span class="set-count" data-count="cats"></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
@@ -1022,6 +1062,23 @@
       </div>
         </div>
       </details>
+      <div class="set-group">App</div>
+      <details class="set-sec" data-sec="display">
+        <summary><i class="ph-fill ph-eye"></i><span class="set-title">Megjelenítés<small>Kapcsold ki, amit nem használsz – az adatok megmaradnak</small></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <div class="set-body">
+      <div class="card data-actions">
+        <label class="view-toggle"><input type="checkbox" id="toggleWishTab"> <i class="ph-fill ph-heart"></i> Kívánság fül</label>
+        <label class="view-toggle"><input type="checkbox" id="toggleInsightsTab"> <i class="ph-fill ph-chart-line-up"></i> Elemzés fül</label>
+        <label class="view-toggle"><input type="checkbox" id="toggleSubs"> <i class="ph-fill ph-repeat"></i> Előfizetések lista</label>
+        <label class="view-toggle"><input type="checkbox" id="toggleFast"> <i class="ph-fill ph-hamburger"></i> Gyorskaja-összesítő</label>
+        <label class="view-toggle" hidden><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
+        <label class="view-toggle"><input type="checkbox" id="toggleMentor"> <i class="ph-fill ph-graduation-cap"></i> Mentor (Elemzés fül)</label>
+        <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> Arány-szabály kártya (60-30-10)</label>
+        <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
+        <label class="view-toggle" id="toggleSaveBalWrap"><input type="checkbox" id="toggleSaveBal"> <i class="ph-fill ph-piggy-bank"></i> Megtakarítás csökkentse az egyenleget</label>
+      </div>
+        </div>
+      </details>
       <details class="set-sec" data-sec="ai">
         <summary><i class="ph-fill ph-sparkle"></i><span class="set-title">AI beolvasás<small>Kulcs a képbeolvasáshoz és a mentorhoz</small></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
@@ -1043,14 +1100,9 @@
         </div>
       </details>
       <details class="set-sec" data-sec="data">
-        <summary><i class="ph-fill ph-floppy-disk"></i><span class="set-title">Adatok és mentés<small>Mentés, visszaállítás, megjelenítés</small></span><i class="ph ph-caret-down set-caret"></i></summary>
+        <summary><i class="ph-fill ph-floppy-disk"></i><span class="set-title">Adatok és mentés<small>Mentés iCloudba, visszaállítás, Excel</small></span><i class="ph ph-caret-down set-caret"></i></summary>
         <div class="set-body">
       <div class="card data-actions">
-        <label class="view-toggle" hidden><input type="checkbox" id="toggleCoach"> <i class="ph-fill ph-compass"></i> Pénzügyi coach az Áttekintésen</label>
-        <label class="view-toggle"><input type="checkbox" id="toggleMentor"> <i class="ph-fill ph-graduation-cap"></i> Mentor az Áttekintésen</label>
-        <label class="view-toggle"><input type="checkbox" id="toggle5030"> <i class="ph-fill ph-target"></i> 50-30-20 kimutatás a Listán</label>
-        <label class="view-toggle" id="toggleBizBalWrap"><input type="checkbox" id="toggleBizBal"> <i class="ph-fill ph-briefcase"></i> Vállalkozás csökkentse az egyenleget</label>
-        <label class="view-toggle" id="toggleSaveBalWrap"><input type="checkbox" id="toggleSaveBal"> <i class="ph-fill ph-piggy-bank"></i> Megtakarítás csökkentse az egyenleget</label>
         <div class="btn-row">
           <button class="btn secondary" id="btnExportJSON"><i class="ph-fill ph-cloud-arrow-up"></i> Mentés (iCloud / Fájlok)</button>
           <button class="btn secondary" id="btnExportCSV"><i class="ph-fill ph-download-simple"></i> Excel (CSV)</button>
@@ -1061,6 +1113,7 @@
       </div>
         </div>
       </details>
+
       <p class="app-version" id="appVersion"></p>
     </section>
 
@@ -1595,7 +1648,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById("panel-" + tab.dataset.panel).classList.add("active");
     if (tab.dataset.panel === "list") { selectedMonth = currentMonth(); renderList(); }
     if (tab.dataset.panel === "categories") renderCategories();
-    if (tab.dataset.panel === "manual") refreshAutoMonth();
+    if (tab.dataset.panel === "manual") { refreshAutoMonth(); fillNoteOpts(); updateMoreHint(); }
     // az „Új tétel" panelen nem fókuszálunk automatikusan – a billentyűzet csak akkor jöjjön fel, ha a mezőbe koppintanak
   });
 });
@@ -1842,7 +1895,7 @@ function submitManual() {
     if (dupPrev) {
       showMsg("manualMsg", `✅ Hozzáadva. ℹ️ ${added.name} ebben a hónapban már szerepelt (${itemDateLabel(dupPrev)}). Ha ez már a következő havi számla, a Tételek fülön átállíthatod a hónapját.`, "info");
     }
-    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift(); hideNameSugg();
+    nameEl.value = ""; amountEl.value = ""; noteEl.value = ""; fixedEl.checked = false; shiftTouched = false; autoShift(); hideNameSugg(); updateMoreHint(); fillNoteOpts();
     try { nameEl.focus({ preventScroll: true }); } catch { nameEl.focus(); }
     document.querySelectorAll("#manualSubs .sub-chip, #manualIncs .sub-chip").forEach(c => c.classList.remove("selected"));
     if (type !== "income") setBucket("manualBucket", catBucket(color)); // besorolás vissza az alapértelmezettre
@@ -2361,7 +2414,7 @@ async function extractTesseract(file, worker) {
   return parseOcrCandidates(data.text || "").map(c => { const g = guessCategory(c.name); return Object.assign(c, { color: g ? g.color : fallback, sub: g ? g.sub : "", date: "" }); });
 }
 /* ---- AI-beolvasás (ingyenes Gemini, saját kulccsal) ---- */
-const APP_VERSION = "v98"; // az sw.js CACHE verziójával együtt léptetjük
+const APP_VERSION = "v99"; // az sw.js CACHE verziójával együtt léptetjük
 let lastAiModel = "";
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]; // kivezetett modell esetén a következő
 /* forintösszeg értelmezése: 11499 | "11 499" | "11.499" | "11 499,00" | "-7840 Ft" → egész szám */
@@ -2926,7 +2979,7 @@ function isFastFood(it) {
   return FAST_KW.some(k => n.includes(k));
 }
 function renderFastLine(month) {
-  if (month === "all") return "";
+  if (month === "all" || !viewPrefs.fast) return "";
   const f = expenseItems.filter(it => (it.month || "") === month && isFastFood(it));
   if (!f.length) return "";
   const sum = f.reduce((s, it) => s + Number(it.amount), 0);
@@ -3010,6 +3063,10 @@ function wireSummaryActions(area) {
   wirePlansActions(area);
   wireFixSuggest(area);
   wirePayday(area);
+  area.querySelectorAll("[data-trip]").forEach(b => b.addEventListener("click", () => {
+    searchQuery = b.dataset.trip; document.getElementById("searchInput").value = searchQuery;
+    selectedMonth = "all"; setOvTab("items"); renderList(); window.scrollTo({ top: 0 });
+  }));
   area.querySelectorAll("[data-goto-month]").forEach(b => b.addEventListener("click", () => { selectedMonth = b.dataset.gotoMonth; renderList(); window.scrollTo({ top: 0 }); }));
   area.querySelectorAll("[data-sub-hide]").forEach(b => b.addEventListener("click", () => {
     if (!subsHidden.includes(b.dataset.subHide)) subsHidden.push(b.dataset.subHide);
@@ -3049,7 +3106,7 @@ function subscriptionGroups() {
   return Object.values(groups).sort((a, b) => Number(b.last.amount) - Number(a.last.amount));
 }
 function renderSubsCard() {
-  if (selectedMonth !== currentMonth()) return "";
+  if (!viewPrefs.subs || selectedMonth !== currentMonth()) return "";
   const gs = subscriptionGroups();
   if (!gs.length) return "";
   const cur = currentMonth(), today = new Date().getDate();
@@ -3277,6 +3334,93 @@ function fillVaultPockets() {
 document.getElementById("mVault").addEventListener("change", fillVaultPockets);
 fillVaultPockets();
 
+/* ---------- Megjelenítés: amit a felhasználó nem használ, elrejthető (az adatok megmaradnak) ---------- */
+let viewPrefs = { wish: true, insights: true, subs: true, fast: true };
+function sanitizeViewPrefs(o) { const out = { wish: true, insights: true, subs: true, fast: true }; if (o && typeof o === "object") Object.keys(out).forEach(k => { if (o[k] === false) out[k] = false; }); return out; }
+try { viewPrefs = sanitizeViewPrefs(JSON.parse(localStorage.getItem("viewPrefs") || "null")); } catch {}
+function saveViewPrefs() { try { localStorage.setItem("viewPrefs", JSON.stringify(viewPrefs)); } catch {} }
+function applyViewPrefs() {
+  document.querySelector('#ovTabs [data-ov="wish"]').hidden = !viewPrefs.wish;
+  document.querySelector('#ovTabs [data-ov="insights"]').hidden = !viewPrefs.insights;
+  if ((ovTab === "wish" && !viewPrefs.wish) || (ovTab === "insights" && !viewPrefs.insights)) setOvTab("month");
+  [["toggleWishTab", "wish"], ["toggleInsightsTab", "insights"], ["toggleSubs", "subs"], ["toggleFast", "fast"]].forEach(([id, k]) => { document.getElementById(id).checked = viewPrefs[k]; });
+}
+[["toggleWishTab", "wish"], ["toggleInsightsTab", "insights"], ["toggleSubs", "subs"], ["toggleFast", "fast"]].forEach(([id, k]) => {
+  document.getElementById(id).addEventListener("change", (e) => { viewPrefs[k] = e.target.checked; saveViewPrefs(); applyViewPrefs(); renderList(); });
+});
+
+/* ---------- Utak, események: a megjegyzés szerinti összesítő (pl. "Krakkó") ---------- */
+function noteGroups() {
+  const g = {};
+  expenseItems.forEach(it => {
+    if ((it.type || "expense") === "income" || !it.note) return;
+    const k = normName(it.note);
+    if (!k) return;
+    const x = g[k] || (g[k] = { note: it.note, sum: 0, count: 0, first: null, last: null });
+    x.sum += Number(it.amount); x.count++;
+    const key = (it.month || "") + "-" + String(it.day || 0).padStart(2, "0");
+    if (!x.first || key < x.first.key) x.first = { key, it };
+    if (!x.last || key > x.last.key) { x.last = { key, it }; x.note = it.note; }
+  });
+  return Object.values(g).filter(x => x.count >= 2).sort((a, b) => b.last.key.localeCompare(a.last.key));
+}
+function renderTripsCard() {
+  const gs = noteGroups().slice(0, 6);
+  if (!gs.length) return "";
+  const rows = gs.map(x => {
+    const range = x.first.key === x.last.key ? itemDateLabel(x.first.it) : `${itemDateLabel(x.first.it)} – ${itemDateLabel(x.last.it)}`;
+    return `<button type="button" class="sub-row trip-row" data-trip="${escapeHtml(x.note)}"><span class="sub-name">${escapeHtml(x.note)}<span class="sub-st">${escapeHtml(range)} · ${x.count} tétel</span></span><span class="sub-amt">${formatFt(x.sum)}</span></button>`;
+  }).join("");
+  return `<div class="card"><h2 style="margin-bottom:4px"><i class="ph-fill ph-airplane-tilt"></i> Utak, események</h2>
+    <p class="hint" style="margin:0 0 8px">A megjegyzés szerint összeadva (legalább 2 tétel). Koppints rá a tételekért.</p>${rows}</div>`;
+}
+/* a megjegyzés-mezőhöz: a korábbi megjegyzések felajánlása, hogy egy út tételei egyformán legyenek jelölve */
+function fillNoteOpts() {
+  const seen = new Map();
+  for (let i = expenseItems.length - 1; i >= 0 && seen.size < 30; i--) { const n = expenseItems[i].note; if (n && !seen.has(normName(n))) seen.set(normName(n), n); }
+  document.getElementById("noteOpts").innerHTML = [...seen.values()].map(n => `<option value="${escapeHtml(n)}">`).join("");
+}
+
+/* ---------- "További beállítások" az Új tétel űrlapon ---------- */
+function updateMoreHint() {
+  const on = [];
+  if (document.getElementById("mNote").value.trim()) on.push("megjegyzés");
+  if (document.getElementById("mFixed").checked) on.push("fix tétel");
+  if (document.getElementById("mVault").checked) on.push("zsebből");
+  const b = getTypeToggle("typeToggle") === "income" ? null : getBucket("manualBucket");
+  const def = getPickerValue("manualColors");
+  if (b && def && b !== catBucket(def)) on.push("átsorolva");
+  const h = document.getElementById("mMoreHint");
+  h.textContent = on.length ? "Beállítva: " + on.join(", ") : "besorolás, megjegyzés, fix tétel, zsebből";
+  h.classList.toggle("on", on.length > 0);
+}
+(function wireMoreOpts() {
+  const d = document.getElementById("mMore");
+  try { d.open = localStorage.getItem("moreOpen") === "1"; } catch {}
+  d.addEventListener("toggle", () => { try { localStorage.setItem("moreOpen", d.open ? "1" : "0"); } catch {} });
+  ["mNote", "mFixed", "mVault"].forEach(id => document.getElementById(id).addEventListener("input", updateMoreHint));
+  ["mFixed", "mVault"].forEach(id => document.getElementById(id).addEventListener("change", updateMoreHint));
+  document.getElementById("manualBucket").addEventListener("click", () => setTimeout(updateMoreHint, 0));
+  document.getElementById("manualColors").addEventListener("click", () => setTimeout(updateMoreHint, 0));
+})();
+
+/* ---------- Visszavonás törlés után ---------- */
+function showUndo(text, onUndo) {
+  let bar = document.getElementById("undoBar");
+  if (!bar) {
+    bar = document.createElement("div"); bar.id = "undoBar";
+    bar.innerHTML = '<span></span><button type="button">Visszavonás</button>';
+    document.body.appendChild(bar);
+  }
+  bar.querySelector("span").textContent = text;
+  const btn = bar.querySelector("button");
+  const fresh = btn.cloneNode(true); btn.replaceWith(fresh); // a korábbi visszavonás ne fusson le
+  fresh.addEventListener("click", () => { clearTimeout(bar._t); bar.classList.remove("show"); onUndo(); });
+  bar.classList.add("show");
+  clearTimeout(bar._t);
+  bar._t = setTimeout(() => bar.classList.remove("show"), 7000);
+}
+
 /* ---------- Dashboard: egy képernyős, csempés áttekintés (a fejléc gombjáról) ---------- */
 let dashMonth = null;
 function dashMonths() { return [...new Set([currentMonth(), planCycle(), ...expenseItems.map(effMonth).filter(Boolean)])].sort(); }
@@ -3339,7 +3483,7 @@ function renderDash() {
   tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-arrow-up-right"></i> Kiadás</span><span class="dt-big">${formatFt(spend)}</span><span class="dt-sub ${cmpCls}">${cmp}</span>`);
   // 4) gyorskaja
   const fast = expenseItems.filter(it => (it.month || "") === m && isFastFood(it));
-  tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-hamburger"></i> Gyorskaja</span><span class="dt-big">${formatFt(fast.reduce((s, it) => s + Number(it.amount), 0))}</span><span class="dt-sub">${fast.length} alkalom</span>`);
+  if (viewPrefs.fast) tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-hamburger"></i> Gyorskaja</span><span class="dt-big">${formatFt(fast.reduce((s, it) => s + Number(it.amount), 0))}</span><span class="dt-sub">${fast.length} alkalom</span>`);
   // 5) kategóriák fánkdiagram + jelmagyarázat (top 4, a többi "Egyéb")
   const entries = Object.keys(totals).map(k => ({ k, v: totals[k] })).sort((a, b) => b.v - a.v);
   if (spend > 0) {
@@ -3360,14 +3504,14 @@ function renderDash() {
   if (m === cur) {
     const gs = subscriptionGroups(), today = new Date().getDate();
     const act = gs.filter(g => g.last.month === cur || (g.last.day && g.last.day > today));
-    if (gs.length) tile("insights", "", `<span class="dt-lbl"><i class="ph-fill ph-repeat"></i> Előfizetések</span><span class="dt-big">${formatFt(act.reduce((s, g) => s + Number(g.last.amount), 0))}</span><span class="dt-sub">havonta · ${act.length} db</span>`);
+    if (gs.length && viewPrefs.subs) tile("insights", "", `<span class="dt-lbl"><i class="ph-fill ph-repeat"></i> Előfizetések</span><span class="dt-big">${formatFt(act.reduce((s, g) => s + Number(g.last.amount), 0))}</span><span class="dt-sub">havonta · ${act.length} db</span>`);
     const w = weekSpend();
     tile("items", "", `<span class="dt-lbl"><i class="ph-fill ph-calendar-check"></i> Ezen a héten</span><span class="dt-big">${formatFt(w.sum)}</span><span class="dt-sub">kiadás hétfő óta</span>`);
   }
   // 8) zsebek (vésztartalék, utazás …)
   if (pockets.length) tile("month", "wide", `<span class="dt-lbl"><i class="ph-fill ph-vault"></i> Zsebek</span>${pockets.map(pocketRowHtml).join("")}`);
   // kívánságlista
-  if (wishlist.length) tile("wish", "wide", `<span class="dt-lbl"><i class="ph-fill ph-heart"></i> Kívánságlista</span><span class="dt-big">${wishlist.length} dolog</span><span class="dt-sub">összesen ${formatFt(wishlist.reduce((s, x) => s + x.amount, 0))}</span>`);
+  if (wishlist.length && viewPrefs.wish) tile("wish", "wide", `<span class="dt-lbl"><i class="ph-fill ph-heart"></i> Kívánságlista</span><span class="dt-big">${wishlist.length} dolog</span><span class="dt-sub">összesen ${formatFt(wishlist.reduce((s, x) => s + x.amount, 0))}</span>`);
   // 9) trend: az utolsó 6 hónap bevétele és kiadása
   const tm = months.filter(x => x <= (m > cur ? m : cur)).slice(-6);
   if (tm.length >= 2) {
@@ -3564,7 +3708,7 @@ function renderList() {
       <div class="hero-breakdown">${bd}</div>
       ${selectedMonth !== "all" ? `<button class="btn secondary report-btn" data-open-report="${selectedMonth}"><i class="ph-fill ph-chart-bar"></i> Részletes havi jelentés</button>` : ""}
     </div>` + renderPaydayCard(selectedMonth) + renderRecurringCard(selectedMonth) + renderPlansCard(selectedMonth) + renderPocketsCard(selectedMonth) + renderBudget(income, needs, wants, savings, balance) + renderGoalsCard() + renderFixSuggestCard(selectedMonth) + renderReportCard() + renderBackupCard();
-  insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTrend();
+  insightArea.innerHTML = renderMentorCard() + renderSubsCard() + renderTripsCard() + renderTrend();
   document.getElementById("ovTabs").hidden = false; setOvTab(ovTab, false);
   wireSummaryActions(summaryArea);
   wireSummaryActions(insightArea);
@@ -3685,9 +3829,11 @@ function deleteExpense(i) {
   if (!it) return;
   const pi = (it.type || "expense") === "income" ? findVaultPairOfIncome(it) : findVaultPair(it);
   if (confirm(`Biztosan törlöd ezt a tételt?\n\n"${it.name}" – ${formatFt(it.amount)}${pi >= 0 ? "\n\n" + ((it.type || "expense") === "income" ? "A hozzá tartozó kiadás is törlődik." : "A hozzá tartozó „Zsebből” bevétel is törlődik.") : ""}`)) {
-    [i, pi].filter(x => x >= 0).sort((a, b) => b - a).forEach(x => expenseItems.splice(x, 1)); // a nagyobb indexet előbb
+    const removed = [i, pi].filter(x => x >= 0).sort((a, b) => a - b).map(x => ({ x, item: expenseItems[x] }));
+    [...removed].reverse().forEach(r => expenseItems.splice(r.x, 1)); // a nagyobb indexet előbb
     saveItems();
     renderList();
+    showUndo(`Törölve: ${it.name}`, () => { removed.forEach(r => expenseItems.splice(Math.min(r.x, expenseItems.length), 0, r.item)); saveItems(); renderList(); toast("↩️ Visszaállítva"); });
   }
 }
 
@@ -4894,7 +5040,7 @@ function downloadFile(name, content, type) {
    egyébként letöltés. A kulcs (AI) szándékosan NEM kerül bele. */
 async function exportJSON() {
   const data = JSON.stringify({ app: "penzugyi-naplo", version: 4, exportedAt: new Date().toISOString(), expenseItems, customCategories, hiddenDefaults,
-    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, pockets, subsHidden, fixDismissed, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
+    settings: { rule5030, balanceInc, show5030, showCoach, incomeCats, recurring, goals, plans, pockets, viewPrefs, subsHidden, fixDismissed, wishlist: { list: wishlist, saved: wishSaved }, showMentor, mentor, mentorItems } }, null, 2);
   const name = `penzugyi-naplo-mentes-${isoDate(new Date())}.json`;
   const done = (how) => {
     try { localStorage.setItem("lastBackup", String(Date.now())); localStorage.removeItem("backupSnooze"); } catch {}
@@ -4953,6 +5099,7 @@ document.getElementById("importFile").addEventListener("change", (e) => {
       if (Array.isArray(st.recurring)) { recurring = sanitizeRecurring(st.recurring); saveRecurring(); }
       if (Array.isArray(st.goals)) { goals = sanitizeGoals(st.goals); saveGoals(); }
       if (Array.isArray(st.plans)) { plans = sanitizePlans(st.plans); savePlans(); }
+      if (st.viewPrefs) { viewPrefs = sanitizeViewPrefs(st.viewPrefs); saveViewPrefs(); applyViewPrefs(); }
       if (Array.isArray(st.pockets)) { pockets = sanitizePockets(st.pockets); savePockets(); }
       if (Array.isArray(st.fixDismissed)) { fixDismissed = st.fixDismissed.filter(v => typeof v === "string" && v.length <= 60).slice(0, 200); saveFixDismissed(); }
       if (Array.isArray(st.subsHidden)) { subsHidden = st.subsHidden.filter(x => typeof x === "string" && /^[a-z0-9]{1,30}$/.test(x)).slice(0, 100); saveSubsHidden(); }
@@ -5049,10 +5196,13 @@ function init() {
     document.getElementById("manualCatWrap").style.display = t === "income" ? "none" : "";
     document.getElementById("manualIncWrap").style.display = t === "income" ? "" : "none";
     document.getElementById("mVaultWrap").hidden = t === "income";
+    document.getElementById("manualBucketWrap").hidden = t === "income";
+    updateMoreHint();
     autoShift();
   });
   renderIncPicker("manualIncWrap", "manualIncs", "");
   renderWishlist();
+  applyViewPrefs();
   document.getElementById("mShift").addEventListener("change", () => { shiftTouched = true; });
   document.getElementById("manualIncs").addEventListener("click", autoShift);
   document.getElementById("mDay").addEventListener("input", autoShift);
